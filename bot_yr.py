@@ -2,39 +2,26 @@ import asyncio
 import json
 import logging
 import os
+import uvicorn
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TelegramError
 
 # --- КОНФИГУРАЦИЯ ---
-# Получаем токен бота и ID администратора из переменных окружения для безопасности.
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
+# Render предоставляет URL нашего сервиса в этой переменной
+WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL")
 
-# Включаем логирование, чтобы видеть информацию о работе бота в консоли.
+# Включаем логирование
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- НОВАЯ ФУНКЦИЯ ПОСЛЕ ИНИЦИАЛИЗАЦИИ ---
-async def post_init(application: Application) -> None:
-    """
-    Эта функция вызывается после инициализации приложения, но перед запуском.
-    Она принудительно очищает очередь обновлений и отключает любые "зависшие" подключения.
-    """
-    logger.info("Force-clearing pending updates and any lingering webhook...")
-    await application.bot.delete_webhook(drop_pending_updates=True)
-    logger.info("Updates cleared successfully.")
-
-
-# --- ОБРАБОТЧИКИ КОМАНД И СООБЩЕНИЙ ---
+# --- ОБРАБОТЧИКИ (без изменений) ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Эта функция вызывается, когда пользователь отправляет команду /start.
-    Она отправляет приветственное сообщение.
-    """
     user = update.effective_user
     await update.message.reply_html(
         f"Здравствуйте, {user.mention_html()}!\n\n"
@@ -43,10 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Эта функция обрабатывает данные, полученные от Mini App.
-    Она отправляет ответ пользователю и уведомление администратору.
-    """
     user = update.effective_user
     data = {}
     try:
@@ -57,7 +40,6 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("Произошла ошибка при обработке вашей заявки. Пожалуйста, попробуйте снова.")
         return
 
-    # --- 1. Отправляем подтверждение пользователю ---
     try:
         await update.message.reply_text(
             text="✅ *Спасибо, ваша заявка принята!* \n\nНаш юрист скоро свяжется с вами.",
@@ -66,15 +48,11 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     except Exception as e:
         logger.error(f"Не удалось отправить подтверждение пользователю: {e}")
 
-    
-    # --- 2. Отправляем уведомление администратору (@dEgor88) ---
     if not ADMIN_CHAT_ID:
         logger.warning("Переменная окружения ADMIN_CHAT_ID не установлена. Уведомление не будет отправлено.")
         return
 
     try:
-        # Формируем красивое и подробное сообщение для администратора.
-        # MarkdownV2 требует экранирования специальных символов.
         def escape_markdown(text: str) -> str:
             escape_chars = r'_*[]()~`>#+-=|{}.!'
             return "".join(f"\\{char}" if char in escape_chars else char for char in str(text))
@@ -105,32 +83,51 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.info(f"Уведомление УСПЕШНО отправлено администратору.")
 
     except TelegramError as e:
-        # Ловим конкретно ошибки Telegram и выводим подробную информацию
         logger.error(f"Telegram API Error: Не удалось отправить уведомление администратору. Ошибка: {e.message}")
     except Exception as e:
-        # Ловим все остальные ошибки
         logger.error(f"Не удалось отправить уведомление администратору: {type(e).__name__} - {e}")
 
 
-def main() -> None:
-    """Основная функция для запуска бота."""
+async def main() -> None:
+    """Основная функция для запуска бота через вебхук."""
     if not TOKEN:
-        logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена! Бот не может быть запущен.")
+        logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена!")
         return
-    
-    application = (
-        Application.builder()
-        .token(TOKEN)
-        .post_init(post_init)
-        .build()
-    )
+    if not WEBHOOK_URL:
+        logger.critical("Переменная окружения RENDER_EXTERNAL_URL не найдена!")
+        return
+        
+    # Создаем приложение
+    application = Application.builder().token(TOKEN).build()
 
+    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
-    print("Бот запущен в режиме polling и готов принимать заявки...")
-    application.run_polling(drop_pending_updates=True)
+    # Устанавливаем вебхук
+    # Мы передаем боту наш уникальный URL, который предоставил Render
+    logger.info(f"Setting webhook to {WEBHOOK_URL}/{TOKEN}")
+    await application.bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}", allowed_updates=Update.ALL_TYPES)
+    
+    # Запускаем приложение как веб-сервер
+    # Это асинхронный процесс, который будет обрабатывать входящие запросы от Telegram
+    async with application:
+        await application.start()
+        # Вместо run_polling, мы запускаем веб-сервер uvicorn
+        # Render автоматически предоставит порт в переменной окружения PORT
+        port = int(os.environ.get('PORT', 8080))
+        webserver = uvicorn.Server(
+            config=uvicorn.Config(
+                app=application.asgi_app,
+                port=port,
+                host='0.0.0.0'
+            )
+        )
+        print(f"Бот запущен в режиме webhook и слушает порт {port}...")
+        await webserver.serve()
+        await application.stop()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
