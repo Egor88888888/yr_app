@@ -255,8 +255,10 @@ def main():
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
 
-    # добавляем маршрут в aiohttp приложение, которое создаёт ptb
-    application.web_app.router.add_route('*', '/submit', submit_handler)
+    # Создаём собственное aiohttp приложение
+    aio_app = web.Application()
+    # Маршрут телеграм вебхука будет добавлен PTB автоматически, нам нужно только кастомный
+    aio_app.router.add_route('*', '/submit', submit_handler)
 
     # Настройка веб-приложения и одновременное создание ГЛОБАЛЬНОГО event-loop,
     # который затем будет использован `application.run_webhook`.
@@ -285,7 +287,8 @@ def main():
                 listen="0.0.0.0",
                 port=port,
                 url_path=TOKEN,
-                webhook_url=webhook_url
+                webhook_url=webhook_url,
+                web_app=aio_app
             )
         else:
             logger.error("❌ MY_RAILWAY_PUBLIC_URL не найден!")
