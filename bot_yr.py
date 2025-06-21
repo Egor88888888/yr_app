@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -67,40 +66,30 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.warning("Переменная окружения ADMIN_CHAT_ID не установлена. Уведомление не будет отправлено.")
         return
 
+    # --- УПРОЩЕННАЯ ОТПРАВКА ---
     try:
-        def escape_markdown(text: str) -> str:
-            escape_chars = r'_*[]()~`>#+-=|{}.!'
-            return "".join(f"\\{char}" if char in escape_chars else char for char in str(text))
-
-        name = escape_markdown(data.get('name', 'Не указано'))
-        phone = escape_markdown(data.get('phone', 'Не указан'))
-        problems_text = escape_markdown(", ".join(data.get('problems', ['Не указаны'])))
-        description = escape_markdown(data.get('description', 'Не заполнено'))
-        user_mention = user.mention_markdown_v2()
-
+        # Формируем простое текстовое сообщение без сложного форматирования
+        problems_text = ", ".join(data.get('problems', ['Не указаны']))
+        
         admin_message = (
-            f"🔔 *Новая заявка с Mini App*\\!\n\n"
-            f"👤 *Отправитель:*\n"
-            f"Имя: *{name}*\n"
-            f"Телефон: `{phone}`\n"
-            f"Пользователь TG: {user_mention}\n\n"
-            f"📋 *Проблемы клиента:*\n`{problems_text}`\n\n"
-            f"📝 *Описание:*\n"
-            f"{description}"
+            f"🔔 Новая заявка!\n\n"
+            f"Отправитель: {data.get('name', 'Не указано')}\n"
+            f"Телефон: {data.get('phone', 'Не указан')}\n"
+            f"ID Пользователя: {user.id}\n\n"
+            f"Проблемы: {problems_text}\n\n"
+            f"Описание:\n{data.get('description', 'Не заполнено')}"
         )
         
-        logger.info(f"Попытка отправить уведомление администратору {ADMIN_CHAT_ID}...")
+        logger.info(f"Попытка отправить УПРОЩЕННОЕ уведомление администратору {ADMIN_CHAT_ID}...")
         await context.bot.send_message(
             chat_id=ADMIN_CHAT_ID,
-            text=admin_message,
-            parse_mode='MarkdownV2'
+            text=admin_message
+            # Убрали parse_mode для максимальной надежности
         )
         logger.info(f"Уведомление УСПЕШНО отправлено администратору.")
 
-    except TelegramError as e:
-        logger.error(f"Telegram API Error: Не удалось отправить уведомление администратору. Ошибка: {e.message}")
     except Exception as e:
-        logger.error(f"Не удалось отправить уведомление администратору: {type(e).__name__} - {e}")
+        logger.error(f"КРИТИЧЕСКАЯ ОШИБКА при отправке уведомления администратору: {type(e).__name__} - {e}")
 
 
 def main() -> None:
@@ -111,7 +100,6 @@ def main() -> None:
     application = Application.builder().token(TOKEN).arbitrary_callback_data(True).build()
 
     application.add_handler(CommandHandler("start", start))
-    # ДОБАВЛЕНА НОВАЯ КОМАНДА
     application.add_handler(CommandHandler("test_admin", test_admin_command))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
@@ -129,4 +117,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
