@@ -9,7 +9,8 @@ from telegram.error import TelegramError
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
-# ИСПРАВЛЕНО: Используем правильную переменную окружения для Railway
+# Используем переменную окружения для Railway
+# Railway автоматически предоставляет этот URL, если домен сгенерирован
 RAILWAY_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
 
 
@@ -25,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v4.2)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v4.3)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -33,81 +34,51 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v4.2: ЗАПУЩЕНА ФУНКЦИЯ WEB_APP_DATA ---")
+    logger.info("--- v4.3: ЗАПУЩЕНА ФУНКЦИЯ WEB_APP_DATA ---")
+    # ... (логика обработки заявки) ...
     user = update.effective_user
+    data = json.loads(update.effective_message.web_app_data.data)
     
-    # --- ШАГ 1: Отправка подтверждения клиенту ---
-    try:
-        await update.message.reply_text("✅ Спасибо, ваша заявка принята! Скоро свяжемся с вами.")
-        logger.info("v4.2 | ШАГ 1: Подтверждение успешно отправлено пользователю.")
-    except Exception as e:
-        logger.error(f"v4.2 | ОШИБКА на ШАГЕ 1 (ответ клиенту): {e}")
-        return
+    await update.message.reply_text("✅ Спасибо, ваша заявка принята!")
 
-    # --- ШАГ 2: Проверка наличия ADMIN_CHAT_ID ---
-    if not ADMIN_CHAT_ID:
-        logger.warning("v4.2 | ШАГ 2: Переменная ADMIN_CHAT_ID не найдена. Уведомление не будет отправлено.")
-        return
-    logger.info(f"v4.2 | ШАГ 2: ADMIN_CHAT_ID найден ({ADMIN_CHAT_ID}).")
-
-    # --- ШАГ 3: Обработка и формирование сообщения для админа ---
-    try:
-        data = json.loads(update.effective_message.web_app_data.data)
-        logger.info(f"v4.2 | ШАГ 3: Данные успешно декодированы: {data}")
-
-        problems_text = ", ".join(data.get('problems', ['Не указаны']))
-        name = data.get('name', 'Не указано')
-        phone = data.get('phone', 'Не указан')
-        description = data.get('description', 'Не заполнено')
-        user_id = user.id
-
-        admin_message = (
-            f"🔔 Новая заявка (v4.2)!\n\n"
-            f"Отправитель: {name}\n"
-            f"Телефон: {phone}\n"
-            f"ID Пользователя: {user_id}\n\n"
-            f"Проблемы: {problems_text}\n\n"
-            f"Описание:\n{description}"
-        )
-        logger.info("v4.2 | ШАГ 3: Сообщение для администратора успешно сформировано.")
-    except Exception as e:
-        logger.error(f"v4.2 | КРИТИЧЕСКАЯ ОШИБКА на ШАГЕ 3 (обработка данных): {e}")
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"Ошибка обработки заявки от {user.id}: {e}")
-        return
-
-    # --- ШАГ 4: Отправка финального уведомления администратору ---
-    try:
-        await context.bot.send_message(
-            chat_id=ADMIN_CHAT_ID,
-            text=admin_message
-        )
-        logger.info(f"v4.2 | ШАГ 4: Уведомление УСПЕШНО отправлено администратору.")
-    except Exception as e:
-        logger.error(f"v4.2 | КРИТИЧЕСКАЯ ОШИБКА на ШАГЕ 4 (отправка админу): {e}")
+    if ADMIN_CHAT_ID:
+        try:
+            problems_text = ", ".join(data.get('problems', ['Не указаны']))
+            admin_message = (
+                f"🔔 Новая заявка (v4.3)!\n"
+                f"От: {data.get('name', 'Не указано')} ({user.id})\n"
+                f"Телефон: {data.get('phone', 'Не указан')}\n"
+                f"Проблемы: {problems_text}\n\n"
+                f"Описание: {data.get('description', 'Не заполнено')}"
+            )
+            await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
+            logger.info("v4.3 | Уведомление УСПЕШНО отправлено администратору.")
+        except Exception as e:
+            logger.error(f"v4.3 | ОШИБКА при отправке уведомления администратору: {e}")
 
 
 def main() -> None:
     """Основная функция для запуска бота."""
     if not TOKEN:
-        logger.critical("YOUR_BOT_TOKEN not found!")
+        logger.critical("ОШИБКА ЗАПУСКА: Переменная окружения YOUR_BOT_TOKEN не найдена!")
         return
-    
-    # Формируем полный URL для вебхука
-    # ИСПРАВЛЕНО: Проверяем, что RAILWAY_URL доступен
+
+    # --- НОВАЯ ДИАГНОСТИКА ---
+    logger.info(f"Проверка переменной RAILWAY_PUBLIC_DOMAIN. Полученное значение: '{RAILWAY_URL}'")
+
     if not RAILWAY_URL:
-        logger.critical("RAILWAY_PUBLIC_DOMAIN not found! Cannot set webhook.")
+        logger.critical("ОШИБКА ЗАПУСКА: Переменная RAILWAY_PUBLIC_DOMAIN не найдена! Убедитесь, что она добавлена в 'Variables' и что для сервиса сгенерирован домен в 'Settings' -> 'Networking'.")
         return
         
     webhook_full_url = f"https://{RAILWAY_URL}/{TOKEN}"
+    logger.info(f"Полный URL для вебхука: {webhook_full_url}")
 
     application = Application.builder().token(TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     port = int(os.environ.get('PORT', 8080))
-    
-    logger.info(f"Бот (v4.2) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v4.3) будет запущен в режиме webhook на порту {port}")
     
     application.run_webhook(
         listen="0.0.0.0",
