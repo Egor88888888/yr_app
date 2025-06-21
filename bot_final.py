@@ -145,15 +145,8 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
 
 
 def pick_image_url() -> str:
-    """Return a random Unsplash image URL relevant to insurance/legal themes."""
-    imgs = [
-        "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1555374018-13a8994ab246?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",
-    ]
-    return random.choice(imgs)
+    # Use Picsum service which guarantees direct jpg link accessible by Telegram
+    return f"https://picsum.photos/seed/{random.randint(1,999999)}/800/600.jpg"
 
 
 # Prompt used by humanizer
@@ -247,9 +240,10 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
         image_url = pick_image_url()
         try:
             await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
-            log.info("AI post sent to channel %s", channel_id)
         except Exception as e:
-            log.error("Failed to send AI post: %s", e)
+            log.warning("send_photo failed (%s), fallback to send_message", e)
+            await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+        log.info("AI post sent to channel %s", channel_id)
 
 # ================== Manual posting command ==================
 
@@ -282,10 +276,10 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     image_url = pick_image_url()
     try:
         await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
-        await update.message.reply_text("✅ Пост опубликован")
     except Exception as e:
-        log.error("Manual post failed: %s", e)
-        await update.message.reply_text(f"Ошибка отправки: {e}")
+        log.warning("send_photo failed (%s), fallback send_message", e)
+        await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+    await update.message.reply_text("✅ Пост опубликован")
 
 # ================== Set channel command =====================
 
