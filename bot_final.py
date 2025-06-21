@@ -2,12 +2,9 @@ import json
 import logging
 import os
 import asyncio
-import threading
 from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TelegramError
-from tornado.web import StaticFileHandler
-import tornado.web
 
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
@@ -21,30 +18,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- СТАТИЧЕСКИЕ ФАЙЛЫ ---
-
-
-class IndexHandler(tornado.web.RequestHandler):
-    def get(self):
-        """Обработчик для index.html"""
-        try:
-            with open('index.html', 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.set_header('Content-Type', 'text/html; charset=utf-8')
-            self.write(content)
-            logger.info("index.html успешно отправлен")
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке index.html: {e}")
-            self.set_status(404)
-            self.write("File not found")
-
 # --- ОБРАБОТЧИКИ БОТА ---
 
 
 async def setup_web_app(application: Application) -> None:
     """Настройка веб-приложения с кнопкой меню"""
     try:
-        web_app_url = f"https://{MY_PUBLIC_URL}/index.html"
+        # Используем GitHub Pages для статических файлов
+        web_app_url = "https://egor88888888.github.io/yr_app/"
         web_app = WebAppInfo(url=web_app_url)
         menu_button = MenuButtonWebApp(
             text="📝 Оставить заявку", web_app=web_app)
@@ -59,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v6.2)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v6.4)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -67,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v6.2: Получена заявка, начинаю обработку ---")
+    logger.info("--- v6.4: Получена заявка, начинаю обработку ---")
     user = update.effective_user
 
     # Логируем данные для отладки
@@ -80,14 +61,14 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     try:
         await update.message.reply_text("✅ Спасибо, ваша заявка принята! Скоро свяжемся с вами.")
-        logger.info("v6.2 | Ответ клиенту отправлен.")
+        logger.info("v6.4 | Ответ клиенту отправлен.")
     except Exception as e:
-        logger.error(f"v6.2 | ОШИБКА при ответе клиенту: {e}")
+        logger.error(f"v6.4 | ОШИБКА при ответе клиенту: {e}")
         return
 
     if not ADMIN_CHAT_ID:
         logger.warning(
-            "v6.2 | ADMIN_CHAT_ID не найден. Уведомление не будет отправлено.")
+            "v6.4 | ADMIN_CHAT_ID не найден. Уведомление не будет отправлено.")
         return
 
     try:
@@ -98,7 +79,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         description = data.get('description', 'Не заполнено')
 
         admin_message = (
-            f"🔔 Новая заявка (v6.2)!\n\n"
+            f"🔔 Новая заявка (v6.4)!\n\n"
             f"От: {name} (ID: {user.id})\n"
             f"Телефон: {phone}\n"
             f"Проблемы: {problems_text}\n\n"
@@ -107,10 +88,10 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         logger.info(f"Отправляю сообщение администратору: {ADMIN_CHAT_ID}")
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-        logger.info("v6.2 | Уведомление УСПЕШНО отправлено администратору.")
+        logger.info("v6.4 | Уведомление УСПЕШНО отправлено администратору.")
     except Exception as e:
         logger.error(
-            f"v6.2 | КРИТИЧЕСКАЯ ОШИБКА при отправке уведомления администратору: {e}")
+            f"v6.4 | КРИТИЧЕСКАЯ ОШИБКА при отправке уведомления администратору: {e}")
         logger.error(f"Тип ошибки: {type(e).__name__}, Детали: {str(e)}")
 
 
@@ -148,20 +129,13 @@ def main() -> None:
         logger.error(f"Ошибка настройки веб-приложения: {e}")
 
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v6.3) будет запущен в режиме webhook на порту {port}")
-
-    # Создаем дополнительные обработчики для статических файлов
-    webhook_handlers = [
-        (r"/index.html", IndexHandler),
-        (r"/", IndexHandler),
-    ]
+    logger.info(f"Бот (v6.4) будет запущен в режиме webhook на порту {port}")
 
     application.run_webhook(
         listen="0.0.0.0",
         port=port,
         url_path=TOKEN,
-        webhook_url=webhook_full_url,
-        webhook_server_kwargs={'webhook_handlers': webhook_handlers}
+        webhook_url=webhook_full_url
     )
 
 
