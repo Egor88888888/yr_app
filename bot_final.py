@@ -1,103 +1,67 @@
 import json
 import logging
 import os
-import asyncio
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.error import TelegramError
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL")
 
-# Включаем логирование
+# --- ЛОГИРОВАНИЕ ---
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- ОБРАБОТЧИКИ ---
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Отправляет приветственное сообщение с маркером версии."""
-    user = update.effective_user
-    await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v4.1)\n\n"
-        "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
-        "нажмите на кнопку 'Меню' слева от поля ввода текста.",
-    )
-
-
+# --- ОБРАБОТЧИК ---
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработка данных из веб-приложения"""
-    logger.info("--- v4.1: ЗАПУЩЕНА ФУНКЦИЯ WEB_APP_DATA ---")
-    user = update.effective_user
+    """
+    Радикально упрощенный обработчик для финальной диагностики.
+    """
+    logger.info("--- !!! v5.0 DEBUG HANDLER EXECUTED !!! ---")
     
-    # --- ШАГ 1: Отправка подтверждения клиенту ---
-    try:
-        await update.message.reply_text("✅ Спасибо, ваша заявка принята! Скоро свяжемся с вами.")
-        logger.info("v4.1 | ШАГ 1: Подтверждение успешно отправлено пользователю.")
-    except Exception as e:
-        logger.error(f"v4.1 | ОШИБКА на ШАГЕ 1 (ответ клиенту): {e}")
-        return
-
-    # --- ШАГ 2: Проверка наличия ADMIN_CHAT_ID ---
     if not ADMIN_CHAT_ID:
-        logger.warning("v4.1 | ШАГ 2: Переменная ADMIN_CHAT_ID не найдена. Уведомление не будет отправлено.")
-        return
-    logger.info(f"v4.1 | ШАГ 2: ADMIN_CHAT_ID найден ({ADMIN_CHAT_ID}).")
-
-    # --- ШАГ 3: Обработка и формирование сообщения для админа ---
-    try:
-        data = json.loads(update.effective_message.web_app_data.data)
-        logger.info(f"v4.1 | ШАГ 3: Данные успешно декодированы: {data}")
-
-        problems_text = ", ".join(data.get('problems', ['Не указаны']))
-        name = data.get('name', 'Не указано')
-        phone = data.get('phone', 'Не указан')
-        description = data.get('description', 'Не заполнено')
-        user_id = user.id
-
-        admin_message = (
-            f"🔔 Новая заявка (v4.1)!\n\n"
-            f"Отправитель: {name}\n"
-            f"Телефон: {phone}\n"
-            f"ID Пользователя: {user_id}\n\n"
-            f"Проблемы: {problems_text}\n\n"
-            f"Описание:\n{description}"
-        )
-        logger.info("v4.1 | ШАГ 3: Сообщение для администратора успешно сформировано.")
-    except Exception as e:
-        logger.error(f"v4.1 | КРИТИЧЕСКАЯ ОШИБКА на ШАГЕ 3 (обработка данных): {e}")
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"Ошибка обработки заявки от {user.id}: {e}")
+        logger.error("v5.0 | ADMIN_CHAT_ID is NOT SET. Cannot send notification.")
         return
 
-    # --- ШАГ 4: Отправка финального уведомления администратору ---
     try:
+        # Просто пересылаем сырые данные администратору
+        data_str = update.effective_message.web_app_data.data
+        logger.info(f"v5.0 | Received data string: {data_str}")
+        
         await context.bot.send_message(
             chat_id=ADMIN_CHAT_ID,
-            text=admin_message
+            text=f"v5.0 DEBUG: Заявка пришла!\n\nДАННЫЕ:\n{data_str}"
         )
-        logger.info(f"v4.1 | ШАГ 4: Уведомление УСПЕШНО отправлено администратору.")
-    except Exception as e:
-        logger.error(f"v4.1 | КРИТИЧЕСКАЯ ОШИБКА на ШАГЕ 4 (отправка админу): {e}")
+        logger.info("v5.0 | DEBUG notification sent to admin.")
+        
+        # Отвечаем пользователю для подтверждения
+        await update.message.reply_text("v5.0: Сервер получил ваши данные.")
 
+    except Exception as e:
+        logger.error(f"v5.0 | An error occurred inside web_app_data: {e}", exc_info=True)
+        if ADMIN_CHAT_ID:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=f"v5.0 DEBUG: Ошибка в обработчике!\n\n{e}"
+            )
 
 def main() -> None:
     """Основная функция для запуска бота."""
+    logger.info("--- LAUNCHING BOT v5.0 ---")
     if not TOKEN:
-        logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена!")
+        logger.critical("YOUR_BOT_TOKEN not found!")
         return
         
     application = Application.builder().token(TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
+    
+    # Оставляем только один, самый важный обработчик
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     port = int(os.environ.get('PORT', 8080))
-    
-    logger.info(f"Бот (v4.1) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"v5.0 | Bot will run on port {port}")
     
     application.run_webhook(
         listen="0.0.0.0",
@@ -105,7 +69,6 @@ def main() -> None:
         url_path=TOKEN,
         webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
     )
-
 
 if __name__ == "__main__":
     main()
