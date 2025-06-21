@@ -164,11 +164,18 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
     # show typing
     await ctx.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+    private_brief = (
+        "Ты — дружелюбный юридический консультант компании 'Страховая справедливость' (strahovayasprav.ru). "
+        "Рационально и понятно отвечай на вопросы о страховых выплатах после ДТП. "
+        "В конце каждого ответа мягко приглашай собеседника получить бесплатную консультацию: "
+        "'Напишите /leave или нажмите кнопку \"Подать заявку\" — и наш менеджер свяжется с вами'. "
+        "Сохраняй профессиональный тон, без давления, не упоминай, что ты ИИ."
+    )
     messages = [
-        {"role": "system", "content": "Ты дружелюбный ассистент, помогаешь людям со страховыми вопросами. Отвечай коротко и по существу."},
+        {"role": "system", "content": private_brief},
         {"role": "user", "content": update.message.text},
     ]
-    answer = await _ai_complete(messages, temperature=0.5)
+    answer = await _ai_complete(messages, temperature=0.6)
     if answer:
         await update.message.reply_text(answer)
 
