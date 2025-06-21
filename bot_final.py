@@ -22,14 +22,10 @@ logger = logging.getLogger(__name__)
 async def setup_web_app(application: Application) -> None:
     """Настройка веб-приложения с GitHub Pages"""
     try:
-        # ИСПОЛЬЗУЕМ GITHUB PAGES ПРАВИЛЬНО
-        web_app_url = "https://egor88888888.github.io/yr_app/"
-        web_app = WebAppInfo(url=web_app_url)
-        menu_button = MenuButtonWebApp(
-            text="📝 Оставить заявку", web_app=web_app)
-
-        await application.bot.set_chat_menu_button(menu_button=menu_button)
-        logger.info(f"✅ Веб-приложение настроено: {web_app_url}")
+        # Сбрасываем меню-кнопку к режиму «по умолчанию», чтобы не дублировать клавиатурную кнопку.
+        await application.bot.set_chat_menu_button()
+        logger.info(
+            "✅ Меню Telegram возвращено в состояние по умолчанию (без WebApp-кнопки)")
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
