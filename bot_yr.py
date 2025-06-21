@@ -19,29 +19,15 @@ logger = logging.getLogger(__name__)
 # --- ОБРАБОТЧИКИ ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Отправляет приветственное сообщение с маркером версии.
+    """
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}!\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v3.0)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
-
-async def test_admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Команда для диагностики"""
-    if str(update.effective_chat.id) == str(ADMIN_CHAT_ID):
-        logger.info(f"Получена команда /test_admin от администратора. Попытка отправить ответ...")
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_CHAT_ID,
-                text="✅ Тестовое сообщение для администратора. Если вы это видите, значит, бот может вам писать."
-            )
-            logger.info("Тестовое сообщение успешно отправлено.")
-        except Exception as e:
-            logger.error(f"Не удалось отправить тестовое сообщение: {e}")
-            await update.message.reply_text(f"Не удалось отправить тестовое сообщение. Ошибка: {e}")
-    else:
-        logger.warning(f"Команду /test_admin попытался использовать не администратор: {update.effective_chat.id}")
-
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
@@ -85,7 +71,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             f"Проблемы: {problems_text}\n\n"
             f"Описание:\n{description}"
         )
-        logger.info("ШАГ 4: Сообщение для администратора успешно сформировано.")
+        logger.info(f"ШАГ 4: Сообщение для администратора успешно сформировано. Текст: {admin_message}")
         
         await context.bot.send_message(
             chat_id=ADMIN_CHAT_ID,
@@ -102,10 +88,9 @@ def main() -> None:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена!")
         return
         
-    application = Application.builder().token(TOKEN).arbitrary_callback_data(True).build()
+    application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("test_admin", test_admin_command))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     port = int(os.environ.get('PORT', 8080))
@@ -122,3 +107,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
