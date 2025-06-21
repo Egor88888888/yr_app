@@ -98,7 +98,14 @@ async def handle_telegram(request: web.Request) -> web.Response:
 
 
 async def setup_menu(bot):
-    await bot.set_chat_menu_button(MenuButtonWebApp(text="📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)))
+    # MenuButton можно задать только для конкретного чата. Используем ADMIN_CHAT_ID.
+    await bot.set_chat_menu_button(
+        chat_id=int(ADMIN_CHAT_ID),
+        menu_button=MenuButtonWebApp(
+            text="📝 Подать заявку",
+            web_app=WebAppInfo(url=WEB_APP_URL),
+        ),
+    )
 
 # ========================= Main ==============================
 
