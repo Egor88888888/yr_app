@@ -94,10 +94,21 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def debug_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик для отладки всех сообщений"""
-    logger.info(f"📨 Получено сообщение: {update.message}")
-    if update.message and hasattr(update.message, 'web_app_data') and update.message.web_app_data:
+    logger.info(
+        f"📨 Получено сообщение от пользователя {update.effective_user.id}")
+    logger.info(f"📨 Тип сообщения: {type(update.message)}")
+    logger.info(f"📨 Содержимое: {update.message}")
+
+    if update.message and hasattr(update.message, 'web_app_data'):
         logger.info(
-            f"🌐 WEB APP DATA найдена: {update.message.web_app_data.data}")
+            f"🌐 Атрибут web_app_data существует: {update.message.web_app_data}")
+        if update.message.web_app_data:
+            logger.info(
+                f"🌐 WEB APP DATA найдена: {update.message.web_app_data.data}")
+        else:
+            logger.info("🌐 web_app_data None")
+    else:
+        logger.info("🌐 web_app_data атрибут отсутствует")
 
 
 def main():
