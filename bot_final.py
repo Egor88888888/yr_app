@@ -177,9 +177,9 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
     text = await generate_ai_post()
     if text:
         bot_username = ctx.bot.username or ""  # safe fallback
+        startapp_link = f"https://t.me/{bot_username}?startapp"
         markup = InlineKeyboardMarkup([
-            [InlineKeyboardButton(
-                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
+            [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
             [InlineKeyboardButton(
                 "🤖 Открыть чат с ботом", url=f"https://t.me/{bot_username}?start=channel")]
         ])
@@ -211,9 +211,9 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     bot_username = ctx.bot.username or ""
+    startapp_link = f"https://t.me/{bot_username}?startapp"
     markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
         [InlineKeyboardButton("🤖 Открыть чат с ботом",
                               url=f"https://t.me/{bot_username}?start=channel")]
     ])
