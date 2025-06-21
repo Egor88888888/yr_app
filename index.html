@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Юридические Услуги</title>
+    <!-- Подключение Tailwind CSS для стилизации -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключение скрипта Telegram Web App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Стили для соответствия теме Telegram */
+        :root {
+            --tg-theme-bg-color: var(--tg-theme-bg-color, #ffffff);
+            --tg-theme-text-color: var(--tg-theme-text-color, #000000);
+            --tg-theme-hint-color: var(--tg-theme-hint-color, #999999);
+            --tg-theme-link-color: var(--tg-theme-link-color, #2481cc);
+            --tg-theme-button-color: var(--tg-theme-button-color, #2481cc);
+            --tg-theme-button-text-color: var(--tg-theme-button-text-color, #ffffff);
+        }
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: color 0.2s, background-color 0.2s;
+        }
+        .service-card {
+            background-color: var(--tg-theme-secondary-bg-color, #f3f4f6);
+        }
+        .order-button {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+        .order-button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="min-h-screen p-4">
+        
+        <!-- Заголовок -->
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold" style="color: var(--tg-theme-text-color);">Юридическая Помощь</h1>
+            <p class="mt-2" style="color: var(--tg-theme-hint-color);">Выберите необходимую услугу, и мы свяжемся с вами.</p>
+        </header>
+
+        <!-- Список услуг -->
+        <main id="services-list" class="space-y-4">
+            
+            <!-- Карточка услуги 1: Консультация -->
+            <div class="service-card rounded-xl p-4 shadow-md transition-transform transform hover:scale-105">
+                <h2 class="text-xl font-semibold mb-2" style="color: var(--tg-theme-text-color);">Первичная консультация</h2>
+                <p class="text-sm mb-4" style="color: var(--tg-theme-hint-color);">Обсуждение вашей ситуации по телефону или в чате. Анализ перспектив дела.</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold" style="color: var(--tg-theme-link-color);">5 000 ₽</span>
+                    <button onclick="orderService('consultation', 'Первичная консультация', 5000)" class="order-button font-bold py-2 px-4 rounded-lg shadow-sm transition">
+                        Заказать
+                    </button>
+                </div>
+            </div>
+
+            <!-- Карточка услуги 2: Анализ документов -->
+            <div class="service-card rounded-xl p-4 shadow-md transition-transform transform hover:scale-105">
+                <h2 class="text-xl font-semibold mb-2" style="color: var(--tg-theme-text-color);">Анализ документов</h2>
+                <p class="text-sm mb-4" style="color: var(--tg-theme-hint-color);">Изучим ваш договор, исковое заявление или другие юридические документы.</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold" style="color: var(--tg-theme-link-color);">10 000 ₽</span>
+                    <button onclick="orderService('doc_analysis', 'Анализ документов', 10000)" class="order-button font-bold py-2 px-4 rounded-lg shadow-sm transition">
+                        Заказать
+                    </button>
+                </div>
+            </div>
+
+            <!-- Карточка услуги 3: Составление иска -->
+            <div class="service-card rounded-xl p-4 shadow-md transition-transform transform hover:scale-105">
+                <h2 class="text-xl font-semibold mb-2" style="color: var(--tg-theme-text-color);">Составление иска</h2>
+                <p class="text-sm mb-4" style="color: var(--tg-theme-hint-color);">Подготовим грамотное исковое заявление для подачи в суд.</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold" style="color: var(--tg-theme-link-color);">15 000 ₽</span>
+                    <button onclick="orderService('claim_drafting', 'Составление иска', 15000)" class="order-button font-bold py-2 px-4 rounded-lg shadow-sm transition">
+                        Заказать
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Подвал -->
+        <footer class="text-center mt-8">
+            <p class="text-sm" style="color: var(--tg-theme-hint-color);">LegalServices Inc. &copy; 2025</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // Инициализация объекта Telegram Web App
+        const tg = window.Telegram.WebApp;
+
+        // Вызывается при загрузке приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Сообщаем Telegram, что приложение готово
+            tg.ready();
+            
+            // Настраиваем главную кнопку внизу
+            tg.MainButton.setText('Посмотреть выбранные услуги');
+            tg.MainButton.textColor = '#FFFFFF';
+            tg.MainButton.color = '#2481CC';
+            
+            // Обработчик нажатия на главную кнопку
+            tg.MainButton.onClick(function() {
+                // В реальном приложении здесь может быть переход к оплате или подтверждению
+                tg.showAlert('Вы будете перенаправлены для подтверждения заказа.');
+                // Отправляем все накопленные данные боту
+                const allOrderedServices = JSON.parse(sessionStorage.getItem('orderedServices') || '[]');
+                if (allOrderedServices.length > 0) {
+                    tg.sendData(JSON.stringify({
+                        totalPrice: calculateTotal(),
+                        services: allOrderedServices
+                    }));
+                } else {
+                    tg.showAlert('Вы еще не выбрали ни одной услуги.');
+                }
+            });
+        });
+        
+        // Функция для расчета общей суммы
+        function calculateTotal() {
+            const services = JSON.parse(sessionStorage.getItem('orderedServices') || '[]');
+            return services.reduce((total, service) => total + service.price, 0);
+        }
+
+        // Функция для обработки заказа услуги
+        function orderService(serviceId, serviceName, servicePrice) {
+            // Получаем текущий список заказов из временного хранилища
+            let orderedServices = JSON.parse(sessionStorage.getItem('orderedServices') || '[]');
+            
+            // Проверяем, не была ли услуга уже заказана
+            if (orderedServices.some(s => s.id === serviceId)) {
+                tg.showAlert(`Услуга "${serviceName}" уже добавлена.`);
+                return;
+            }
+
+            // Добавляем новую услугу
+            orderedServices.push({
+                id: serviceId,
+                name: serviceName,
+                price: servicePrice
+            });
+            
+            // Сохраняем обновленный список
+            sessionStorage.setItem('orderedServices', JSON.stringify(orderedServices));
+            
+            console.log('Заказана услуга:', serviceName);
+
+            // Показываем обратную связь пользователю
+            tg.HapticFeedback.notificationOccurred('success');
+            
+            // Показываем и обновляем главную кнопку
+            if (!tg.MainButton.isVisible) {
+                tg.MainButton.show();
+            }
+            tg.MainButton.setText(`Итого: ${calculateTotal().toLocaleString('ru-RU')} ₽`);
+        }
+        
+        // Очищаем хранилище при запуске, чтобы избежать старых заказов
+        sessionStorage.removeItem('orderedServices');
+
+    </script>
+</body>
+</html>
