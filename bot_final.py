@@ -145,8 +145,19 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
 
 
 def pick_image_url() -> str:
-    # Use Picsum service which guarantees direct jpg link accessible by Telegram
-    return f"https://picsum.photos/seed/{random.randint(1,999999)}/800/600.jpg"
+    images = [
+        # Car accident scene
+        "https://images.pexels.com/photos/701775/pexels-photo-701775.jpeg?auto=compress&cs=tinysrgb&w=800",
+        # Broken windshield / crash
+        "https://images.pexels.com/photos/806137/pexels-photo-806137.jpeg?auto=compress&cs=tinysrgb&w=800",
+        # Lawyer handshake
+        "https://images.pexels.com/photos/4425839/pexels-photo-4425839.jpeg?auto=compress&cs=tinysrgb&w=800",
+        # Court gavel
+        "https://images.pexels.com/photos/235569/pexels-photo-235569.jpeg?auto=compress&cs=tinysrgb&w=800",
+        # Documents & contract signing
+        "https://images.pexels.com/photos/5682738/pexels-photo-5682738.jpeg?auto=compress&cs=tinysrgb&w=800",
+    ]
+    return random.choice(images)
 
 
 # Prompt used by humanizer
