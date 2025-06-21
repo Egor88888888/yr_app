@@ -9,9 +9,8 @@ from telegram.error import TelegramError
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
-# Используем переменную окружения для Railway
-# Railway автоматически предоставляет этот URL, если домен сгенерирован
-RAILWAY_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+# ИСПРАВЛЕНО: Используем нашу собственную, уникальную переменную
+PUBLIC_URL = os.environ.get("MY_PUBLIC_DOMAIN")
 
 
 # Включаем логирование
@@ -26,7 +25,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v4.3)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v4.4)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -34,8 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v4.3: ЗАПУЩЕНА ФУНКЦИЯ WEB_APP_DATA ---")
-    # ... (логика обработки заявки) ...
+    logger.info("--- v4.4: ЗАПУЩЕНА ФУНКЦИЯ WEB_APP_DATA ---")
     user = update.effective_user
     data = json.loads(update.effective_message.web_app_data.data)
     
@@ -45,16 +43,16 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         try:
             problems_text = ", ".join(data.get('problems', ['Не указаны']))
             admin_message = (
-                f"🔔 Новая заявка (v4.3)!\n"
+                f"🔔 Новая заявка (v4.4)!\n"
                 f"От: {data.get('name', 'Не указано')} ({user.id})\n"
                 f"Телефон: {data.get('phone', 'Не указан')}\n"
                 f"Проблемы: {problems_text}\n\n"
                 f"Описание: {data.get('description', 'Не заполнено')}"
             )
             await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-            logger.info("v4.3 | Уведомление УСПЕШНО отправлено администратору.")
+            logger.info("v4.4 | Уведомление УСПЕШНО отправлено администратору.")
         except Exception as e:
-            logger.error(f"v4.3 | ОШИБКА при отправке уведомления администратору: {e}")
+            logger.error(f"v4.4 | ОШИБКА при отправке уведомления администратору: {e}")
 
 
 def main() -> None:
@@ -64,13 +62,13 @@ def main() -> None:
         return
 
     # --- НОВАЯ ДИАГНОСТИКА ---
-    logger.info(f"Проверка переменной RAILWAY_PUBLIC_DOMAIN. Полученное значение: '{RAILWAY_URL}'")
+    logger.info(f"Проверка переменной MY_PUBLIC_DOMAIN. Полученное значение: '{PUBLIC_URL}'")
 
-    if not RAILWAY_URL:
-        logger.critical("ОШИБКА ЗАПУСКА: Переменная RAILWAY_PUBLIC_DOMAIN не найдена! Убедитесь, что она добавлена в 'Variables' и что для сервиса сгенерирован домен в 'Settings' -> 'Networking'.")
+    if not PUBLIC_URL:
+        logger.critical("ОШИБКА ЗАПУСКА: Переменная MY_PUBLIC_DOMAIN не найдена! Убедитесь, что она добавлена в 'Variables'.")
         return
         
-    webhook_full_url = f"https://{RAILWAY_URL}/{TOKEN}"
+    webhook_full_url = f"https://{PUBLIC_URL}/{TOKEN}"
     logger.info(f"Полный URL для вебхука: {webhook_full_url}")
 
     application = Application.builder().token(TOKEN).build()
@@ -78,7 +76,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v4.3) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v4.4) будет запущен в режиме webhook на порту {port}")
     
     application.run_webhook(
         listen="0.0.0.0",
