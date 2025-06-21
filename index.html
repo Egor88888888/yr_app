@@ -52,7 +52,6 @@
             background-color: var(--tg-theme-secondary-bg-color);
             border: 2px solid transparent;
             transition: all 0.2s ease-in-out;
-            display: flex; flex-direction: column;
         }
         .service-card.selected {
             border-color: var(--tg-theme-button-color);
@@ -95,7 +94,7 @@
             <p class="mt-2 text-md" style="color: var(--tg-theme-hint-color);">Выберите, что у вас случилось</p>
         </header>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
-            <div id="progress-1" class="progress-bar-fill h-full rounded-full" style="width: 25%;"></div>
+            <div class="progress-bar-fill h-full rounded-full" style="width: 25%;"></div>
         </div>
         <div id="services-grid" class="grid grid-cols-2 gap-4"></div>
     </div>
@@ -110,7 +109,7 @@
         <h1 class="text-2xl font-bold mb-2">Контактные данные</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Чтобы мы могли с вами связаться</p>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
-            <div id="progress-2" class="progress-bar-fill h-full rounded-full" style="width: 50%;"></div>
+            <div class="progress-bar-fill h-full rounded-full" style="width: 50%;"></div>
         </div>
         <div class="space-y-4">
             <div>
@@ -129,7 +128,7 @@
         <h1 class="text-2xl font-bold mb-2">Описание ситуации</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Опишите вашу проблему кратко</p>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
-            <div id="progress-3" class="progress-bar-fill h-full rounded-full" style="width: 75%;"></div>
+            <div class="progress-bar-fill h-full rounded-full" style="width: 75%;"></div>
         </div>
         <textarea id="description" class="form-input" rows="6" placeholder="Например: Страховая отказала в выплате после ДТП..."></textarea>
     </div>
@@ -139,7 +138,7 @@
         <h1 class="text-2xl font-bold mb-2">Проверьте заявку</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Все данные верны?</p>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
-            <div id="progress-4" class="progress-bar-fill h-full rounded-full" style="width: 100%;"></div>
+            <div class="progress-bar-fill h-full rounded-full" style="width: 100%;"></div>
         </div>
         <div id="summary-container" class="space-y-4"></div>
     </div>
@@ -159,7 +158,6 @@
 <script>
     const tg = window.Telegram.WebApp;
 
-    // --- ДАННЫЕ И СОСТОЯНИЕ ---
     const services = [
         { 
             id: 'denial', title: 'Отказ в выплате', icon: 'shield-off',
@@ -202,7 +200,6 @@
     };
     const pageOrder = ['problems', 'contacts', 'description', 'summary'];
 
-    // --- ЭЛЕМЕНТЫ DOM ---
     const pages = {
         problems: document.getElementById('page-problems'),
         details: document.getElementById('page-details'),
@@ -212,7 +209,6 @@
         success: document.getElementById('page-success')
     };
 
-    // --- ИНИЦИАЛИЗАЦИЯ ---
     document.addEventListener('DOMContentLoaded', () => {
         tg.ready();
         tg.expand();
@@ -227,7 +223,6 @@
         updateUI();
         lucide.createIcons();
 
-        // --- ОБРАБОТЧИКИ ---
         document.getElementById('services-grid').addEventListener('click', handleServiceClick);
         document.getElementById('close-app-btn').addEventListener('click', () => tg.close());
         Object.values(document.querySelectorAll('.form-input')).forEach(input => input.addEventListener('input', handleInputChange));
@@ -235,7 +230,6 @@
         tg.onEvent('backButtonClicked', handleBackButtonClick);
     });
     
-    // --- ОСНОВНАЯ ЛОГИКА ---
     function navigate(targetPage, direction = 'forward') {
         const currentElem = pages[state.currentPage];
         const targetElem = pages[targetPage];
@@ -244,11 +238,9 @@
 
         Object.values(pages).forEach(p => p.classList.remove('center', 'left', 'right'));
         
-        if (direction === 'forward') {
-            currentElem.classList.add('left');
-        } else {
-            currentElem.classList.add('right');
-        }
+        if (direction === 'forward') currentElem.classList.add('left');
+        else currentElem.classList.add('right');
+        
         targetElem.classList.add('center');
 
         state.previousPage = state.currentPage;
@@ -261,20 +253,18 @@
             navigate(state.previousPage, 'backward');
         } else {
             const currentIndex = pageOrder.indexOf(state.currentPage);
-            if (currentIndex > 0) {
-                navigate(pageOrder[currentIndex - 1], 'backward');
-            }
+            if (currentIndex > 0) navigate(pageOrder[currentIndex - 1], 'backward');
         }
     }
 
-    // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
     function handleServiceClick(event) {
         const card = event.target.closest('.service-card');
-        const detailsBtn = event.target.closest('.details-btn');
         if (!card) return;
         
         const serviceId = card.dataset.serviceId;
-        if (detailsBtn) {
+        const infoButton = event.target.closest('.info-btn');
+
+        if (infoButton) {
             tg.HapticFeedback.impactOccurred('light');
             renderDetailsPage(serviceId);
             navigate('details');
@@ -286,7 +276,6 @@
         updateUI();
     }
     
-    // ... (остальные обработчики без изменений: handleInputChange, handleMainButtonClick, sendData, etc.)
     function handleInputChange(event) {
         const { id, value } = event.target;
         state.formData[id] = id === 'phone' ? formatPhoneNumber(value) : value;
@@ -296,11 +285,17 @@
 
     function handleMainButtonClick() {
         if (!validateCurrentPage()) {
-            tg.HapticFeedback.notificationOccurred('error'); return;
+            tg.HapticFeedback.notificationOccurred('error');
+            return;
         }
-        if (state.currentPage === 'summary') sendData();
-        else if (state.currentPage === 'details') handleBackButtonClick();
-        else navigate(pageOrder[pageOrder.indexOf(state.currentPage) + 1]);
+
+        const currentPage = state.currentPage;
+
+        if (currentPage === 'problems') navigate('contacts');
+        else if (currentPage === 'contacts') navigate('description');
+        else if (currentPage === 'description') navigate('summary');
+        else if (currentPage === 'summary') sendData();
+        else if (currentPage === 'details') handleBackButtonClick();
     }
 
     function sendData() {
@@ -312,15 +307,9 @@
         setTimeout(() => navigate('success'), 500);
     }
     
-    // --- РЕНДЕР И UI ---
     function updateUI() {
         const isMasterFormPage = pageOrder.includes(state.currentPage);
-
-        if (state.currentPage === 'details' || isMasterFormPage && pageOrder.indexOf(state.currentPage) > 0) {
-            tg.BackButton.show();
-        } else {
-            tg.BackButton.hide();
-        }
+        tg.BackButton.isVisible = state.currentPage === 'details' || (isMasterFormPage && pageOrder.indexOf(state.currentPage) > 0);
         
         let mb = { is_visible: false };
         if (state.currentPage === 'details') {
@@ -331,9 +320,6 @@
                 is_visible: true,
                 is_active: validateCurrentPage()
             };
-        } else if (state.currentPage === 'success') {
-            tg.MainButton.hide();
-            return;
         }
         tg.MainButton.setParams(mb);
         if (state.currentPage === 'summary') renderSummary();
@@ -343,15 +329,15 @@
     function renderServiceCards() {
         const grid = document.getElementById('services-grid');
         grid.innerHTML = services.map(service => `
-            <div class="service-card rounded-xl p-3" data-service-id="${service.id}">
-                <div class="flex-grow flex flex-col items-center text-center cursor-pointer pt-2">
+            <div class="service-card rounded-xl p-3 cursor-pointer relative" data-service-id="${service.id}">
+                <div class="absolute top-1 right-1 info-btn p-2 rounded-full">
+                    <i data-lucide="info" class="w-4 h-4" style="color: var(--tg-theme-hint-color);"></i>
+                </div>
+                <div class="flex-grow flex flex-col items-center text-center pt-2">
                     <div class="icon-container w-12 h-12 rounded-full flex items-center justify-center mb-2">
                         <i data-lucide="${service.icon}" class="w-6 h-6"></i>
                     </div>
                     <span class="font-semibold text-sm">${service.title}</span>
-                </div>
-                <div class="details-btn text-center text-xs font-semibold py-2 mt-2 border-t" style="color: var(--tg-theme-link-color); border-color: var(--tg-theme-secondary-bg-color);">
-                    Подробнее
                 </div>
             </div>
         `).join('');
@@ -374,7 +360,6 @@
         const container = document.getElementById('success-actions');
         const problemId = Array.from(state.formData.problems)[0] || 'other';
         const service = services.find(s => s.id === problemId);
-
         container.innerHTML = `
             <button id="view-cases-btn" class="font-bold py-3 px-6 rounded-lg w-full text-white" style="background-color: var(--tg-theme-button-color);">
                 Посмотреть кейсы по этой проблеме
@@ -387,18 +372,10 @@
         const container = document.getElementById('summary-container');
         const { problems, name, phone, description } = state.formData;
         const problemTitles = Array.from(problems).map(id => services.find(s => s.id === id).title);
-        
         container.innerHTML = `
-            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]">
-                <h3 class="font-bold mb-2">Проблема</h3><p>${problemTitles.join(', ') || 'Не указана'}</p>
-            </div>
-            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]">
-                <h3 class="font-bold mb-2">Контактные данные</h3><p>Имя: ${name}</p><p>Телефон: ${phone}</p>
-            </div>
-            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]">
-                <h3 class="font-bold mb-2">Описание</h3><p class="whitespace-pre-wrap">${description || 'Не указано'}</p>
-            </div>
-        `;
+            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]"><h3 class="font-bold mb-2">Проблема</h3><p>${problemTitles.join(', ') || 'Не указана'}</p></div>
+            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]"><h3 class="font-bold mb-2">Контактные данные</h3><p>Имя: ${name}</p><p>Телефон: ${phone}</p></div>
+            <div class="p-4 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]"><h3 class="font-bold mb-2">Описание</h3><p class="whitespace-pre-wrap">${description || 'Не указано'}</p></div>`;
     }
 
     function validateCurrentPage() {
@@ -418,7 +395,6 @@
         if (!x) return '';
         return !x[2] ? (x[1] ? '+7' : '') : '+7 (' + x[2] + (x[3] ? ') ' + x[3] : '') + (x[4] ? '-' + x[4] : '') + (x[5] ? '-' + x[5] : '');
     }
-
 </script>
 </body>
 </html>
