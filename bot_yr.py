@@ -9,7 +9,6 @@ from telegram.error import TelegramError
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
-# Render предоставляет URL нашего сервиса в этой переменной
 WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL")
 
 # Включаем логирование
@@ -18,7 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- ОБРАБОТЧИКИ (без изменений) ---
+# --- ОБРАБОТЧИКИ ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -27,6 +26,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
+
+async def test_admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """НОВАЯ КОМАНДА ДЛЯ ДИАГНОСТИКИ"""
+    if str(update.effective_chat.id) == str(ADMIN_CHAT_ID):
+        logger.info(f"Получена команда /test_admin от администратора. Попытка отправить ответ...")
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text="✅ Тестовое сообщение для администратора. Если вы это видите, значит, бот может вам писать."
+            )
+            logger.info("Тестовое сообщение успешно отправлено.")
+        except Exception as e:
+            logger.error(f"Не удалось отправить тестовое сообщение: {e}")
+            await update.message.reply_text(f"Не удалось отправить тестовое сообщение. Ошибка: {e}")
+    else:
+        logger.warning(f"Команду /test_admin попытался использовать не администратор: {update.effective_chat.id}")
+
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -88,22 +104,17 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 def main() -> None:
-    """Основная функция для запуска бота через вебхук."""
     if not TOKEN:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена!")
         return
         
-    # Создаем приложение
-    # Указываем путь, на который Telegram будет отправлять обновления
-    # Это более надежно, чем передавать токен в URL
     application = Application.builder().token(TOKEN).arbitrary_callback_data(True).build()
 
-    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
+    # ДОБАВЛЕНА НОВАЯ КОМАНДА
+    application.add_handler(CommandHandler("test_admin", test_admin_command))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
-    # Запускаем приложение в режиме вебхука
-    # Эта встроенная функция сама установит вебхук и запустит веб-сервер
     port = int(os.environ.get('PORT', 8080))
     
     logger.info(f"Бот будет запущен в режиме webhook на порту {port}")
@@ -111,8 +122,8 @@ def main() -> None:
     application.run_webhook(
         listen="0.0.0.0",
         port=port,
-        url_path=TOKEN, # Путь, который будет частью нашего URL
-        webhook_url=f"{WEBHOOK_URL}/{TOKEN}" # Полный URL для регистрации в Telegram
+        url_path=TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
     )
 
 
