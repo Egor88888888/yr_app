@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 async def setup_web_app(application: Application) -> None:
     """Настройка веб-приложения с кнопкой меню"""
     try:
-        # Временно используем тестовый URL для проверки работоспособности
-        web_app_url = "https://telegram.org/demo/webapps"
+        # Используем GitHub Pages для реального веб-приложения
+        web_app_url = "https://egor88888888.github.io/yr_app/"
         web_app = WebAppInfo(url=web_app_url)
         menu_button = MenuButtonWebApp(
-            text="📝 Тест веб-приложения", web_app=web_app)
+            text="📝 Оставить заявку", web_app=web_app)
 
         await application.bot.set_chat_menu_button(menu_button=menu_button)
-        logger.info(f"ТЕСТОВОЕ веб-приложение настроено: {web_app_url}")
+        logger.info(f"Веб-приложение настроено: {web_app_url}")
     except Exception as e:
         logger.error(f"Ошибка настройки веб-приложения: {e}")
 
@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v6.5)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v6.7)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v6.5: Получена заявка, начинаю обработку ---")
+    logger.info("--- v6.7: Получена заявка, начинаю обработку ---")
     user = update.effective_user
 
     # Логируем данные для отладки
@@ -142,7 +142,7 @@ def main() -> None:
         logger.error(f"Ошибка настройки веб-приложения: {e}")
 
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v6.6) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v6.7) будет запущен в режиме webhook на порту {port}")
 
     application.run_webhook(
         listen="0.0.0.0",
