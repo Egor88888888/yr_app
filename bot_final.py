@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Рабочая версия бота с внешним хостингом
+РАБОЧАЯ версия бота с GitHub Pages
 """
 import json
 import logging
@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 async def setup_web_app(application: Application) -> None:
-    """Настройка веб-приложения с кнопкой меню"""
+    """Настройка веб-приложения с GitHub Pages"""
     try:
-        # Используем надежный внешний хостинг
-        web_app_url = "https://raw.githubusercontent.com/Egor88888888/yr_app/main/index.html"
+        # ИСПОЛЬЗУЕМ GITHUB PAGES ПРАВИЛЬНО
+        web_app_url = "https://egor88888888.github.io/yr_app/"
         web_app = WebAppInfo(url=web_app_url)
         menu_button = MenuButtonWebApp(
             text="📝 Оставить заявку", web_app=web_app)
@@ -38,7 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Стартовое сообщение"""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (РАБОЧАЯ ВЕРСИЯ)\n\n"
+        f"Здравствуйте, {user.mention_html()}! 🏛️\n\n"
         "Я ваш юридический помощник по страховым вопросам.\n"
         "Нажмите кнопку меню для подачи заявки."
     )
@@ -127,7 +127,7 @@ def main():
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
-    logger.info("🚀 Запуск рабочего бота...")
+    logger.info("🚀 Запуск ИСПРАВЛЕННОГО бота...")
 
     # Используем webhook для Railway
     if os.environ.get('RAILWAY_ENVIRONMENT'):
