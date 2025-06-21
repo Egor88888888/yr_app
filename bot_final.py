@@ -22,12 +22,15 @@ from telegram import (
     InputTextMessageContent,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    InputFile,
 )
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from datetime import timedelta
 import openai
 from typing import Optional
 from telegram.constants import ChatAction
+import aiohttp
+import io
 
 ########################### CONFIG ###########################
 TOKEN = os.getenv("YOUR_BOT_TOKEN")
@@ -48,6 +51,12 @@ POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", 4))
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s - %(message)s")
 log = logging.getLogger(__name__)
+
+MEDIA_POOL = [
+    {"url": "https://images.pexels.com/videos/856192/pexels-photo-856192.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/701775/pexels-photo-701775.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://player.vimeo.com/external/332164148.sd.mp4?s=9f4b2f33f4760e8152ef749398a422a2aabbae3c&profile_id=164&oauth2_token_id=57447761", "kind": "video"},
+]
 
 # ===================== Telegram handlers =====================
 
@@ -248,12 +257,7 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💬 Получить помощь онлайн",
                                   url=f"https://t.me/{bot_username}?start=channel")]
         ])
-        image_url = pick_image_url()
-        try:
-            await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
-        except Exception as e:
-            log.warning("send_photo failed (%s), fallback to send_message", e)
-            await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+        await send_media(ctx.bot, channel_id, text, markup)
         log.info("AI post sent to channel %s", channel_id)
 
 # ================== Manual posting command ==================
@@ -284,12 +288,7 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💬 Получить помощь онлайн",
                               url=f"https://t.me/{bot_username}?start=channel")]
     ])
-    image_url = pick_image_url()
-    try:
-        await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
-    except Exception as e:
-        log.warning("send_photo failed (%s), fallback send_message", e)
-        await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+    await send_media(ctx.bot, channel_id, text, markup)
     await update.message.reply_text("✅ Пост опубликован")
 
 # ================== Set channel command =====================
@@ -333,6 +332,42 @@ async def handle_forward(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         ctx.bot_data["TARGET_CHANNEL_ID"] = ch_id
         await update.message.reply_text(f"✅ Channel зарегистрирован по пересланному сообщению: {ch_id}")
         log.info("Channel registered via forward: %s", ch_id)
+
+# ---------- Media helpers ----------
+
+
+async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
+    """Download media and return bytes or None."""
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    return await resp.read()
+    except Exception as e:
+        log.warning("fetch_bytes failed for %s: %s", url, e)
+    return None
+
+
+async def send_media(bot, chat_id: int, caption: str, reply_markup):
+    """Send photo or video with fallback to text-only."""
+    for _ in range(3):
+        media = random.choice(MEDIA_POOL)
+        data = await fetch_bytes(media["url"])
+        if not data:
+            continue
+        file_name = "media.jpg" if media["kind"] == "photo" else "media.mp4"
+        input_file = InputFile(io.BytesIO(data), filename=file_name)
+        try:
+            if media["kind"] == "photo":
+                await bot.send_photo(chat_id=chat_id, photo=input_file, caption=caption, reply_markup=reply_markup)
+            else:
+                await bot.send_video(chat_id=chat_id, video=input_file, caption=caption, reply_markup=reply_markup)
+            return True
+        except Exception as e:
+            log.warning("send_%s failed: %s", media["kind"], e)
+    # fallback
+    await bot.send_message(chat_id=chat_id, text=caption, reply_markup=reply_markup)
+    return False
 
 # ========================= Main ==============================
 
