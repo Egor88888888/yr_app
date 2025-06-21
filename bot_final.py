@@ -176,13 +176,17 @@ def main():
     application.add_handler(MessageHandler(
         filters.ALL & ~filters.COMMAND, debug_all_messages))
 
-    # Настройка веб-приложения
+    # Настройка веб-приложения и одновременное создание ГЛОБАЛЬНОГО event-loop,
+    # который затем будет использован `application.run_webhook`.
+    # 1. Создаём новый цикл
+    # 2. Делаем его текущим (set_event_loop)
+    # 3. Выполняем coroutine настройки веб-аппа
+    # 4. НЕ закрываем цикл, чтобы он остался доступен run_webhook.
     try:
-        # Используем отдельный временный цикл, который автоматически создаётся и
-        # закрывается внутри asyncio.run — это НЕ влияет на цикл, который будет
-        # создан внутри `application.run_webhook`, тем самым избегаем ошибки
-        # "Event loop is closed".
-        asyncio.run(setup_web_app(application))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(setup_web_app(application))
+        # ВАЖНО: не закрываем loop, иначе run_webhook потеряет текущий цикл.
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
