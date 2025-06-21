@@ -379,17 +379,16 @@ def main():
 if __name__ == "__main__":
     main()
 
-# ---------------- Image helper -----------------
+# ---------------- Image helper (needs before usage) -----------------
 
 
 def pick_image_url() -> str:
-    """Return a random Unsplash image url relevant to insurance/legal theme."""
-    imgs = [
-        "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",  # car accident
-        # lawyer handshake
+    """Return a random Unsplash image URL about insurance, law, or car accidents."""
+    images = [
+        "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
         "https://images.unsplash.com/photo-1555374018-13a8994ab246?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",  # documents
-        "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",  # judge gavel
-        "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",  # broken car
+        "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",
     ]
-    return random.choice(imgs)
+    return random.choice(images)
