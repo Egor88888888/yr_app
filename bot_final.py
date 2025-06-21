@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import asyncio
-from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup
+from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup, MenuButtonDefault
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- КОНФИГУРАЦИЯ ---
@@ -22,10 +22,11 @@ logger = logging.getLogger(__name__)
 async def setup_web_app(application: Application) -> None:
     """Настройка веб-приложения с GitHub Pages"""
     try:
-        # Сбрасываем меню-кнопку к режиму «по умолчанию», чтобы не дублировать клавиатурную кнопку.
-        await application.bot.set_chat_menu_button()
+        # Сбрасываем меню-кнопку к состоянию по умолчанию, иначе Telegram будет продолжать показывать
+        # старую WebApp-кнопку. Используем явный объект MenuButtonDefault().
+        await application.bot.set_chat_menu_button(menu_button=MenuButtonDefault())
         logger.info(
-            "✅ Меню Telegram возвращено в состояние по умолчанию (без WebApp-кнопки)")
+            "✅ Удалена MenuButton WebApp — осталось лишь одно место запуска (клавиатура)")
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
