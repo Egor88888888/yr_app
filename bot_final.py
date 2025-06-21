@@ -46,14 +46,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка заявки"""
-    logger.info("🎯 ПОЛУЧЕНА ЗАЯВКА ОТ ВЕБА!")
-    user = update.effective_user
+    logger.info("🎯🎯🎯 WEB_APP_DATA HANDLER ВЫЗВАН!")
+    logger.info(f"🔍 Update объект: {update}")
+    logger.info(f"🔍 Update.effective_message: {update.effective_message}")
+    logger.info(f"🔍 Update.effective_user: {update.effective_user}")
 
-    if not update.effective_message or not update.effective_message.web_app_data:
-        logger.error("❌ Нет данных веб-приложения!")
+    user = update.effective_user
+    logger.info(f"👤 Пользователь: {user.id} - {user.full_name}")
+
+    if not update.effective_message:
+        logger.error("❌ КРИТИЧНО: update.effective_message отсутствует!")
         return
 
-    logger.info(f"📄 Данные: {update.effective_message.web_app_data.data}")
+    if not update.effective_message.web_app_data:
+        logger.error(
+            "❌ КРИТИЧНО: update.effective_message.web_app_data отсутствует!")
+        logger.error(f"❌ Но сообщение есть: {update.effective_message}")
+        return
+
+    logger.info(f"📄 RAW web_app_data: {update.effective_message.web_app_data}")
+    logger.info(
+        f"📄 WEB APP ДАННЫЕ: {update.effective_message.web_app_data.data}")
+    logger.info(
+        f"📄 Длина данных: {len(update.effective_message.web_app_data.data)}")
 
     try:
         await update.message.reply_text("✅ Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.")
@@ -67,11 +82,17 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     try:
+        logger.info("🔄 Парсим JSON данные...")
         data = json.loads(update.effective_message.web_app_data.data)
+        logger.info(f"📊 Распарсенные данные: {data}")
+
         problems = ", ".join(data.get('problems', ['Не указано']))
         name = data.get('name', 'Не указано')
         phone = data.get('phone', 'Не указан')
         description = data.get('description', 'Не указано')
+
+        logger.info(
+            f"📋 Подготовленные данные: problems={problems}, name={name}, phone={phone}")
 
         admin_message = f"""🔔 НОВАЯ ЗАЯВКА!
 
@@ -84,31 +105,54 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 ⏰ Время: {update.effective_message.date}"""
 
+        logger.info(f"📨 Отправляем сообщение админу в чат: {ADMIN_CHAT_ID}")
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-        logger.info("✅ Заявка отправлена администратору!")
+        logger.info("✅✅✅ ЗАЯВКА УСПЕШНО ОТПРАВЛЕНА АДМИНИСТРАТОРУ!")
     except Exception as e:
-        logger.error(f"❌ Ошибка отправки администратору: {e}")
+        logger.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА отправки администратору: {e}")
         import traceback
+        logger.error(f"❌ Stack trace: {traceback.format_exc()}")
         traceback.print_exc()
 
 
 async def debug_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик для отладки всех сообщений"""
+    logger.info("=" * 50)
     logger.info(
-        f"📨 Получено сообщение от пользователя {update.effective_user.id}")
+        f"📨 ПОЛУЧЕНО СООБЩЕНИЕ от пользователя {update.effective_user.id}")
+    logger.info(f"📨 Тип update: {type(update)}")
     logger.info(f"📨 Тип сообщения: {type(update.message)}")
-    logger.info(f"📨 Содержимое: {update.message}")
+    logger.info(f"📨 Полное содержимое update.message: {update.message}")
 
-    if update.message and hasattr(update.message, 'web_app_data'):
+    if update.message:
+        logger.info(f"📨 Message ID: {update.message.message_id}")
+        logger.info(f"📨 Text: {getattr(update.message, 'text', 'NO TEXT')}")
         logger.info(
-            f"🌐 Атрибут web_app_data существует: {update.message.web_app_data}")
-        if update.message.web_app_data:
+            f"📨 Caption: {getattr(update.message, 'caption', 'NO CAPTION')}")
+
+        if hasattr(update.message, 'web_app_data'):
             logger.info(
-                f"🌐 WEB APP DATA найдена: {update.message.web_app_data.data}")
+                f"🌐 web_app_data атрибут СУЩЕСТВУЕТ: {update.message.web_app_data}")
+            if update.message.web_app_data:
+                logger.info(
+                    f"🌐🌐🌐 WEB APP DATA НАЙДЕНА: {update.message.web_app_data.data}")
+                logger.info(
+                    f"🌐 Длина данных: {len(update.message.web_app_data.data) if update.message.web_app_data.data else 0}")
+            else:
+                logger.info("🌐 web_app_data существует но None")
         else:
-            logger.info("🌐 web_app_data None")
+            logger.info("🌐 web_app_data атрибут НЕ СУЩЕСТВУЕТ")
+
+        # Попытка прямого доступа к web_app_data
+        try:
+            direct_access = update.message.web_app_data
+            logger.info(f"🔍 Прямой доступ к web_app_data: {direct_access}")
+        except AttributeError as e:
+            logger.info(f"🔍 Ошибка прямого доступа: {e}")
     else:
-        logger.info("🌐 web_app_data атрибут отсутствует")
+        logger.info("📨 update.message отсутствует!")
+
+    logger.info("=" * 50)
 
 
 def main():
@@ -134,7 +178,10 @@ def main():
 
     # Настройка веб-приложения
     try:
-        asyncio.get_event_loop().run_until_complete(setup_web_app(application))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(setup_web_app(application))
+        loop.close()
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 

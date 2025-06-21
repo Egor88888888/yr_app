@@ -328,21 +328,34 @@
 
     function sendData() {
         console.log('🚀 sendData() вызвана!');
+        console.log('🔍 Telegram WebApp объект:', tg);
+        console.log('🔍 tg.sendData доступен:', typeof tg.sendData);
+        console.log('🔍 Состояние формы:', state.formData);
+        
         tg.MainButton.showProgress();
         const { problems, ...rest } = state.formData;
         const dataToSend = { ...rest, problems: Array.from(problems).map(id => services.find(s => s.id === id).title) };
+        
         console.log('📤 Отправляю данные:', dataToSend);
-        console.log('📤 JSON:', JSON.stringify(dataToSend));
+        console.log('📤 JSON строка:', JSON.stringify(dataToSend));
+        console.log('📤 Длина JSON:', JSON.stringify(dataToSend).length);
         
         try {
+            console.log('⏳ Вызываю tg.sendData...');
             tg.sendData(JSON.stringify(dataToSend));
-            console.log('✅ sendData вызван успешно!');
+            console.log('✅ tg.sendData вызван БЕЗ ошибок!');
+            console.log('✅ Данные должны быть отправлены в бот!');
         } catch (error) {
-            console.error('❌ Ошибка sendData:', error);
+            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА sendData:', error);
+            console.error('❌ Stack trace:', error.stack);
         }
         
+        console.log('🎯 Переходим к экрану успеха...');
         renderSuccessActions();
-        setTimeout(() => navigate('success'), 500);
+        setTimeout(() => {
+            console.log('📱 Навигация к success...');
+            navigate('success');
+        }, 500);
     }
     
     function updateUI() {
