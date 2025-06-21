@@ -42,8 +42,10 @@
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto; background-color: var(--tg-theme-bg-color);
             box-sizing: border-box;
+            visibility: hidden;
         }
 
+        .page.active { visibility: visible; }
         .page.left { transform: translateX(-100%); }
         .page.center { transform: translateX(0); }
         .page.right { transform: translateX(100%); }
@@ -88,10 +90,11 @@
 
 <div class="page-container">
     <!-- СТРАНИЦА 1: ВЫБОР ПРОБЛЕМЫ -->
-    <div id="page-problems" class="page center">
+    <div id="page-problems" class="page active center">
         <header class="text-center mb-6">
             <h1 class="text-3xl font-extrabold">Страховая Справка</h1>
             <p class="mt-2 text-md" style="color: var(--tg-theme-hint-color);">Выберите, что у вас случилось</p>
+             <p class="text-xs mt-2" style="color: var(--tg-theme-hint-color);">Версия 2.0</p>
         </header>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
             <div class="progress-bar-fill h-full rounded-full" style="width: 25%;"></div>
@@ -161,32 +164,32 @@
     const services = [
         { 
             id: 'denial', title: 'Отказ в выплате', icon: 'shield-off',
-            details: 'Страховые компании часто ищут формальные поводы для отказа: от неверно заполненных документов до "нестраховых случаев". Мы знаем все уловки и поможем доказать ваше право на выплату. Проанализируем отказ, подготовим досудебную претензию и, если нужно, представим ваши интересы в суде.',
+            details: 'Страховые компании часто ищут формальные поводы для отказа. Мы знаем все уловки и поможем доказать ваше право на выплату.',
             caseLink: 'https://strahovayasprav.ru/case' 
         },
         { 
             id: 'underpayment', title: 'Занижение выплаты', icon: 'trending-down',
-            details: 'Самая частая проблема. Страховая проводит "свою" экспертизу, которая занижает стоимость ремонта в 2-3 раза. Мы организуем независимую техническую экспертизу, которая установит реальную сумму ущерба, и взыщем разницу со страховой, включая все расходы.',
+            details: 'Самая частая проблема. Мы организуем независимую экспертизу, которая установит реальную сумму ущерба, и взыщем разницу со страховой.',
             caseLink: 'https://strahovayasprav.ru/case' 
         },
         { 
             id: 'delay', title: 'Затягивание сроков', icon: 'hourglass',
-            details: 'По закону у страховой есть 20 дней на выплату или выдачу направления на ремонт. Если сроки нарушены, вы имеете право на неустойку (1% от суммы за каждый день просрочки). Мы поможем ускорить процесс и взыскать положенную неустойку.',
+            details: 'По закону у страховой есть 20 дней на выплату. Если сроки нарушены, вы имеете право на неустойку (1% от суммы за каждый день просрочки).',
             caseLink: 'https://strahovayasprav.ru/case'
         },
         { 
             id: 'uts', title: 'Взыскание УТС', icon: 'receipt',
-            details: 'Утрата товарной стоимости (УТС) – это уменьшение рыночной цены авто после ремонта. Ее почти никогда не выплачивают добровольно. Мы рассчитаем УТС и взыщем ее со страховой компании или виновника ДТП.',
+            details: 'Утрата товарной стоимости (УТС) – это уменьшение рыночной цены авто после ремонта. Ее почти никогда не выплачивают добровольно.',
             caseLink: 'https://strahovayasprav.ru/case'
         },
         { 
             id: 'culprit', title: 'Спор с виновником', icon: 'users',
-            details: 'Если лимита по ОСАГО (400 тыс. руб.) не хватило на ремонт, разницу можно и нужно взыскивать напрямую с виновника ДТП. Мы возьмем на себя все переговоры и судебный процесс.',
+            details: 'Если лимита по ОСАГО (400 тыс. руб.) не хватило на ремонт, разницу можно и нужно взыскивать напрямую с виновника ДТП.',
             caseLink: 'https://strahovayasprav.ru/case'
         },
         { 
             id: 'other', title: 'Другая проблема', icon: 'help-circle',
-            details: 'Юридических тонкостей в автостраховании множество. Если вы не нашли свою проблему в списке, подробно опишите ее на следующем шаге, и мы обязательно разберемся и поможем.',
+            details: 'Если вы не нашли свою проблему в списке, подробно опишите ее на следующем шаге, и мы обязательно разберемся и поможем.',
             caseLink: 'https://strahovayasprav.ru/blog'
         }
     ];
@@ -210,38 +213,50 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        tg.ready();
-        tg.expand();
-        
-        if (tg.initDataUnsafe?.user) {
-            const user = tg.initDataUnsafe.user;
-            state.formData.name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-            document.getElementById('name').value = state.formData.name;
+        try {
+            tg.ready();
+            tg.expand();
+            
+            if (tg.initDataUnsafe?.user) {
+                const user = tg.initDataUnsafe.user;
+                state.formData.name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                document.getElementById('name').value = state.formData.name;
+            }
+
+            renderServiceCards();
+            updateUI();
+            lucide.createIcons();
+
+            document.getElementById('services-grid').addEventListener('click', handleServiceClick);
+            document.getElementById('close-app-btn').addEventListener('click', () => tg.close());
+            Object.values(document.querySelectorAll('.form-input')).forEach(input => input.addEventListener('input', handleInputChange));
+            tg.MainButton.onClick(handleMainButtonClick);
+            tg.onEvent('backButtonClicked', handleBackButtonClick);
+        } catch (e) {
+            console.error("Initialization failed:", e);
+            // Optionally show an error message to the user
         }
-
-        renderServiceCards();
-        updateUI();
-        lucide.createIcons();
-
-        document.getElementById('services-grid').addEventListener('click', handleServiceClick);
-        document.getElementById('close-app-btn').addEventListener('click', () => tg.close());
-        Object.values(document.querySelectorAll('.form-input')).forEach(input => input.addEventListener('input', handleInputChange));
-        tg.MainButton.onClick(handleMainButtonClick);
-        tg.onEvent('backButtonClicked', handleBackButtonClick);
     });
     
     function navigate(targetPage, direction = 'forward') {
         const currentElem = pages[state.currentPage];
         const targetElem = pages[targetPage];
         
-        if (!currentElem || !targetElem) return;
+        if (!currentElem || !targetElem) {
+            console.error(`Navigation error: page not found. Target: ${targetPage}`);
+            return;
+        }
 
-        Object.values(pages).forEach(p => p.classList.remove('center', 'left', 'right'));
+        Object.values(pages).forEach(p => {
+            p.classList.remove('center', 'left', 'right', 'active');
+        });
         
-        if (direction === 'forward') currentElem.classList.add('left');
-        else currentElem.classList.add('right');
-        
-        targetElem.classList.add('center');
+        if (direction === 'forward') {
+            currentElem.classList.add('left');
+        } else {
+            currentElem.classList.add('right');
+        }
+        targetElem.classList.add('center', 'active');
 
         state.previousPage = state.currentPage;
         state.currentPage = targetPage;
@@ -250,10 +265,12 @@
 
     function handleBackButtonClick() {
         if (state.currentPage === 'details') {
-            navigate(state.previousPage, 'backward');
+            navigate(state.previousPage || 'problems', 'backward');
         } else {
             const currentIndex = pageOrder.indexOf(state.currentPage);
-            if (currentIndex > 0) navigate(pageOrder[currentIndex - 1], 'backward');
+            if (currentIndex > 0) {
+                navigate(pageOrder[currentIndex - 1], 'backward');
+            }
         }
     }
 
@@ -290,12 +307,15 @@
         }
 
         const currentPage = state.currentPage;
+        const currentIndex = pageOrder.indexOf(currentPage);
 
-        if (currentPage === 'problems') navigate('contacts');
-        else if (currentPage === 'contacts') navigate('description');
-        else if (currentPage === 'description') navigate('summary');
-        else if (currentPage === 'summary') sendData();
-        else if (currentPage === 'details') handleBackButtonClick();
+        if (currentIndex !== -1 && currentIndex < pageOrder.length - 1) {
+            navigate(pageOrder[currentIndex + 1]);
+        } else if (currentPage === 'summary') {
+            sendData();
+        } else if (currentPage === 'details') {
+            handleBackButtonClick();
+        }
     }
 
     function sendData() {
@@ -308,13 +328,12 @@
     }
     
     function updateUI() {
-        const isMasterFormPage = pageOrder.includes(state.currentPage);
-        tg.BackButton.isVisible = state.currentPage === 'details' || (isMasterFormPage && pageOrder.indexOf(state.currentPage) > 0);
+        tg.BackButton.isVisible = state.currentPage !== 'problems';
         
         let mb = { is_visible: false };
         if (state.currentPage === 'details') {
             mb = { text: 'Назад к выбору', is_visible: true, is_active: true };
-        } else if (isMasterFormPage) {
+        } else if (pageOrder.includes(state.currentPage)) {
             mb = {
                 text: state.currentPage === 'summary' ? 'Отправить заявку' : 'Далее',
                 is_visible: true,
@@ -322,6 +341,7 @@
             };
         }
         tg.MainButton.setParams(mb);
+
         if (state.currentPage === 'summary') renderSummary();
         lucide.createIcons();
     }
@@ -330,7 +350,7 @@
         const grid = document.getElementById('services-grid');
         grid.innerHTML = services.map(service => `
             <div class="service-card rounded-xl p-3 cursor-pointer relative" data-service-id="${service.id}">
-                <div class="absolute top-1 right-1 info-btn p-2 rounded-full">
+                <div class="absolute top-1 right-1 info-btn p-2 rounded-full z-10">
                     <i data-lucide="info" class="w-4 h-4" style="color: var(--tg-theme-hint-color);"></i>
                 </div>
                 <div class="flex-grow flex flex-col items-center text-center pt-2">
