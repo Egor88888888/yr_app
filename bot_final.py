@@ -144,6 +144,27 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
         return None
 
 
+async def pick_image_url() -> str:
+    """Return a random Unsplash image URL relevant to insurance/legal themes."""
+    imgs = [
+        "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1555374018-13a8994ab246?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",
+        "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",
+    ]
+    return random.choice(imgs)
+
+
+async def humanize(text: str) -> str:
+    messages = [
+        {"role": "system", "content": HUMANIZE_PROMPT},
+        {"role": "user", "content": text},
+    ]
+    rewritten = await _ai_complete(messages, temperature=0.9, max_tokens=min(800, len(text) + 120))
+    return rewritten or text
+
+
 async def generate_ai_post() -> Optional[str]:
     """Generate diverse Telegram post about our services."""
     site_brief = (
@@ -383,22 +404,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-# ===== Image helper (defined before runtime) =====
-
-
-def pick_image_url() -> str:
-    """Return a random Unsplash image URL relevant to insurance/legal themes."""
-    imgs = [
-        "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1555374018-13a8994ab246?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",
-        "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",
-    ]
-    return random.choice(imgs)
-
 # === Humanizer helper ===
-
 
 HUMANIZE_PROMPT = (
     "Представь, что ты — генератор контента. Для написания эффективного контента важны две вещи: «недоумение» и «разрывность». "
@@ -406,13 +412,3 @@ HUMANIZE_PROMPT = (
     "предложения, в то время как машинные тексты обычно однообразны. Задача — переписать текст так, чтобы добиться нужного баланса между "
     "сложностью и разнообразием, создавая человеческий стиль. Сохрани смысл, не добавляй новых фактов."
 )
-
-
-async def humanize(text: str) -> str:
-    """Rewrite text with variability to look human."""
-    messages = [
-        {"role": "system", "content": HUMANIZE_PROMPT},
-        {"role": "user", "content": text},
-    ]
-    rewritten = await _ai_complete(messages, temperature=0.9, max_tokens=min(800, len(text) + 120))
-    return rewritten or text
