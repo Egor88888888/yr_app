@@ -4,6 +4,7 @@ import logging
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.error import TelegramError
 
 # --- КОНФИГУРАЦИЯ ---
 # Получаем токен бота и ID администратора из переменных окружения для безопасности.
@@ -57,10 +58,14 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     # --- 1. Отправляем подтверждение пользователю ---
-    await update.message.reply_text(
-        text="✅ *Спасибо, ваша заявка принята!* \n\nНаш юрист скоро свяжется с вами.",
-        parse_mode='Markdown'
-    )
+    try:
+        await update.message.reply_text(
+            text="✅ *Спасибо, ваша заявка принята!* \n\nНаш юрист скоро свяжется с вами.",
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Не удалось отправить подтверждение пользователю: {e}")
+
     
     # --- 2. Отправляем уведомление администратору (@dEgor88) ---
     if not ADMIN_CHAT_ID:
@@ -69,29 +74,42 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     try:
         # Формируем красивое и подробное сообщение для администратора.
-        problems_text = ", ".join(data.get('problems', ['Не указаны']))
-        
+        # MarkdownV2 требует экранирования специальных символов.
+        def escape_markdown(text: str) -> str:
+            escape_chars = r'_*[]()~`>#+-=|{}.!'
+            return "".join(f"\\{char}" if char in escape_chars else char for char in str(text))
+
+        name = escape_markdown(data.get('name', 'Не указано'))
+        phone = escape_markdown(data.get('phone', 'Не указан'))
+        problems_text = escape_markdown(", ".join(data.get('problems', ['Не указаны'])))
+        description = escape_markdown(data.get('description', 'Не заполнено'))
+        user_mention = user.mention_markdown_v2()
+
         admin_message = (
-            f"🔔 *Новая заявка с Mini App!*\n\n"
+            f"🔔 *Новая заявка с Mini App*\\!\n\n"
             f"👤 *Отправитель:*\n"
-            f"Имя: *{data.get('name', 'Не указано')}*\n"
-            f"Телефон: `{data.get('phone', 'Не указан')}`\n"
-            f"Пользователь TG: {user.mention_markdown_v2()}\n\n"
+            f"Имя: *{name}*\n"
+            f"Телефон: `{phone}`\n"
+            f"Пользователь TG: {user_mention}\n\n"
             f"📋 *Проблемы клиента:*\n`{problems_text}`\n\n"
             f"📝 *Описание:*\n"
-            f"{data.get('description', 'Не заполнено')}"
+            f"{description}"
         )
-
-        # Отправляем сообщение администратору.
+        
+        logger.info(f"Попытка отправить уведомление администратору {ADMIN_CHAT_ID}...")
         await context.bot.send_message(
             chat_id=ADMIN_CHAT_ID,
             text=admin_message,
             parse_mode='MarkdownV2'
         )
-        logger.info(f"Уведомление успешно отправлено администратору {ADMIN_CHAT_ID}")
+        logger.info(f"Уведомление УСПЕШНО отправлено администратору.")
 
+    except TelegramError as e:
+        # Ловим конкретно ошибки Telegram и выводим подробную информацию
+        logger.error(f"Telegram API Error: Не удалось отправить уведомление администратору. Ошибка: {e.message}")
     except Exception as e:
-        logger.error(f"Не удалось отправить уведомление администратору: {e}")
+        # Ловим все остальные ошибки
+        logger.error(f"Не удалось отправить уведомление администратору: {type(e).__name__} - {e}")
 
 
 def main() -> None:
@@ -100,7 +118,6 @@ def main() -> None:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена! Бот не может быть запущен.")
         return
     
-    # Используем post_init для выполнения асинхронных задач до запуска опроса.
     application = (
         Application.builder()
         .token(TOKEN)
@@ -108,12 +125,10 @@ def main() -> None:
         .build()
     )
 
-    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     print("Бот запущен в режиме polling и готов принимать заявки...")
-    # Запускаем бота в блокирующем режиме. Это стандартный и стабильный способ.
     application.run_polling(drop_pending_updates=True)
 
 
