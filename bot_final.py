@@ -1,301 +1,146 @@
 #!/usr/bin/env python3
 """
-РАБОЧАЯ версия бота с GitHub Pages
+Telegram bot with Mini-App launched via a single MenuButtonWebApp.
+Works on Railway automatically: no manual steps after deploy.
+– aiohttp web-server handles both Telegram webhook POST /<TOKEN>
+  and POST /submit from the mini-app.
+– /submit parses payload, notifies admin, answers WebAppQuery to
+  close the mini-app.
 """
+import asyncio
 import json
 import logging
 import os
-import asyncio
-from telegram import Update, WebAppInfo, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup, InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from aiohttp import web
 import uuid
+from aiohttp import web
+from telegram import (
+    Update,
+    WebAppInfo,
+    MenuButtonWebApp,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
+)
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# --- КОНФИГУРАЦИЯ ---
-TOKEN = os.environ.get("YOUR_BOT_TOKEN")
-ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
+########################### CONFIG ###########################
+TOKEN = os.getenv("YOUR_BOT_TOKEN")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")  # string
+# e.g. poetic-simplicity-production-xxx.up.railway.app
+PUBLIC_HOST = os.getenv("MY_RAILWAY_PUBLIC_URL")
+WEB_APP_URL = "https://egor88888888.github.io/yr_app/"
+PORT = int(os.getenv("PORT", 8080))
+##############################################################
 
-# Включаем логирование
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s - %(message)s")
+log = logging.getLogger(__name__)
+
+# ===================== Telegram handlers =====================
 
 
-async def setup_web_app(application: Application) -> None:
-    """Настройка веб-приложения с GitHub Pages"""
+async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Нажмите кнопку \"📝 Подать заявку\" рядом со строкой ввода⬇️")
+
+
+async def debug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    log.debug("Update: %s", update)
+
+# ====================== HTTP handlers ========================
+
+
+async def handle_submit(request: web.Request) -> web.Response:
+    """Receive data from mini-app, notify admin, answer WebAppQuery."""
+    if request.method == "OPTIONS":
+        return web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
+    data = await request.json()
+    query_id = data.get("queryId")
+    payload = data.get("payload", {})
+    log.info("/submit payload=%s", payload)
+
+    # Notify admin
     try:
-        # Устанавливаем ВИДИМУЮ menu-кнопку рядом со строкой ввода.
-        web_app_url = "https://egor88888888.github.io/yr_app/"
-        await application.bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="📝 Подать заявку", web_app=WebAppInfo(url=web_app_url)))
-        logger.info("✅ MenuButtonWebApp установлена (боковая кнопка)")
+        problems = ", ".join(payload.get("problems", []))
+        name = payload.get("name", "-")
+        phone = payload.get("phone", "-")
+        desc = payload.get("description", "-")
+        text = f"🔔 Заявка\n{name}\n{phone}\n{problems}\n{desc}"
+        await request.app["bot"].send_message(chat_id=ADMIN_CHAT_ID, text=text)
     except Exception as e:
-        logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
+        log.error("Admin send failed: %s", e)
 
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Стартовое сообщение"""
-    user = update.effective_user
-
-    greeting_text = (
-        f"Здравствуйте, {user.mention_html()}! 🏛️\n\n"
-        "Я ваш юридический помощник по страховым вопросам.\n"
-        "Нажмите кнопку \"📝 Подать заявку\", чтобы открыть форму."
-    )
-
-    # Кнопка-клавиатура с WebApp — ИМЕННО она позволяет использовать tg.sendData.
-    web_app_url = "https://egor88888888.github.io/yr_app/"
-    kb = [
-        [
-            KeyboardButton(
-                text="📝 Подать заявку",
-                web_app=WebAppInfo(url=web_app_url),
-            )
-        ]
-    ]
-
-    reply_markup = ReplyKeyboardMarkup(kb, resize_keyboard=True)
-
-    await update.message.reply_html(greeting_text, reply_markup=reply_markup)
-
-
-# /form — на случай, если пользователь потерял клавиатуру
-async def form(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Отправляем сообщение с кнопкой WebApp ещё раз."""
-    web_app_url = "https://egor88888888.github.io/yr_app/"
-    kb = [[KeyboardButton(text="📝 Подать заявку",
-                          web_app=WebAppInfo(url=web_app_url))]]
-    await update.message.reply_text(
-        "Нажмите кнопку ниже, чтобы открыть форму:",
-        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True),
-    )
-
-
-async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработка заявки"""
-    logger.info("🎯🎯🎯 WEB_APP_DATA HANDLER ВЫЗВАН!")
-    logger.info(f"🔍 Update объект: {update}")
-    logger.info(f"🔍 Update.effective_message: {update.effective_message}")
-    logger.info(f"🔍 Update.effective_user: {update.effective_user}")
-
-    user = update.effective_user
-    logger.info(f"👤 Пользователь: {user.id} - {user.full_name}")
-
-    if not update.effective_message:
-        logger.error("❌ КРИТИЧНО: update.effective_message отсутствует!")
-        return
-
-    if not update.effective_message.web_app_data:
-        logger.error(
-            "❌ КРИТИЧНО: update.effective_message.web_app_data отсутствует!")
-        logger.error(f"❌ Но сообщение есть: {update.effective_message}")
-        return
-
-    logger.info(f"📄 RAW web_app_data: {update.effective_message.web_app_data}")
-    logger.info(
-        f"📄 WEB APP ДАННЫЕ: {update.effective_message.web_app_data.data}")
-    logger.info(
-        f"📄 Длина данных: {len(update.effective_message.web_app_data.data)}")
-
+    # Close mini-app
     try:
-        await update.message.reply_text("✅ Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.")
-        logger.info("✅ Ответ клиенту отправлен")
+        result = InlineQueryResultArticle(
+            id=str(uuid.uuid4()),
+            title="Заявка принята",
+            input_message_content=InputTextMessageContent(
+                "✅ Спасибо! Заявка получена."),
+        )
+        await request.app["bot"].answer_web_app_query(query_id, result)
     except Exception as e:
-        logger.error(f"❌ Ошибка ответа клиенту: {e}")
+        log.error("answerWebAppQuery failed: %s", e)
+
+    return web.json_response({"status": "ok"}, headers={"Access-Control-Allow-Origin": "*"})
+
+
+async def handle_telegram(request: web.Request) -> web.Response:
+    """Telegram sends updates here."""
+    update_json = await request.json()
+    await request.app["application"].update_queue.put(Update.de_json(update_json, request.app["bot"]))
+    return web.Response(text="ok")
+
+# ====================== Setup helpers ========================
+
+
+async def setup_menu(bot):
+    await bot.set_chat_menu_button(MenuButtonWebApp(text="📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)))
+
+# ========================= Main ==============================
+
+
+async def main_async():
+    if not all([TOKEN, ADMIN_CHAT_ID, PUBLIC_HOST]):
+        log.critical(
+            "Missing env vars: YOUR_BOT_TOKEN / ADMIN_CHAT_ID / MY_RAILWAY_PUBLIC_URL")
         return
 
-    if not ADMIN_CHAT_ID:
-        logger.warning("⚠️ ADMIN_CHAT_ID не настроен!")
-        return
+    application = Application.builder().token(TOKEN).updater(None).build()
 
-    try:
-        logger.info("🔄 Парсим JSON данные...")
-        data = json.loads(update.effective_message.web_app_data.data)
-        logger.info(f"📊 Распарсенные данные: {data}")
+    application.add_handler(CommandHandler("start", cmd_start))
+    application.add_handler(MessageHandler(
+        filters.ALL & ~filters.COMMAND, debug))
 
-        problems = ", ".join(data.get('problems', ['Не указано']))
-        name = data.get('name', 'Не указано')
-        phone = data.get('phone', 'Не указан')
-        description = data.get('description', 'Не указано')
+    # aiohttp app
+    app = web.Application()
+    app["bot"] = application.bot
+    app["application"] = application
+    app.router.add_post(f"/{TOKEN}", handle_telegram)
+    app.router.add_route("*", "/submit", handle_submit)
 
-        logger.info(
-            f"📋 Подготовленные данные: problems={problems}, name={name}, phone={phone}")
+    # Set webhook & menu
+    await setup_menu(application.bot)
+    await application.bot.set_webhook(url=f"https://{PUBLIC_HOST}/{TOKEN}")
+    log.info("Webhook set to https://%s/%s", PUBLIC_HOST, TOKEN)
 
-        admin_message = f"""🔔 НОВАЯ ЗАЯВКА!
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", PORT)
+    await site.start()
 
-👤 Клиент: {name} (ID: {user.id})
-📞 Телефон: {phone}
-⚠️ Проблемы: {problems}
-
-📝 Описание ситуации:
-{description}
-
-⏰ Время: {update.effective_message.date}"""
-
-        logger.info(f"📨 Отправляем сообщение админу в чат: {ADMIN_CHAT_ID}")
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-        logger.info("✅✅✅ ЗАЯВКА УСПЕШНО ОТПРАВЛЕНА АДМИНИСТРАТОРУ!")
-    except Exception as e:
-        logger.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА отправки администратору: {e}")
-        import traceback
-        logger.error(f"❌ Stack trace: {traceback.format_exc()}")
-        traceback.print_exc()
-
-
-async def debug_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик для отладки всех сообщений"""
-    logger.info("=" * 50)
-    logger.info(
-        f"📨 ПОЛУЧЕНО СООБЩЕНИЕ от пользователя {update.effective_user.id}")
-    logger.info(f"📨 Тип update: {type(update)}")
-    logger.info(f"📨 Тип сообщения: {type(update.message)}")
-    logger.info(f"📨 Полное содержимое update.message: {update.message}")
-
-    if update.message:
-        logger.info(f"📨 Message ID: {update.message.message_id}")
-        logger.info(f"📨 Text: {getattr(update.message, 'text', 'NO TEXT')}")
-        logger.info(
-            f"📨 Caption: {getattr(update.message, 'caption', 'NO CAPTION')}")
-
-        if hasattr(update.message, 'web_app_data'):
-            logger.info(
-                f"🌐 web_app_data атрибут СУЩЕСТВУЕТ: {update.message.web_app_data}")
-            if update.message.web_app_data:
-                logger.info(
-                    f"🌐🌐🌐 WEB APP DATA НАЙДЕНА: {update.message.web_app_data.data}")
-                logger.info(
-                    f"🌐 Длина данных: {len(update.message.web_app_data.data) if update.message.web_app_data.data else 0}")
-            else:
-                logger.info("🌐 web_app_data существует но None")
-        else:
-            logger.info("🌐 web_app_data атрибут НЕ СУЩЕСТВУЕТ")
-
-        # Попытка прямого доступа к web_app_data
-        try:
-            direct_access = update.message.web_app_data
-            logger.info(f"🔍 Прямой доступ к web_app_data: {direct_access}")
-        except AttributeError as e:
-            logger.info(f"🔍 Ошибка прямого доступа: {e}")
-    else:
-        logger.info("📨 update.message отсутствует!")
-
-    logger.info("=" * 50)
+    async with application:
+        await application.start()
+        log.info("Bot & HTTP server running on port %s", PORT)
+        # run forever
+        await asyncio.Event().wait()
 
 
 def main():
-    """Запуск бота"""
-    if not TOKEN:
-        logger.critical("❌ YOUR_BOT_TOKEN не найден в переменных окружения!")
-        return
-
-    if ADMIN_CHAT_ID:
-        logger.info(f"✅ ADMIN_CHAT_ID настроен: {ADMIN_CHAT_ID}")
-    else:
-        logger.warning(
-            "⚠️ ADMIN_CHAT_ID не настроен! Заявки не будут приходить.")
-
-    application = Application.builder().token(TOKEN).build()
-
-    # Обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("form", form))
-    application.add_handler(MessageHandler(
-        filters.StatusUpdate.WEB_APP_DATA, web_app_data))
-    application.add_handler(MessageHandler(
-        filters.ALL & ~filters.COMMAND, debug_all_messages))
-
-    # === HTTP endpoint for WebApp submissions ===
-    async def submit_handler(request: web.Request):
-        if request.method == 'OPTIONS':
-            resp = web.Response()
-            resp.headers['Access-Control-Allow-Origin'] = '*'
-            resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-            return resp
-
-        data = await request.json()
-        query_id = data.get('queryId')
-        payload = data.get('payload', {})
-        logger.info(
-            f"🌐 /submit received: query_id={query_id}, payload={payload}")
-
-        # Send admin notification
-        try:
-            problems = ", ".join(payload.get('problems', []))
-            name = payload.get('name', 'Не указано')
-            phone = payload.get('phone', 'Не указан')
-            description = payload.get('description', 'Не указано')
-
-            admin_message = f"""🔔 НОВАЯ ЗАЯВКА!
-
-👤 {name}
-📞 {phone}
-⚠️ {problems}
-
-📝 {description}"""
-
-            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-            logger.info("✅ Заявка отправлена админу из /submit")
-        except Exception as e:
-            logger.error(f"❌ Не удалось отправить админу: {e}")
-
-        # Answer WebApp query to close the app
-        try:
-            result = InlineQueryResultArticle(
-                id=str(uuid.uuid4()),
-                title="Заявка отправлена",
-                input_message_content=InputTextMessageContent(
-                    "✅ Спасибо! Заявка получена."),
-            )
-            await application.bot.answer_web_app_query(web_app_query_id=query_id, result=result)
-            logger.info("✅ answerWebAppQuery отправлен")
-        except Exception as e:
-            logger.error(f"❌ answerWebAppQuery error: {e}")
-
-        resp = web.json_response({'status': 'ok'})
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        return resp
-
-    # Создаём собственное aiohttp приложение
-    aio_app = web.Application()
-    # Маршрут телеграм вебхука будет добавлен PTB автоматически, нам нужно только кастомный
-    aio_app.router.add_route('*', '/submit', submit_handler)
-
-    # Настройка веб-приложения и одновременное создание ГЛОБАЛЬНОГО event-loop,
-    # который затем будет использован `application.run_webhook`.
-    # 1. Создаём новый цикл
-    # 2. Делаем его текущим (set_event_loop)
-    # 3. Выполняем coroutine настройки веб-аппа
-    # 4. НЕ закрываем цикл, чтобы он остался доступен run_webhook.
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(setup_web_app(application))
-        # ВАЖНО: не закрываем loop, иначе run_webhook потеряет текущий цикл.
-    except Exception as e:
-        logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
-
-    logger.info("🚀 Запуск ИСПРАВЛЕННОГО бота...")
-
-    # Используем webhook для Railway
-    if os.environ.get('RAILWAY_ENVIRONMENT'):
-        MY_PUBLIC_URL = os.environ.get("MY_RAILWAY_PUBLIC_URL")
-        if MY_PUBLIC_URL:
-            webhook_url = f"https://{MY_PUBLIC_URL}/{TOKEN}"
-            port = int(os.environ.get('PORT', 8080))
-            logger.info(f"🌐 Webhook: {webhook_url}")
-            application.run_webhook(
-                listen="0.0.0.0",
-                port=port,
-                url_path=TOKEN,
-                webhook_url=webhook_url,
-                web_app=aio_app
-            )
-        else:
-            logger.error("❌ MY_RAILWAY_PUBLIC_URL не найден!")
-    else:
-        # Локальный запуск
-        logger.info("🏠 Локальный режим polling")
-        application.run_polling()
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":
