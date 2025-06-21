@@ -89,7 +89,6 @@
 <body>
 
 <div class="page-container">
-    <!-- СТРАНИЦА 1: ВЫБОР ПРОБЛЕМЫ -->
     <div id="page-problems" class="page active center">
         <header class="text-center mb-6">
             <h1 class="text-3xl font-extrabold">Страховая справедливость</h1>
@@ -102,12 +101,10 @@
         <div id="services-grid" class="grid grid-cols-2 gap-4"></div>
     </div>
 
-    <!-- НОВАЯ СТРАНИЦА: ДЕТАЛИ УСЛУГИ -->
     <div id="page-details" class="page right">
          <div id="details-content"></div>
     </div>
 
-    <!-- СТРАНИЦА 2: КОНТАКТНЫЕ ДАННЫЕ -->
     <div id="page-contacts" class="page right">
         <h1 class="text-2xl font-bold mb-2">Контактные данные</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Чтобы мы могли с вами связаться</p>
@@ -126,7 +123,6 @@
         </div>
     </div>
 
-    <!-- СТРАНИЦА 3: ОПИСАНИЕ -->
     <div id="page-description" class="page right">
         <h1 class="text-2xl font-bold mb-2">Описание ситуации</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Опишите вашу проблему кратко</p>
@@ -136,7 +132,6 @@
         <textarea id="description" class="form-input" rows="6" placeholder="Например: Страховая отказала в выплате после ДТП..."></textarea>
     </div>
 
-    <!-- СТРАНИЦА 4: ПОДТВЕРЖДЕНИЕ -->
     <div id="page-summary" class="page right">
         <h1 class="text-2xl font-bold mb-2">Проверьте заявку</h1>
         <p class="mb-6" style="color: var(--tg-theme-hint-color);">Все данные верны?</p>
@@ -146,7 +141,6 @@
         <div id="summary-container" class="space-y-4"></div>
     </div>
 
-    <!-- СТРАНИЦА 5: УСПЕХ -->
     <div id="page-success" class="page right flex flex-col items-center justify-center text-center">
         <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6" style="background-color: #34c7591a;">
             <i data-lucide="check" class="w-12 h-12" style="color: #34c759;"></i>
@@ -377,8 +371,7 @@
     
     function renderSuccessActions() {
         const container = document.getElementById('success-actions');
-        const problemId = Array.from(state.formData.problems)[0] || 'other';
-        const service = services.find(s => s.id === problemId);
+        const service = services[0]; // Link to main page
         container.innerHTML = `
             <button id="view-cases-btn" class="font-bold py-3 px-6 rounded-lg w-full text-white" style="background-color: var(--tg-theme-button-color);">
                 Перейти на сайт
