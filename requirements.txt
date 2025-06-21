@@ -1,2 +1,3 @@
 python-telegram-bot[callback-data,webhooks]
 aiohttp>=3.8
+openai>=0.28
