@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import uvicorn
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TelegramError
@@ -88,46 +87,35 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Не удалось отправить уведомление администратору: {type(e).__name__} - {e}")
 
 
-async def main() -> None:
+def main() -> None:
     """Основная функция для запуска бота через вебхук."""
     if not TOKEN:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена!")
         return
-    if not WEBHOOK_URL:
-        logger.critical("Переменная окружения RENDER_EXTERNAL_URL не найдена!")
-        return
         
     # Создаем приложение
-    application = Application.builder().token(TOKEN).build()
+    # Указываем путь, на который Telegram будет отправлять обновления
+    # Это более надежно, чем передавать токен в URL
+    application = Application.builder().token(TOKEN).arbitrary_callback_data(True).build()
 
     # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
-    # Устанавливаем вебхук
-    # Мы передаем боту наш уникальный URL, который предоставил Render
-    logger.info(f"Setting webhook to {WEBHOOK_URL}/{TOKEN}")
-    await application.bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}", allowed_updates=Update.ALL_TYPES)
+    # Запускаем приложение в режиме вебхука
+    # Эта встроенная функция сама установит вебхук и запустит веб-сервер
+    port = int(os.environ.get('PORT', 8080))
     
-    # Запускаем приложение как веб-сервер
-    # Это асинхронный процесс, который будет обрабатывать входящие запросы от Telegram
-    async with application:
-        await application.start()
-        # Вместо run_polling, мы запускаем веб-сервер uvicorn
-        # Render автоматически предоставит порт в переменной окружения PORT
-        port = int(os.environ.get('PORT', 8080))
-        webserver = uvicorn.Server(
-            config=uvicorn.Config(
-                app=application.asgi_app,
-                port=port,
-                host='0.0.0.0'
-            )
-        )
-        print(f"Бот запущен в режиме webhook и слушает порт {port}...")
-        await webserver.serve()
-        await application.stop()
+    logger.info(f"Бот будет запущен в режиме webhook на порту {port}")
+    
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TOKEN, # Путь, который будет частью нашего URL
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}" # Полный URL для регистрации в Telegram
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
