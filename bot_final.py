@@ -53,10 +53,22 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger(__name__)
 
 MEDIA_POOL = [
-    {"url": "https://images.pexels.com/videos/856192/pexels-photo-856192.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    # Photos
     {"url": "https://images.pexels.com/photos/701775/pexels-photo-701775.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://player.vimeo.com/external/332164148.sd.mp4?s=9f4b2f33f4760e8152ef749398a422a2aabbae3c&profile_id=164&oauth2_token_id=57447761", "kind": "video"},
+    {"url": "https://images.pexels.com/photos/806137/pexels-photo-806137.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/5668840/pexels-photo-5668840.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/4425839/pexels-photo-4425839.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/235569/pexels-photo-235569.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/5682738/pexels-photo-5682738.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/672630/pexels-photo-672630.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    {"url": "https://images.pexels.com/photos/3768893/pexels-photo-3768893.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
+    # Short thematic video (dashcam)
+    {"url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4", "kind": "video"},
 ]
+
+
+def _media_url(item):
+    return item["url"] + f"&rand={random.randint(1,999999)}" if "?" in item["url"] else item["url"] + f"?rand={random.randint(1,999999)}"
 
 # ===================== Telegram handlers =====================
 
@@ -153,22 +165,6 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
         return None
 
 
-def pick_image_url() -> str:
-    images = [
-        # Car accident scene
-        "https://images.pexels.com/photos/701775/pexels-photo-701775.jpeg?auto=compress&cs=tinysrgb&w=800",
-        # Broken windshield / crash
-        "https://images.pexels.com/photos/806137/pexels-photo-806137.jpeg?auto=compress&cs=tinysrgb&w=800",
-        # Lawyer handshake
-        "https://images.pexels.com/photos/4425839/pexels-photo-4425839.jpeg?auto=compress&cs=tinysrgb&w=800",
-        # Court gavel
-        "https://images.pexels.com/photos/235569/pexels-photo-235569.jpeg?auto=compress&cs=tinysrgb&w=800",
-        # Documents & contract signing
-        "https://images.pexels.com/photos/5682738/pexels-photo-5682738.jpeg?auto=compress&cs=tinysrgb&w=800",
-    ]
-    return random.choice(images)
-
-
 # Prompt used by humanizer
 
 HUMANIZE_PROMPT = (
@@ -228,8 +224,7 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     private_brief = (
         "Ты — дружелюбный юридический консультант компании 'Страховая справедливость' (strahovayasprav.ru). "
         "Рационально и понятно отвечай на вопросы о страховых выплатах после ДТП. "
-        "В конце каждого ответа мягко приглашай собеседника получить бесплатную консультацию: "
-        "'Напишите /leave или нажмите кнопку \"Подать заявку\" — и наш менеджер свяжется с вами'. "
+        "В конце каждого ответа мягко приглашай: 'Нажмите кнопку \"Подать заявку\" — и наш специалист свяжется с вами'. "
         "Сохраняй профессиональный тон, без давления, не упоминай, что ты ИИ."
     )
     messages = [
@@ -238,7 +233,11 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ]
     answer = await _ai_complete(messages, temperature=0.6)
     if answer:
+        # First humanize, then guarantee CTA line
         answer = await humanize(answer)
+        cta = "Нажмите кнопку \"Подать заявку\" — и наш специалист свяжется с вами"
+        if cta not in answer:
+            answer = f"{answer}\n\n{cta}"
         await update.message.reply_text(answer)
 
 
@@ -350,11 +349,21 @@ async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
 
 async def send_media(bot, chat_id: int, caption: str, reply_markup):
     """Send photo or video with fallback to text-only."""
-    for _ in range(3):
-        media = random.choice(MEDIA_POOL)
-        data = await fetch_bytes(media["url"])
+    tried_urls = set()
+    max_attempts = min(5, len(MEDIA_POOL))
+    for _ in range(max_attempts):
+        # pick media that hasn't been tried yet to avoid repeat attempts
+        media_candidates = [
+            m for m in MEDIA_POOL if m["url"] not in tried_urls]
+        if not media_candidates:
+            break
+        media = random.choice(media_candidates)
+        tried_urls.add(media["url"])
+
+        data = await fetch_bytes(_media_url(media))
         if not data:
-            continue
+            continue  # try another media file
+
         file_name = "media.jpg" if media["kind"] == "photo" else "media.mp4"
         input_file = InputFile(io.BytesIO(data), filename=file_name)
         try:
@@ -362,7 +371,7 @@ async def send_media(bot, chat_id: int, caption: str, reply_markup):
                 await bot.send_photo(chat_id=chat_id, photo=input_file, caption=caption, reply_markup=reply_markup)
             else:
                 await bot.send_video(chat_id=chat_id, video=input_file, caption=caption, reply_markup=reply_markup)
-            return True
+            return True  # success
         except Exception as e:
             log.warning("send_%s failed: %s", media["kind"], e)
     # fallback
