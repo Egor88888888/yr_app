@@ -144,7 +144,7 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
         return None
 
 
-async def pick_image_url() -> str:
+def pick_image_url() -> str:
     """Return a random Unsplash image URL relevant to insurance/legal themes."""
     imgs = [
         "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
