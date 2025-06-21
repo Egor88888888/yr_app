@@ -144,13 +144,18 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
 
 
 async def generate_ai_post() -> Optional[str]:
-    """Generate a short Telegram post about insurance fairness."""
+    """Generate a short Telegram post aligned with strahovayasprav.ru topics."""
+    site_brief = (
+        "Вы — копирайтер компании \"Страховая справедливость\" (strahovayasprav.ru). "
+        "Мы добиваемся страховых выплат после ДТП: вред здоровью, гибель, ущерб авто, споры с ОСАГО/КАСКО, ОСГОП. "
+        "Пишем по-русски, живым языком, 400–600 знаков, с призывом получить бесплатную консультацию. "
+        "Упомяни наш опыт >5 лет и работу без предоплаты. Не используйте эмодзи, максимум два."
+    )
     messages = [
-        {"role": "system", "content": "Ты опытный копирайтер, эксперт в страховых правах. Пиши на русском."},
-        {"role": "user",
-            "content": "Сгенерируй короткий, полезный и цепляющий пост (до 700 символов) о страховой справедливости."},
+        {"role": "system", "content": site_brief},
+        {"role": "user", "content": "Напиши пост для Telegram-канала, который заинтересует пострадавших в ДТП и пригласит на бесплатную консультацию."},
     ]
-    return await _ai_complete(messages, temperature=0.8, max_tokens=700)
+    return await _ai_complete(messages, temperature=0.75, max_tokens=600)
 
 
 async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
