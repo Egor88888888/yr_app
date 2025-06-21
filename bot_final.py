@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import asyncio
-from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp
+from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- КОНФИГУРАЦИЯ ---
@@ -37,10 +37,38 @@ async def setup_web_app(application: Application) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Стартовое сообщение"""
     user = update.effective_user
-    await update.message.reply_html(
+
+    greeting_text = (
         f"Здравствуйте, {user.mention_html()}! 🏛️\n\n"
         "Я ваш юридический помощник по страховым вопросам.\n"
-        "Нажмите кнопку меню для подачи заявки."
+        "Нажмите кнопку \"📝 Подать заявку\", чтобы открыть форму."
+    )
+
+    # Кнопка-клавиатура с WebApp — ИМЕННО она позволяет использовать tg.sendData.
+    web_app_url = "https://egor88888888.github.io/yr_app/"
+    kb = [
+        [
+            KeyboardButton(
+                text="📝 Подать заявку",
+                web_app=WebAppInfo(url=web_app_url),
+            )
+        ]
+    ]
+
+    reply_markup = ReplyKeyboardMarkup(kb, resize_keyboard=True)
+
+    await update.message.reply_html(greeting_text, reply_markup=reply_markup)
+
+
+# /form — на случай, если пользователь потерял клавиатуру
+async def form(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Отправляем сообщение с кнопкой WebApp ещё раз."""
+    web_app_url = "https://egor88888888.github.io/yr_app/"
+    kb = [[KeyboardButton(text="📝 Подать заявку",
+                          web_app=WebAppInfo(url=web_app_url))]]
+    await update.message.reply_text(
+        "Нажмите кнопку ниже, чтобы открыть форму:",
+        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True),
     )
 
 
@@ -171,6 +199,7 @@ def main():
 
     # Обработчики
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("form", form))
     application.add_handler(MessageHandler(
         filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     application.add_handler(MessageHandler(
