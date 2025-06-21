@@ -16,6 +16,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- НОВАЯ ФУНКЦИЯ ПОСЛЕ ИНИЦИАЛИЗАЦИИ ---
+async def post_init(application: Application) -> None:
+    """
+    Эта функция вызывается после инициализации приложения, но перед запуском.
+    Она принудительно очищает очередь обновлений и отключает любые "зависшие" подключения.
+    """
+    logger.info("Force-clearing pending updates and any lingering webhook...")
+    await application.bot.delete_webhook(drop_pending_updates=True)
+    logger.info("Updates cleared successfully.")
+
+
 # --- ОБРАБОТЧИКИ КОМАНД И СООБЩЕНИЙ ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -83,27 +94,28 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Не удалось отправить уведомление администратору: {e}")
 
 
-async def main() -> None:
+def main() -> None:
     """Основная функция для запуска бота."""
     if not TOKEN:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена! Бот не может быть запущен.")
         return
-        
-    application = Application.builder().token(TOKEN).build()
-
-    # ВАЖНО: Принудительно очищаем очередь обновлений и отключаем любые "зависшие" подключения
-    logger.info("Force-clearing pending updates and any lingering webhook...")
-    await application.bot.delete_webhook(drop_pending_updates=True)
     
+    # Используем post_init для выполнения асинхронных задач до запуска опроса.
+    application = (
+        Application.builder()
+        .token(TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+
     # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
     print("Бот запущен в режиме polling и готов принимать заявки...")
-    # Запускаем бота
-    await application.run_polling(drop_pending_updates=True)
+    # Запускаем бота в блокирующем режиме. Это стандартный и стабильный способ.
+    application.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    # Используем asyncio.run() для запуска асинхронной функции main
-    asyncio.run(main())
+    main()
