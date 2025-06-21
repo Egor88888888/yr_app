@@ -83,19 +83,27 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Не удалось отправить уведомление администратору: {e}")
 
 
-def main() -> None:
+async def main() -> None:
     """Основная функция для запуска бота."""
     if not TOKEN:
         logger.critical("Переменная окружения YOUR_BOT_TOKEN не найдена! Бот не может быть запущен.")
         return
         
     application = Application.builder().token(TOKEN).build()
+
+    # ВАЖНО: Принудительно очищаем очередь обновлений и отключаем любые "зависшие" подключения
+    logger.info("Force-clearing pending updates and any lingering webhook...")
+    await application.bot.delete_webhook(drop_pending_updates=True)
+    
+    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     
-    print("Бот запущен и готов принимать заявки...")
-    application.run_polling()
+    print("Бот запущен в режиме polling и готов принимать заявки...")
+    # Запускаем бота
+    await application.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    main()
+    # Используем asyncio.run() для запуска асинхронной функции main
+    asyncio.run(main())
