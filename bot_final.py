@@ -128,7 +128,7 @@ def main() -> None:
         logger.error(f"Ошибка настройки веб-приложения: {e}")
 
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v6.1) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v6.1.1) будет запущен в режиме webhook на порту {port}")
 
     application.run_webhook(
         listen="0.0.0.0",
