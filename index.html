@@ -211,13 +211,19 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         try {
+            console.log('🎯 MINI APP ЗАПУЩЕН!');
+            console.log('🔗 tg объект:', tg);
             tg.ready();
             tg.expand();
+            console.log('✅ tg.ready() и tg.expand() выполнены');
             
             if (tg.initDataUnsafe?.user) {
                 const user = tg.initDataUnsafe.user;
+                console.log('👤 Пользователь найден:', user);
                 state.formData.name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
                 document.getElementById('name').value = state.formData.name;
+            } else {
+                console.log('⚠️ Пользователь не найден в initDataUnsafe');
             }
 
             renderServiceCards();
@@ -297,7 +303,10 @@
     }
 
     function handleMainButtonClick() {
+        console.log('🔘 MainButton нажата! Текущая страница:', state.currentPage);
+        
         if (!validateCurrentPage()) {
+            console.log('❌ Валидация не прошла');
             tg.HapticFeedback.notificationOccurred('error');
             return;
         }
@@ -306,19 +315,32 @@
         const currentIndex = pageOrder.indexOf(currentPage);
 
         if (currentIndex !== -1 && currentIndex < pageOrder.length - 1) {
+            console.log('➡️ Переходим на следующую страницу');
             navigate(pageOrder[currentIndex + 1]);
         } else if (currentPage === 'summary') {
+            console.log('📤 Отправляем данные!');
             sendData();
         } else if (currentPage === 'details') {
+            console.log('⬅️ Возвращаемся назад');
             handleBackButtonClick();
         }
     }
 
     function sendData() {
+        console.log('🚀 sendData() вызвана!');
         tg.MainButton.showProgress();
         const { problems, ...rest } = state.formData;
         const dataToSend = { ...rest, problems: Array.from(problems).map(id => services.find(s => s.id === id).title) };
-        tg.sendData(JSON.stringify(dataToSend));
+        console.log('📤 Отправляю данные:', dataToSend);
+        console.log('📤 JSON:', JSON.stringify(dataToSend));
+        
+        try {
+            tg.sendData(JSON.stringify(dataToSend));
+            console.log('✅ sendData вызван успешно!');
+        } catch (error) {
+            console.error('❌ Ошибка sendData:', error);
+        }
+        
         renderSuccessActions();
         setTimeout(() => navigate('success'), 500);
     }
