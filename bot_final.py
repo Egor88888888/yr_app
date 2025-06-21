@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v6.4)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v6.5)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v6.4: Получена заявка, начинаю обработку ---")
+    logger.info("--- v6.5: Получена заявка, начинаю обработку ---")
     user = update.effective_user
 
     # Логируем данные для отладки
@@ -122,6 +122,19 @@ def main() -> None:
     application.add_handler(MessageHandler(
         filters.StatusUpdate.WEB_APP_DATA, web_app_data))
 
+    # Добавляем обработчик всех сообщений для диагностики
+    async def debug_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        logger.info(f"Получено сообщение: {update.message}")
+        if update.message and update.message.web_app_data:
+            logger.info(
+                f"НАЙДЕНЫ ДАННЫЕ WEB APP: {update.message.web_app_data.data}")
+        else:
+            logger.info("Обычное сообщение, не веб-приложение")
+
+    # Добавляем обработчик для диагностики
+    application.add_handler(MessageHandler(
+        filters.ALL & ~filters.COMMAND, debug_handler))
+
     # Настройка веб-приложения
     try:
         asyncio.get_event_loop().run_until_complete(setup_web_app(application))
@@ -129,7 +142,7 @@ def main() -> None:
         logger.error(f"Ошибка настройки веб-приложения: {e}")
 
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v6.4) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v6.5) будет запущен в режиме webhook на порту {port}")
 
     application.run_webhook(
         listen="0.0.0.0",
