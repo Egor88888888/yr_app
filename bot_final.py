@@ -224,6 +224,20 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         log.error("Manual post failed: %s", e)
         await update.message.reply_text(f"Ошибка отправки: {e}")
 
+# ================== Set channel command =====================
+
+
+async def cmd_set_channel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Command /set_channel executed INSIDE target channel to register its ID."""
+    chat = update.effective_chat
+    if chat.type != "channel":
+        await update.effective_message.reply_text("Эта команда должна выполняться в канале.")
+        return
+
+    ctx.bot_data["TARGET_CHANNEL_ID"] = chat.id
+    await update.effective_message.reply_text("✅ Канал зарегистрирован. Теперь можно использовать /post из личного чата.")
+    log.info("Channel registered via /set_channel: %s", chat.id)
+
 # ========================= Main ==============================
 
 
@@ -237,6 +251,8 @@ async def main_async():
 
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
+    application.add_handler(CommandHandler(
+        "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, ai_private_chat))
     application.add_handler(MessageHandler(
