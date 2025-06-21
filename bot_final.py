@@ -238,6 +238,34 @@ async def cmd_set_channel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_text("✅ Канал зарегистрирован. Теперь можно использовать /post из личного чата.")
     log.info("Channel registered via /set_channel: %s", chat.id)
 
+# ===== Alt registration via private chat =====
+
+
+async def cmd_set_channel_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """/set_channel_id <numeric_id> — admin sets channel id manually in private chat."""
+    if str(update.effective_user.id) != str(ADMIN_CHAT_ID):
+        return
+    if not ctx.args:
+        await update.message.reply_text("Использование: /set_channel_id -1001234567890")
+        return
+    try:
+        ch_id = int(ctx.args[0])
+    except ValueError:
+        await update.message.reply_text("Некорректный ID")
+        return
+    ctx.bot_data["TARGET_CHANNEL_ID"] = ch_id
+    await update.message.reply_text(f"✅ Channel ID установлен: {ch_id}")
+    log.info("Channel ID set manually: %s", ch_id)
+
+
+async def handle_forward(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Capture forwarded channel message to register channel id."""
+    if update.message and update.message.forward_from_chat and update.message.forward_from_chat.type == 'channel':
+        ch_id = update.message.forward_from_chat.id
+        ctx.bot_data["TARGET_CHANNEL_ID"] = ch_id
+        await update.message.reply_text(f"✅ Channel зарегистрирован по пересланному сообщению: {ch_id}")
+        log.info("Channel registered via forward: %s", ch_id)
+
 # ========================= Main ==============================
 
 
@@ -253,6 +281,10 @@ async def main_async():
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
     application.add_handler(CommandHandler(
         "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
+    application.add_handler(CommandHandler(
+        "set_channel_id", cmd_set_channel_id, filters.ChatType.PRIVATE))
+    application.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.FORWARDED, handle_forward))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, ai_private_chat))
     application.add_handler(MessageHandler(
