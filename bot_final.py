@@ -6,8 +6,10 @@ import json
 import logging
 import os
 import asyncio
-from telegram import Update, WebAppInfo, MenuButton, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup, MenuButtonDefault
+from telegram import Update, WebAppInfo, MenuButtonWebApp, KeyboardButton, ReplyKeyboardMarkup, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from aiohttp import web
+import uuid
 
 # --- КОНФИГУРАЦИЯ ---
 TOKEN = os.environ.get("YOUR_BOT_TOKEN")
@@ -22,11 +24,10 @@ logger = logging.getLogger(__name__)
 async def setup_web_app(application: Application) -> None:
     """Настройка веб-приложения с GitHub Pages"""
     try:
-        # Сбрасываем меню-кнопку к состоянию по умолчанию, иначе Telegram будет продолжать показывать
-        # старую WebApp-кнопку. Используем явный объект MenuButtonDefault().
-        await application.bot.set_chat_menu_button(menu_button=MenuButtonDefault())
-        logger.info(
-            "✅ Удалена MenuButton WebApp — осталось лишь одно место запуска (клавиатура)")
+        # Устанавливаем ВИДИМУЮ menu-кнопку рядом со строкой ввода.
+        web_app_url = "https://egor88888888.github.io/yr_app/"
+        await application.bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="📝 Подать заявку", web_app=WebAppInfo(url=web_app_url)))
+        logger.info("✅ MenuButtonWebApp установлена (боковая кнопка)")
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
@@ -201,6 +202,61 @@ def main():
         filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     application.add_handler(MessageHandler(
         filters.ALL & ~filters.COMMAND, debug_all_messages))
+
+    # === HTTP endpoint for WebApp submissions ===
+    async def submit_handler(request: web.Request):
+        if request.method == 'OPTIONS':
+            resp = web.Response()
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            return resp
+
+        data = await request.json()
+        query_id = data.get('queryId')
+        payload = data.get('payload', {})
+        logger.info(
+            f"🌐 /submit received: query_id={query_id}, payload={payload}")
+
+        # Send admin notification
+        try:
+            problems = ", ".join(payload.get('problems', []))
+            name = payload.get('name', 'Не указано')
+            phone = payload.get('phone', 'Не указан')
+            description = payload.get('description', 'Не указано')
+
+            admin_message = f"""🔔 НОВАЯ ЗАЯВКА!
+
+👤 {name}
+📞 {phone}
+⚠️ {problems}
+
+📝 {description}"""
+
+            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
+            logger.info("✅ Заявка отправлена админу из /submit")
+        except Exception as e:
+            logger.error(f"❌ Не удалось отправить админу: {e}")
+
+        # Answer WebApp query to close the app
+        try:
+            result = InlineQueryResultArticle(
+                id=str(uuid.uuid4()),
+                title="Заявка отправлена",
+                input_message_content=InputTextMessageContent(
+                    "✅ Спасибо! Заявка получена."),
+            )
+            await application.bot.answer_web_app_query(web_app_query_id=query_id, result=result)
+            logger.info("✅ answerWebAppQuery отправлен")
+        except Exception as e:
+            logger.error(f"❌ answerWebAppQuery error: {e}")
+
+        resp = web.json_response({'status': 'ok'})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
+    # добавляем маршрут в aiohttp приложение, которое создаёт ptb
+    application.web_app.router.add_route('*', '/submit', submit_handler)
 
     # Настройка веб-приложения и одновременное создание ГЛОБАЛЬНОГО event-loop,
     # который затем будет использован `application.run_webhook`.
