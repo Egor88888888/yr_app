@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import uuid
+import random
 from aiohttp import web
 from telegram import (
     Update,
@@ -144,18 +145,31 @@ async def _ai_complete(messages: list[dict], model: str = "gpt-3.5-turbo", max_t
 
 
 async def generate_ai_post() -> Optional[str]:
-    """Generate a short Telegram post aligned with strahovayasprav.ru topics."""
+    """Generate diverse Telegram post about our services."""
     site_brief = (
-        "Вы — копирайтер компании \"Страховая справедливость\" (strahovayasprav.ru). "
-        "Мы добиваемся страховых выплат после ДТП: вред здоровью, гибель, ущерб авто, споры с ОСАГО/КАСКО, ОСГОП. "
-        "Пишем по-русски, живым языком, 400–600 знаков, с призывом получить бесплатную консультацию. "
-        "Упомяни наш опыт >5 лет и работу без предоплаты. Не используйте эмодзи, максимум два."
+        "Ты копирайтер компании 'Страховая справедливость' (strahovayasprav.ru). "
+        "Наша миссия — добиваться страховых выплат после ДТП: вред здоровью, гибель, ущерб авто, споры ОСАГО/КАСКО, ОСГОП. "
+        "Всегда призываем к бесплатной консультации, стаж >5 лет, работаем без предоплаты. Пиши по-русски, 400–600 символов, максимум две эмодзи."
     )
+
+    mode = random.choice(["promo", "case", "law"])
+    if mode == "promo":
+        user_prompt = "Сделай мотивирующий пост о том, почему важно бороться со страховой и как мы помогаем клиентам получить максимум выплат."
+    elif mode == "case":
+        user_prompt = (
+            "Приведи короткую историю успешного клиента (выдумай имя и цифры, реалистичные). "
+            "Опиши проблему, наши действия и результат — сумма выплаты."
+        )
+    else:  # law
+        user_prompt = (
+            "Поделись интересным фактом или выдержкой из законодательства об ОСАГО или КАСКО, объясни, как это помогает пострадавшим получить компенсацию."
+        )
+
     messages = [
         {"role": "system", "content": site_brief},
-        {"role": "user", "content": "Напиши пост для Telegram-канала, который заинтересует пострадавших в ДТП и пригласит на бесплатную консультацию."},
+        {"role": "user", "content": user_prompt},
     ]
-    return await _ai_complete(messages, temperature=0.75, max_tokens=600)
+    return await _ai_complete(messages, temperature=0.8, max_tokens=600)
 
 
 async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -192,11 +206,12 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
         startapp_link = f"https://t.me/{bot_username}?startapp"
         markup = InlineKeyboardMarkup([
             [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
-            [InlineKeyboardButton(
-                "🤖 Открыть чат с ботом", url=f"https://t.me/{bot_username}?start=channel")]
+            [InlineKeyboardButton("💬 Получить помощь онлайн",
+                                  url=f"https://t.me/{bot_username}?start=channel")]
         ])
+        image_url = pick_image_url()
         try:
-            await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+            await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
             log.info("AI post sent to channel %s", channel_id)
         except Exception as e:
             log.error("Failed to send AI post: %s", e)
@@ -226,11 +241,12 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     startapp_link = f"https://t.me/{bot_username}?startapp"
     markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
-        [InlineKeyboardButton("🤖 Открыть чат с ботом",
+        [InlineKeyboardButton("💬 Получить помощь онлайн",
                               url=f"https://t.me/{bot_username}?start=channel")]
     ])
+    image_url = pick_image_url()
     try:
-        await ctx.bot.send_message(chat_id=channel_id, text=text, reply_markup=markup)
+        await ctx.bot.send_photo(chat_id=channel_id, photo=image_url, caption=text, reply_markup=markup)
         await update.message.reply_text("✅ Пост опубликован")
     except Exception as e:
         log.error("Manual post failed: %s", e)
