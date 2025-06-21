@@ -39,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение с маркером версии."""
     user = update.effective_user
     await update.message.reply_html(
-        f"Здравствуйте, {user.mention_html()}! (v6.0)\n\n"
+        f"Здравствуйте, {user.mention_html()}! (v6.1)\n\n"
         "Я ваш личный юридический помощник. Чтобы посмотреть каталог услуг и оставить заявку, "
         "нажмите на кнопку 'Меню' слева от поля ввода текста.",
     )
@@ -47,19 +47,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработка данных из веб-приложения"""
-    logger.info("--- v6.0: Получена заявка, начинаю обработку ---")
+    logger.info("--- v6.1: Получена заявка, начинаю обработку ---")
     user = update.effective_user
+
+    # Логируем данные для отладки
+    if update.effective_message and update.effective_message.web_app_data:
+        logger.info(
+            f"Получены данные от пользователя {user.id}: {update.effective_message.web_app_data.data}")
+    else:
+        logger.error("Не удалось получить данные веб-приложения!")
+        return
 
     try:
         await update.message.reply_text("✅ Спасибо, ваша заявка принята! Скоро свяжемся с вами.")
-        logger.info("v6.0 | Ответ клиенту отправлен.")
+        logger.info("v6.1 | Ответ клиенту отправлен.")
     except Exception as e:
-        logger.error(f"v6.0 | ОШИБКА при ответе клиенту: {e}")
+        logger.error(f"v6.1 | ОШИБКА при ответе клиенту: {e}")
         return
 
     if not ADMIN_CHAT_ID:
         logger.warning(
-            "v6.0 | ADMIN_CHAT_ID не найден. Уведомление не будет отправлено.")
+            "v6.1 | ADMIN_CHAT_ID не найден. Уведомление не будет отправлено.")
         return
 
     try:
@@ -70,18 +78,20 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         description = data.get('description', 'Не заполнено')
 
         admin_message = (
-            f"🔔 Новая заявка (v6.0)!\n\n"
+            f"🔔 Новая заявка (v6.1)!\n\n"
             f"От: {name} (ID: {user.id})\n"
             f"Телефон: {phone}\n"
             f"Проблемы: {problems_text}\n\n"
             f"Описание:\n{description}"
         )
 
+        logger.info(f"Отправляю сообщение администратору: {ADMIN_CHAT_ID}")
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_message)
-        logger.info("v6.0 | Уведомление УСПЕШНО отправлено администратору.")
+        logger.info("v6.1 | Уведомление УСПЕШНО отправлено администратору.")
     except Exception as e:
         logger.error(
-            f"v6.0 | КРИТИЧЕСКАЯ ОШИБКА при отправке уведомления администратору: {e}")
+            f"v6.1 | КРИТИЧЕСКАЯ ОШИБКА при отправке уведомления администратору: {e}")
+        logger.error(f"Тип ошибки: {type(e).__name__}, Детали: {str(e)}")
 
 
 def main() -> None:
@@ -96,6 +106,13 @@ def main() -> None:
             "ОШИБКА ЗАПУСКА: Переменная MY_RAILWAY_PUBLIC_URL не найдена! Убедитесь, что она добавлена в 'Variables'.")
         return
 
+    # Проверка ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        logger.info(f"ADMIN_CHAT_ID настроен: {ADMIN_CHAT_ID}")
+    else:
+        logger.warning(
+            "⚠️ ADMIN_CHAT_ID не настроен! Заявки не будут приходить администратору!")
+
     webhook_full_url = f"https://{MY_PUBLIC_URL}/{TOKEN}"
     logger.info(f"Полный URL для вебхука: {webhook_full_url}")
 
@@ -105,10 +122,13 @@ def main() -> None:
         filters.StatusUpdate.WEB_APP_DATA, web_app_data))
 
     # Настройка веб-приложения
-    asyncio.get_event_loop().run_until_complete(setup_web_app(application))
+    try:
+        asyncio.get_event_loop().run_until_complete(setup_web_app(application))
+    except Exception as e:
+        logger.error(f"Ошибка настройки веб-приложения: {e}")
 
     port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Бот (v6.0) будет запущен в режиме webhook на порту {port}")
+    logger.info(f"Бот (v6.1) будет запущен в режиме webhook на порту {port}")
 
     application.run_webhook(
         listen="0.0.0.0",
