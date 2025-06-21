@@ -94,7 +94,7 @@
         <header class="text-center mb-6">
             <h1 class="text-3xl font-extrabold">Страховая справедливость</h1>
             <p class="mt-2 text-md" style="color: var(--tg-theme-hint-color);">Выберите, что у вас случилось</p>
-             <p class="text-xs mt-2" style="color: var(--tg-theme-hint-color);">Версия 2.1</p>
+             <p class="text-xs mt-2" style="color: var(--tg-theme-hint-color);">Версия 2.2</p>
         </header>
         <div class="progress-bar w-full h-2 rounded-full mb-6">
             <div class="progress-bar-fill h-full rounded-full" style="width: 25%;"></div>
@@ -165,32 +165,32 @@
         { 
             id: 'denial', title: 'Отказ в выплате', icon: 'shield-off',
             details: 'Страховые компании часто ищут формальные поводы для отказа. Мы знаем все уловки и поможем доказать ваше право на выплату.',
-            caseLink: 'https://strahovayasprav.ru/services/denial-of-payment/' 
+            caseLink: 'https://strahovayasprav.ru/' 
         },
         { 
             id: 'underpayment', title: 'Занижение выплаты', icon: 'trending-down',
             details: 'Самая частая проблема. Мы организуем независимую экспертизу, которая установит реальную сумму ущерба, и взыщем разницу со страховой.',
-            caseLink: 'https://strahovayasprav.ru/services/underpayment/' 
+            caseLink: 'https://strahovayasprav.ru/'
         },
         { 
             id: 'delay', title: 'Затягивание сроков', icon: 'hourglass',
             details: 'По закону у страховой есть 20 дней на выплату. Если сроки нарушены, вы имеете право на неустойку (1% от суммы за каждый день просрочки).',
-            caseLink: 'https://strahovayasprav.ru/services/delay-of-terms/'
+            caseLink: 'https://strahovayasprav.ru/'
         },
         { 
             id: 'uts', title: 'Взыскание УТС', icon: 'receipt',
             details: 'Утрата товарной стоимости (УТС) – это уменьшение рыночной цены авто после ремонта. Ее почти никогда не выплачивают добровольно.',
-            caseLink: 'https://strahovayasprav.ru/services/uts-recovery/'
+            caseLink: 'https://strahovayasprav.ru/'
         },
         { 
             id: 'culprit', title: 'Спор с виновником', icon: 'users',
             details: 'Если лимита по ОСАГО (400 тыс. руб.) не хватило на ремонт, разницу можно и нужно взыскивать напрямую с виновника ДТП.',
-            caseLink: 'https://strahovayasprav.ru/services/dispute-with-the-culprit/'
+            caseLink: 'https://strahovayasprav.ru/'
         },
         { 
             id: 'other', title: 'Другая проблема', icon: 'help-circle',
             details: 'Если вы не нашли свою проблему в списке, подробно опишите ее на следующем шаге, и мы обязательно разберемся и поможем.',
-            caseLink: 'https://strahovayasprav.ru/blog/'
+            caseLink: 'https://strahovayasprav.ru/'
         }
     ];
     let state = {
@@ -381,7 +381,7 @@
         const service = services.find(s => s.id === problemId);
         container.innerHTML = `
             <button id="view-cases-btn" class="font-bold py-3 px-6 rounded-lg w-full text-white" style="background-color: var(--tg-theme-button-color);">
-                Посмотреть кейсы по этой проблеме
+                Перейти на сайт
             </button>
         `;
         document.getElementById('view-cases-btn').onclick = () => tg.openLink(service.caseLink);
