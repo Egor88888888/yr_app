@@ -169,7 +169,10 @@ async def generate_ai_post() -> Optional[str]:
         {"role": "system", "content": site_brief},
         {"role": "user", "content": user_prompt},
     ]
-    return await _ai_complete(messages, temperature=0.8, max_tokens=600)
+    text = await _ai_complete(messages, temperature=0.8, max_tokens=600)
+    if text:
+        text = await humanize(text)
+    return text
 
 
 async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -191,6 +194,7 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ]
     answer = await _ai_complete(messages, temperature=0.6)
     if answer:
+        answer = await humanize(answer)
         await update.message.reply_text(answer)
 
 
@@ -379,16 +383,36 @@ def main():
 if __name__ == "__main__":
     main()
 
-# ---------------- Image helper (needs before usage) -----------------
+# ===== Image helper (defined before runtime) =====
 
 
 def pick_image_url() -> str:
-    """Return a random Unsplash image URL about insurance, law, or car accidents."""
-    images = [
+    """Return a random Unsplash image URL relevant to insurance/legal themes."""
+    imgs = [
         "https://images.unsplash.com/photo-1528134982981-82b6dbea6570?auto=format&fit=crop&w=800&q=60",
         "https://images.unsplash.com/photo-1555374018-13a8994ab246?auto=format&fit=crop&w=800&q=60",
         "https://images.unsplash.com/photo-1612196204899-8dda7f4308eb?auto=format&fit=crop&w=800&q=60",
         "https://images.unsplash.com/photo-1506247159354-1e1a9d786eae?auto=format&fit=crop&w=800&q=60",
         "https://images.unsplash.com/photo-1518081461904-9b8f9dc7d5c1?auto=format&fit=crop&w=800&q=60",
     ]
-    return random.choice(images)
+    return random.choice(imgs)
+
+# === Humanizer helper ===
+
+
+HUMANIZE_PROMPT = (
+    "Представь, что ты — генератор контента. Для написания эффективного контента важны две вещи: «недоумение» и «разрывность». "
+    "«Недоумение» оценивает сложность текста, а «разрывность» — вариативность предложений. Люди часто пишут, чередуя длинные и короткие "
+    "предложения, в то время как машинные тексты обычно однообразны. Задача — переписать текст так, чтобы добиться нужного баланса между "
+    "сложностью и разнообразием, создавая человеческий стиль. Сохрани смысл, не добавляй новых фактов."
+)
+
+
+async def humanize(text: str) -> str:
+    """Rewrite text with variability to look human."""
+    messages = [
+        {"role": "system", "content": HUMANIZE_PROMPT},
+        {"role": "user", "content": text},
+    ]
+    rewritten = await _ai_complete(messages, temperature=0.9, max_tokens=min(800, len(text) + 120))
+    return rewritten or text
