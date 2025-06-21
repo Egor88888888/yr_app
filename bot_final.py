@@ -178,10 +178,11 @@ def main():
 
     # Настройка веб-приложения
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(setup_web_app(application))
-        loop.close()
+        # Используем отдельный временный цикл, который автоматически создаётся и
+        # закрывается внутри asyncio.run — это НЕ влияет на цикл, который будет
+        # создан внутри `application.run_webhook`, тем самым избегаем ошибки
+        # "Event loop is closed".
+        asyncio.run(setup_web_app(application))
     except Exception as e:
         logger.error(f"❌ Ошибка настройки веб-приложения: {e}")
 
