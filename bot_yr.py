@@ -3,11 +3,13 @@ import json
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
+TOKEN = os.environ.get("YOUR_BOT_TOKEN")
 
 # --- КОНФИГУРАЦИЯ ---
 # Вставьте сюда API-токен вашего бота, полученный от @BotFather.
 # ВАЖНО: В реальном проекте храните токен в безопасности, например, в переменных окружения.
-TOKEN = "7295107983:AAFNYNjk3CNhwpEgLX033TS6Nmt4EfWxb1w" 
+
 
 # Включаем логирование, чтобы видеть информацию о работе бота в консоли.
 logging.basicConfig(
