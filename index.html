@@ -341,15 +341,17 @@
         console.log('📤 JSON строка:', JSON.stringify(dataToSend));
         console.log('📤 Длина JSON:', JSON.stringify(dataToSend).length);
         
-        try {
-            console.log('⏳ Вызываю tg.sendData...');
-            tg.sendData(JSON.stringify(dataToSend));
-            console.log('✅ tg.sendData вызван БЕЗ ошибок!');
-            console.log('✅ Данные должны быть отправлены в бот!');
-        } catch (error) {
-            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА sendData:', error);
-            console.error('❌ Stack trace:', error.stack);
-        }
+        // Для MenuButton используем fetch + answerWebAppQuery
+        const payload = { queryId: tg.initDataUnsafe.query_id, payload: dataToSend };
+        fetch('https://poetic-simplicity-production-60e7.up.railway.app/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(r => r.json()).then(res => {
+            console.log('✅ Сервер ответил:', res);
+        }).catch(err => {
+            console.error('❌ Ошибка fetch /submit:', err);
+        });
         
         console.log('🎯 Переходим к экрану успеха...');
         renderSuccessActions();
