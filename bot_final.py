@@ -31,6 +31,10 @@ from typing import Optional
 from telegram.constants import ChatAction
 import aiohttp
 import io
+# === Analytics & External parsing ===
+from db import init_models, async_sessionmaker
+from jobs import collect_subscribers_job, scan_external_channels_job
+from telethon import TelegramClient
 
 ########################### CONFIG ###########################
 TOKEN = os.getenv("YOUR_BOT_TOKEN")
@@ -46,6 +50,9 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # required for AI
 TARGET_CHANNEL_ID = os.getenv("TARGET_CHANNEL_ID")
 TARGET_CHANNEL_USERNAME = os.getenv("TARGET_CHANNEL_USERNAME", "@strahsprav")
 POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", 4))
+# === Telethon & analytics config ===
+API_ID = int(os.getenv("API_ID", 0))
+API_HASH = os.getenv("API_HASH")
 ##############################################################
 
 logging.basicConfig(level=logging.INFO,
@@ -443,6 +450,18 @@ async def main_async():
 
     application = Application.builder().token(TOKEN).updater(None).build()
 
+    # === Init database ===
+    await init_models()
+    application.bot_data["db_sessionmaker"] = async_sessionmaker
+
+    # === Telethon client ===
+    telethon_client = None
+    if API_ID and API_HASH:
+        telethon_client = TelegramClient("analytics", API_ID, API_HASH)
+        await telethon_client.start()
+        application.bot_data["telethon"] = telethon_client
+        log.info("Telethon client started for analytics")
+
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
     application.add_handler(CommandHandler(
@@ -499,6 +518,21 @@ async def main_async():
         )
         log.info("Autoposting job scheduled every %s hours",
                  POST_INTERVAL_HOURS)
+
+    # === Schedule analytics jobs ===
+    if telethon_client:
+        application.job_queue.run_repeating(
+            collect_subscribers_job,
+            interval=timedelta(days=1),
+            first=timedelta(minutes=5),
+            name="collect_subscribers",
+        )
+        application.job_queue.run_repeating(
+            scan_external_channels_job,
+            interval=timedelta(hours=2),
+            first=timedelta(minutes=10),
+            name="scan_external_channels",
+        )
 
     runner = web.AppRunner(app)
     await runner.setup()
