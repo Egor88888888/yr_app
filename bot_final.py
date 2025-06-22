@@ -243,21 +243,30 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
     """Periodic job: post AI-generated text to target channel."""
+    log.info("[ai_post_job] tick")
     channel_id = ctx.bot_data.get("TARGET_CHANNEL_ID")
     if not channel_id:
-        log.warning("TARGET_CHANNEL_ID not resolved; skip posting")
+        log.warning(
+            "[ai_post_job] TARGET_CHANNEL_ID not resolved; skip posting")
         return
+
     text = await generate_ai_post()
-    if text:
-        bot_username = ctx.bot.username or ""  # safe fallback
-        startapp_link = f"https://t.me/{bot_username}?startapp"
-        markup = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
-            [InlineKeyboardButton("💬 Получить помощь онлайн",
-                                  url=f"https://t.me/{bot_username}?start=channel")]
-        ])
-        await send_media(ctx.bot, channel_id, text, markup)
-        log.info("AI post sent to channel %s", channel_id)
+    if not text:
+        log.warning("[ai_post_job] generate_ai_post returned None")
+        return
+
+    bot_username = ctx.bot.username or ""  # safe fallback
+    startapp_link = f"https://t.me/{bot_username}?startapp"
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
+        [InlineKeyboardButton("💬 Получить помощь онлайн",
+                              url=f"https://t.me/{bot_username}?start=channel")]
+    ])
+    ok = await send_media(ctx.bot, channel_id, text, markup)
+    if ok:
+        log.info("[ai_post_job] Post sent to channel %s", channel_id)
+    else:
+        log.warning("[ai_post_job] Failed to send media; fallback posted")
 
 # ================== Manual posting command ==================
 
@@ -443,6 +452,8 @@ async def main_async():
             first=timedelta(minutes=1),
             name="ai_posting",
         )
+        log.info("Autoposting job scheduled every %s hours",
+                 POST_INTERVAL_HOURS)
 
     runner = web.AppRunner(app)
     await runner.setup()
@@ -452,6 +463,11 @@ async def main_async():
     async with application:
         await application.start()
         log.info("Bot & HTTP server running on port %s", PORT)
+        # Notify admin that bot started and autoposting scheduled
+        try:
+            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"🤖 Бот запущен. Автопостинг каждые {POST_INTERVAL_HOURS} ч.")
+        except Exception as e:
+            log.warning("Cannot notify admin: %s", e)
         # run forever
         await asyncio.Event().wait()
 
