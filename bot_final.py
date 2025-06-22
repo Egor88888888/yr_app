@@ -465,12 +465,10 @@ async def main_async():
     application.bot_data["db_sessionmaker"] = async_sessionmaker
 
     # === Telethon client ===
-    telethon_client = None
-    if API_ID and API_HASH:
-        telethon_client = TelegramClient("analytics", API_ID, API_HASH)
-        await telethon_client.start()
-        application.bot_data["telethon"] = telethon_client
-        log.info("Telethon client started for analytics")
+    telethon_client = TelegramClient("analytics", API_ID, API_HASH)
+    await telethon_client.start(bot_token=TOKEN)
+    application.bot_data["telethon"] = telethon_client
+    log.info("Telethon client started for analytics")
 
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
@@ -540,13 +538,13 @@ async def main_async():
         application.job_queue.run_repeating(
             scan_external_channels_job,
             interval=timedelta(minutes=10),
-            first=timedelta(minutes=10),
+            first=timedelta(seconds=30),
             name="scan_external_channels",
         )
         application.job_queue.run_repeating(
             post_from_external_job,
             interval=timedelta(minutes=10),
-            first=timedelta(minutes=12),
+            first=timedelta(minutes=1),
             name="post_external_content",
         )
 
