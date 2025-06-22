@@ -594,10 +594,27 @@ async def main_async():
 
     application.bot_data["TARGET_CHANNEL_ID"] = target_channel_id
 
-    # Set webhook & default menu button
-    await setup_menu(application.bot)
-    await application.bot.set_webhook(url=f"https://{PUBLIC_HOST}/{TOKEN}")
-    log.info("Webhook set to https://%s/%s", PUBLIC_HOST, TOKEN)
+    # Set webhook & default menu button with error handling
+    try:
+        await setup_menu(application.bot)
+        log.info("Menu button set successfully")
+    except Exception as e:
+        log.error("Failed to set menu button: %s", e)
+
+    try:
+        # Проверяем текущий webhook перед установкой
+        webhook_info = await application.bot.get_webhook_info()
+        current_url = f"https://{PUBLIC_HOST}/{TOKEN}"
+
+        if webhook_info.url != current_url:
+            await application.bot.set_webhook(url=current_url)
+            log.info("Webhook set to https://%s/%s", PUBLIC_HOST, TOKEN)
+        else:
+            log.info("Webhook already set correctly: %s", webhook_info.url)
+    except Exception as e:
+        log.error("Failed to set webhook: %s", e)
+        # Продолжаем работу даже если webhook не установился
+        log.warning("Bot will continue without webhook - polling mode disabled")
 
     # === Schedule autoposting job ===
     if target_channel_id:

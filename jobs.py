@@ -17,10 +17,21 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from db import Subscriber, ExternalPost
 
 # Environment thresholds
-VIEWS_THRESHOLD = int(os.getenv("VIEWS_THRESHOLD", 500))
-REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 10))
+VIEWS_THRESHOLD = int(os.getenv("VIEWS_THRESHOLD", 300))
+REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 5))
 EXTERNAL_CHANNELS: List[str] = [c.strip() for c in os.getenv(
     "EXTERNAL_CHANNELS", "").split(',') if c.strip()]
+
+# Дополнительные источники контента
+NEWS_KEYWORDS = [
+    "страхование", "страховая", "выплата", "ущерб", "ДТП", "ОСАГО", "КАСКО",
+    "страховщик", "возмещение", "компенсация", "полис", "франшиза",
+    "автострахование", "медстрахование", "страхование жизни"
+]
+
+EXCLUDED_KEYWORDS = [
+    "реклама", "продаю", "купить", "скидка", "акция", "промокод"
+]
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +44,43 @@ def _total_reactions(msg: types.Message) -> int:
     if msg.reactions and isinstance(msg.reactions, types.MessageReactions):
         return sum(r.count for r in msg.reactions.results)
     return 0
+
+
+def _is_relevant_content(text: str) -> bool:
+    """Проверяет релевантность контента для страхового канала."""
+    if not text:
+        return False
+
+    text_lower = text.lower()
+
+    # Исключаем рекламу
+    if any(keyword in text_lower for keyword in EXCLUDED_KEYWORDS):
+        return False
+
+    # Проверяем наличие ключевых слов
+    relevant_score = sum(
+        1 for keyword in NEWS_KEYWORDS if keyword in text_lower)
+
+    # Контент релевантен если есть минимум 1 ключевое слово
+    return relevant_score >= 1
+
+
+def _extract_key_facts(text: str) -> str:
+    """Извлекает ключевые факты из текста для последующей обработки AI."""
+    if not text:
+        return ""
+
+    # Базовая очистка от лишнего
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+
+    # Убираем ссылки и хэштеги в конце
+    clean_lines = []
+    for line in lines:
+        if line.startswith(('http', '@', '#')) or 'подписывайтесь' in line.lower():
+            break
+        clean_lines.append(line)
+
+    return '\n'.join(clean_lines[:5])  # Первые 5 строк
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +127,14 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
             log.warning("failed to fetch %s: %s", channel, e)
             continue
 
+        # Фильтруем по популярности И релевантности
         popular = [m for m in messages if (
-            m.views or 0) >= VIEWS_THRESHOLD or _total_reactions(m) >= REACTIONS_THRESHOLD]
+            (m.views or 0) >= VIEWS_THRESHOLD or _total_reactions(
+                m) >= REACTIONS_THRESHOLD
+        ) and _is_relevant_content(m.message)]
+
+        log.info("scan_external: found %d popular + relevant messages from %s",
+                 len(popular), channel)
         saved = 0
         async with session_maker() as session:
             for m in popular:
@@ -90,13 +144,15 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
                 ))
                 if exists:
                     continue
+                # Сохраняем очищенный текст для лучшей обработки AI
+                clean_text = _extract_key_facts(m.message or "")
                 post = ExternalPost(
                     channel=channel,
                     message_id=m.id,
                     date=m.date or datetime.utcnow(),
                     views=m.views,
                     reactions=_total_reactions(m),
-                    text=m.message,
+                    text=clean_text,
                 )
                 session.add(post)
                 saved += 1
