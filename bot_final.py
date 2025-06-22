@@ -215,6 +215,35 @@ async def generate_ai_post() -> Optional[str]:
     return text
 
 
+# ---------- Role detection helper ----------
+
+
+def _detect_role(user_text: str) -> str:
+    """Rudimentary heuristic to classify participant role in ДТП."""
+    text = user_text.lower()
+    # pedestrian patterns
+    pedestrian_keys = ["пешеход", "тротуар", "переходил",
+                       "переходила", "переход", "дорогу пешком"]
+    if any(k in text for k in pedestrian_keys):
+        return "пешеход"
+
+    # passenger patterns (public or private transport passenger)
+    passenger_keys = ["пассажир", "маршрутк", "автобус",
+                      "троллейбус", "такси", "рейсов", "общественн"]
+    if any(k in text for k in passenger_keys):
+        return "пассажир"
+
+    # driver patterns
+    driver_keys = ["водител", "за рул", "управлял",
+                   "вёл машин", "вел автомобил", "ехал на своём"]
+    if any(k in text for k in driver_keys):
+        if any(w in text for w in ["я винов", "виноват", "допустил", "нарушил"]):
+            return "водитель-виновник"
+        return "водитель-потерпевший"
+
+    return "неопределённо"
+
+
 async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Answer private user messages with AI."""
     if update.message is None or update.message.text is None:
@@ -233,8 +262,14 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
     messages = [
         {"role": "system", "content": private_brief},
-        {"role": "user", "content": update.message.text},
     ]
+
+    role = _detect_role(update.message.text)
+    if role != "неопределённо":
+        messages.append(
+            {"role": "system", "content": f"Клиент идентифицирован как: {role}. Отвечай с учётом этой роли."})
+
+    messages.append({"role": "user", "content": update.message.text})
     # Используем более мощную модель, чтобы получить детальные развернутые ответы
     answer = await _ai_complete(messages, model="gpt-4o-mini", temperature=0.45, max_tokens=1000)
     if not answer:
