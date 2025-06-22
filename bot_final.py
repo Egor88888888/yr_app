@@ -33,7 +33,7 @@ import aiohttp
 import io
 # === Analytics & External parsing ===
 from db import init_models, async_sessionmaker
-from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job
+from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job, EXTERNAL_CHANNELS
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from collections import deque
@@ -446,6 +446,11 @@ async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
 
 async def send_media(bot, chat_id: int, caption: str, reply_markup):
     """Send photo or video with fallback to text-only."""
+    # Telegram limits: photo caption 1024 chars, video caption 1024 chars
+    if len(caption) > 1000:
+        caption = caption[:997] + "..."
+        log.warning("Caption truncated to %d chars", len(caption))
+
     tried_urls: set[str] = set(RECENT_MEDIA)
     max_attempts = min(5, len(MEDIA_POOL))
     for _ in range(max_attempts):
@@ -508,19 +513,22 @@ async def main_async():
     if API_ID and API_HASH:
         session_str = os.getenv("TELETHON_USER_SESSION")
         try:
-            if session_str:
+            if session_str and session_str.strip():
+                # Используем пользовательскую сессию для чтения каналов
                 telethon_client = TelegramClient(
                     StringSession(session_str), API_ID, API_HASH)
                 await telethon_client.start()
                 me = await telethon_client.get_me()
                 log.info("Telethon client started with user session %s",
                          me.username or me.id)
+                application.bot_data["telethon"] = telethon_client
             else:
-                telethon_client = TelegramClient("analytics", API_ID, API_HASH)
-                await telethon_client.start(bot_token=TOKEN)
-                log.info("Telethon client started as bot for analytics")
-
-            application.bot_data["telethon"] = telethon_client
+                # Без пользовательской сессии внешние каналы недоступны
+                log.warning(
+                    "TELETHON_USER_SESSION not set - external channel parsing disabled")
+                log.warning(
+                    "To enable: generate session with session_gen.py and set TELETHON_USER_SESSION variable")
+                telethon_client = None
         except Exception as e:
             log.error(
                 "Telethon init failed: %s. Analytics & external posting disabled.", e)
@@ -585,24 +593,33 @@ async def main_async():
 
     # === Schedule analytics jobs ===
     if telethon_client:
+        log.info("Scheduling external channel jobs...")
         application.job_queue.run_repeating(
             collect_subscribers_job,
             interval=timedelta(days=1),
             first=timedelta(minutes=5),
             name="collect_subscribers",
         )
+        log.info("✓ collect_subscribers_job scheduled (daily)")
+
         application.job_queue.run_repeating(
             scan_external_channels_job,
             interval=timedelta(minutes=10),
             first=timedelta(seconds=30),
             name="scan_external_channels",
         )
+        log.info("✓ scan_external_channels_job scheduled (every 10 min)")
+
         application.job_queue.run_repeating(
             post_from_external_job,
             interval=timedelta(minutes=10),
             first=timedelta(minutes=1),
             name="post_external_content",
         )
+        log.info("✓ post_external_content_job scheduled (every 10 min)")
+    else:
+        log.warning(
+            "❌ External jobs NOT scheduled - Telethon client unavailable")
 
     runner = web.AppRunner(app)
     await runner.setup()
@@ -614,7 +631,12 @@ async def main_async():
         log.info("Bot & HTTP server running on port %s", PORT)
         # Notify admin that bot started and autoposting scheduled
         try:
-            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"🤖 Бот запущен. Автопостинг каждые 10 минут.")
+            status_msg = f"🤖 Бот запущен. AI-постинг каждые {POST_INTERVAL_HOURS}ч."
+            if telethon_client:
+                status_msg += f"\n✅ Внешние каналы: {', '.join(EXTERNAL_CHANNELS) if EXTERNAL_CHANNELS else 'не настроены'}"
+            else:
+                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)"
+            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=status_msg)
         except Exception as e:
             log.warning("Cannot notify admin: %s", e)
         # run forever
