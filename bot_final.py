@@ -33,7 +33,7 @@ import aiohttp
 import io
 # === Analytics & External parsing ===
 from db import init_models, async_sessionmaker
-from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job, scan_rss_sources_job, EXTERNAL_CHANNELS
+from jobs import collect_subscribers_job, scan_external_channels_job, scan_rss_sources_job, EXTERNAL_CHANNELS
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from collections import deque
@@ -388,7 +388,7 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
-    """Periodic job: post AI-generated text to target channel."""
+    """Periodic job: post from external content OR AI-generated text."""
     log.info("[ai_post_job] tick")
     channel_id = ctx.bot_data.get("TARGET_CHANNEL_ID")
     if not channel_id:
@@ -396,12 +396,72 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
             "[ai_post_job] TARGET_CHANNEL_ID not resolved; skip posting")
         return
 
+    # === ПРИОРИТЕТ 1: Проверяем внешние посты ===
+    session_maker = ctx.bot_data.get("db_sessionmaker")
+    if session_maker:
+        try:
+            from db import ExternalPost
+            from sqlalchemy import select
+
+            async with session_maker() as session:
+                # Ищем непрошенный пост с наибольшими просмотрами
+                external_post = await session.scalar(
+                    select(ExternalPost).where(ExternalPost.posted.is_(False))
+                    .order_by(ExternalPost.views.desc()).limit(1)
+                )
+
+                if external_post:
+                    # Есть внешний контент - используем его
+                    log.info("[ai_post_job] Found external post from %s (views=%s)",
+                             external_post.channel, external_post.views)
+
+                    # AI rewrite внешнего контента
+                    site_brief = (
+                        "Ты копирайтер канала 'Страховая справедливость'. Перепиши новость для нашей аудитории страховых выплат, сохраняя факты, добавь один вывод, но убери упоминания конкурентов. 400-500 символов, максимум две эмодзи."
+                    )
+                    messages = [
+                        {"role": "system", "content": site_brief},
+                        {"role": "user", "content": external_post.text or ""},
+                    ]
+                    text = await _ai_complete(messages, temperature=0.7, max_tokens=600)
+                    if text:
+                        text = await humanize(text)
+                    else:
+                        text = external_post.text or ""
+
+                    bot_username = ctx.bot.username or ""
+                    startapp_link = f"https://t.me/{bot_username}?startapp"
+                    markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton(
+                            "📝 Подать заявку", url=startapp_link)],
+                        [InlineKeyboardButton("💬 Получить помощь онлайн",
+                                              url=f"https://t.me/{bot_username}?start=channel")]
+                    ])
+
+                    ok = await send_media(ctx.bot, channel_id, text, markup)
+                    if ok:
+                        log.info(
+                            "[ai_post_job] External post sent to channel %s", channel_id)
+                        # Помечаем как прошенный
+                        external_post.posted = True
+                        await session.commit()
+                    else:
+                        log.warning(
+                            "[ai_post_job] Failed to send external post")
+                    return
+                else:
+                    log.info(
+                        "[ai_post_job] No external posts available, generating AI content")
+        except Exception as e:
+            log.error("[ai_post_job] Database error: %s", e)
+
+    # === ПРИОРИТЕТ 2: Генерируем AI контент ===
     text = await generate_ai_post()
     if not text:
         log.warning("[ai_post_job] generate_ai_post returned None")
         return
 
-    bot_username = ctx.bot.username or ""  # safe fallback
+    bot_username = ctx.bot.username or ""
     startapp_link = f"https://t.me/{bot_username}?startapp"
     markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("📝 Подать заявку", url=startapp_link)],
@@ -410,9 +470,9 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
     ])
     ok = await send_media(ctx.bot, channel_id, text, markup)
     if ok:
-        log.info("[ai_post_job] Post sent to channel %s", channel_id)
+        log.info("[ai_post_job] AI post sent to channel %s", channel_id)
     else:
-        log.warning("[ai_post_job] Failed to send media; fallback posted")
+        log.warning("[ai_post_job] Failed to send AI post; fallback posted")
 
 # ================== Manual posting command ==================
 
@@ -712,19 +772,10 @@ async def main_async():
     application.job_queue.run_repeating(
         scan_rss_sources_job,
         interval=timedelta(minutes=15),
-        first=timedelta(minutes=2),
+        first=timedelta(seconds=30),
         name="scan_rss_sources",
     )
     log.info("✓ scan_rss_sources_job scheduled (every 15 min)")
-
-    # === Постинг из внешних источников (работает всегда) ===
-    application.job_queue.run_repeating(
-        post_from_external_job,
-        interval=timedelta(minutes=12),
-        first=timedelta(minutes=3),
-        name="post_external_content",
-    )
-    log.info("✓ post_external_content_job scheduled (every 12 min)")
 
     runner = web.AppRunner(app)
     await runner.setup()
