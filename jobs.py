@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from typing import List
+import logging
 
 from telethon import functions, types
 from telethon.client import TelegramClient
@@ -21,10 +22,12 @@ REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 10))
 EXTERNAL_CHANNELS: List[str] = [c.strip() for c in os.getenv(
     "EXTERNAL_CHANNELS", "").split(',') if c.strip()]
 
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _total_reactions(msg: types.Message) -> int:
     if msg.reactions and isinstance(msg.reactions, types.MessageReactions):
@@ -75,6 +78,7 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
 
         popular = [m for m in messages if (
             m.views or 0) >= VIEWS_THRESHOLD or _total_reactions(m) >= REACTIONS_THRESHOLD]
+        saved = 0
         async with session_maker() as session:
             for m in popular:
                 exists = await session.scalar(select(ExternalPost.id).where(
@@ -92,7 +96,12 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
                     text=m.message,
                 )
                 session.add(post)
+                saved += 1
             await session.commit()
+        if saved:
+            log.info("scan_external: saved %s new posts from %s", saved, channel)
+        else:
+            log.info("scan_external: no new popular posts from %s", channel)
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +123,7 @@ async def post_from_external_job(ctx: ContextTypes.DEFAULT_TYPE):
                                        ).order_by(ExternalPost.views.desc()).limit(1)
         )
         if not post:
+            log.info("post_external: no unposted items found")
             return
 
         # AI rewrite
@@ -136,6 +146,8 @@ async def post_from_external_job(ctx: ContextTypes.DEFAULT_TYPE):
         # Reuse send_media helper
         bot = ctx.bot
         await send_media(bot, channel_id, text, reply_markup=None)
+        log.info("post_external: posted message %s from %s views=%s",
+                 post.message_id, post.channel, post.views)
 
         post.posted = True
         await session.commit()

@@ -550,7 +550,7 @@ async def main_async():
         log.info("Bot & HTTP server running on port %s", PORT)
         # Notify admin that bot started and autoposting scheduled
         try:
-            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"🤖 Бот запущен. Автопостинг каждые {POST_INTERVAL_HOURS} ч.")
+            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"🤖 Бот запущен. Автопостинг каждые 10 минут.")
         except Exception as e:
             log.warning("Cannot notify admin: %s", e)
         # run forever
