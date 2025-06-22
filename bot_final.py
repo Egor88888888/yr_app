@@ -48,10 +48,17 @@ PORT = int(os.getenv("PORT", 8080))
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # required for AI
 # numeric id as string, optional
 TARGET_CHANNEL_ID = os.getenv("TARGET_CHANNEL_ID")
-TARGET_CHANNEL_USERNAME = os.getenv(
-    "TARGET_CHANNEL_USERNAME", "@strahsprav").strip()
-if TARGET_CHANNEL_USERNAME and not TARGET_CHANNEL_USERNAME.startswith("@") and not TARGET_CHANNEL_USERNAME.lstrip("-").isdigit():
-    TARGET_CHANNEL_USERNAME = "@" + TARGET_CHANNEL_USERNAME
+
+# Normalize channel username; allow numeric IDs as env alternative
+raw_username = os.getenv("TARGET_CHANNEL_USERNAME", "strahsprav")
+raw_username = "".join(raw_username.split())  # remove any spaces/nbsp
+
+if raw_username.lstrip("-").isdigit():
+    TARGET_CHANNEL_ID = raw_username
+    TARGET_CHANNEL_USERNAME = None
+else:
+    TARGET_CHANNEL_USERNAME = "@" + raw_username.lstrip("@")
+
 POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", 4))
 # === Telethon & analytics config ===
 API_ID = int(os.getenv("API_ID", 0))

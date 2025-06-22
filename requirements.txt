@@ -1,4 +1,4 @@
-python-telegram-bot[callback-data,webhooks]
+python-telegram-bot[callback-data,webhooks,job-queue]
 aiohttp>=3.8
 openai>=0.28,<1.0
 telethon>=1.33
