@@ -63,6 +63,8 @@ async def collect_subscribers_job(ctx: ContextTypes.DEFAULT_TYPE):
 async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
     """Fetch recent posts from external channels and store popular ones."""
     if not EXTERNAL_CHANNELS:
+        log.warning(
+            "scan_external: EXTERNAL_CHANNELS is empty; set env var EXTERNAL_CHANNELS=vc_ru,rbc_news,…")
         return
     telethon_client: TelegramClient = ctx.bot_data.get("telethon")
     session_maker: async_sessionmaker = ctx.bot_data["db_sessionmaker"]

@@ -453,6 +453,17 @@ async def send_media(bot, chat_id: int, caption: str, reply_markup):
 
 
 async def main_async():
+    # --- Quick diagnostics of critical env-vars (redacted where needed) ---
+    masked_hash = (API_HASH[:5] + "…" + API_HASH[-2:]) if API_HASH else "None"
+    log.info(
+        "Startup config ⇒ API_ID=%s, API_HASH=%s (len=%d), TARGET_CHANNEL_ID=%s, TARGET_CHANNEL_USERNAME=%s",
+        API_ID,
+        masked_hash,
+        len(API_HASH or ""),
+        TARGET_CHANNEL_ID,
+        TARGET_CHANNEL_USERNAME,
+    )
+
     if not all([TOKEN, ADMIN_CHAT_ID, PUBLIC_HOST]):
         log.critical(
             "Missing env vars: YOUR_BOT_TOKEN / ADMIN_CHAT_ID / MY_RAILWAY_PUBLIC_URL")
