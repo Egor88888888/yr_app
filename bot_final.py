@@ -232,13 +232,18 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         {"role": "user", "content": update.message.text},
     ]
     answer = await _ai_complete(messages, temperature=0.6)
-    if answer:
-        # First humanize, then guarantee CTA line
-        answer = await humanize(answer)
-        cta = "Нажмите кнопку \"Подать заявку\" — и наш специалист свяжется с вами"
-        if cta not in answer:
-            answer = f"{answer}\n\n{cta}"
-        await update.message.reply_text(answer)
+    if not answer:
+        # Fallback static reply if AI failed (no key, network error, etc.)
+        fallback = "Спасибо за вопрос! Наш специалист скоро свяжется с вами.\n\nНажмите кнопку \"Подать заявку\" — и наш специалист свяжется с вами"
+        await update.message.reply_text(fallback)
+        return
+
+    # First humanize, then guarantee CTA line
+    answer = await humanize(answer)
+    cta = "Нажмите кнопку \"Подать заявку\" — и наш специалист свяжется с вами"
+    if cta not in answer:
+        answer = f"{answer}\n\n{cta}"
+    await update.message.reply_text(answer)
 
 
 async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
