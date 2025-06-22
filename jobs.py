@@ -1,4 +1,5 @@
 from __future__ import annotations
+# avoid circular? maybe import inside function.
 
 """Background jobs for analytics and external channel parsing."""
 
@@ -92,3 +93,49 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
                 )
                 session.add(post)
             await session.commit()
+
+
+# ---------------------------------------------------------------------------
+# Posting job
+# ---------------------------------------------------------------------------
+
+
+async def post_from_external_job(ctx: ContextTypes.DEFAULT_TYPE):
+    """Pick one unsent external post, rewrite via AI, publish, mark as posted."""
+    telethon_client = ctx.bot  # not used but keep signature
+    session_maker: async_sessionmaker = ctx.bot_data["db_sessionmaker"]
+    channel_id = ctx.bot_data.get("TARGET_CHANNEL_ID")
+    if not channel_id:
+        return
+
+    async with session_maker() as session:
+        post: ExternalPost | None = await session.scalar(
+            select(ExternalPost).where(ExternalPost.posted.is_(False)
+                                       ).order_by(ExternalPost.views.desc()).limit(1)
+        )
+        if not post:
+            return
+
+        # AI rewrite
+        site_brief = (
+            "Ты копирайтер канала 'Страховая справедливость'. Перепиши новость для нашей аудитории страховых выплат, сохраняя факты, добавь один вывод, но убери упоминания конкурентов. 400-500 символов, максимум две эмодзи."
+        )
+        from bot_final import _ai_complete, humanize
+
+        messages = [
+            {"role": "system", "content": site_brief},
+            {"role": "user", "content": post.text or ""},
+        ]
+        text = await _ai_complete(messages, temperature=0.7, max_tokens=600)
+        if text:
+            text = await humanize(text)
+        else:
+            text = post.text or ""
+
+        from bot_final import send_media
+        # Reuse send_media helper
+        bot = ctx.bot
+        await send_media(bot, channel_id, text, reply_markup=None)
+
+        post.posted = True
+        await session.commit()

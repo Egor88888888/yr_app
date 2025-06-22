@@ -33,7 +33,7 @@ import aiohttp
 import io
 # === Analytics & External parsing ===
 from db import init_models, async_sessionmaker
-from jobs import collect_subscribers_job, scan_external_channels_job
+from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job
 from telethon import TelegramClient
 
 ########################### CONFIG ###########################
@@ -529,9 +529,15 @@ async def main_async():
         )
         application.job_queue.run_repeating(
             scan_external_channels_job,
-            interval=timedelta(hours=2),
+            interval=timedelta(minutes=10),
             first=timedelta(minutes=10),
             name="scan_external_channels",
+        )
+        application.job_queue.run_repeating(
+            post_from_external_job,
+            interval=timedelta(minutes=10),
+            first=timedelta(minutes=12),
+            name="post_external_content",
         )
 
     runner = web.AppRunner(app)
