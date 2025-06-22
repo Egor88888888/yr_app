@@ -5,3 +5,4 @@ telethon>=1.33
 sqlalchemy[asyncio]>=2.0
 asyncpg>=0.28
 sqlalchemy>=2.0
+aiosqlite>=0.19
