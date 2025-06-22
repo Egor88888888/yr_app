@@ -116,6 +116,15 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Нажмите кнопку \"📝 Подать заявку\" рядом со строкой ввода⬇️")
 
 
+async def cmd_setup_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Принудительная установка кнопки мини-приложения."""
+    try:
+        await setup_menu(ctx.bot)
+        await update.message.reply_text("✅ Кнопка 'Подать заявку' установлена! Проверьте меню рядом со строкой ввода.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка установки кнопки: {e}")
+
+
 async def debug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     log.debug("Update: %s", update)
 
@@ -554,6 +563,7 @@ async def main_async():
         log.warning("⚠️ API_ID or API_HASH missing - Telethon disabled")
 
     application.add_handler(CommandHandler("start", cmd_start))
+    application.add_handler(CommandHandler("setup_menu", cmd_setup_menu))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
     application.add_handler(CommandHandler(
         "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
