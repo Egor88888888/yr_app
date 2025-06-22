@@ -35,6 +35,7 @@ import io
 from db import init_models, async_sessionmaker
 from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job
 from telethon import TelegramClient
+from telethon.sessions import StringSession
 from collections import deque
 
 ########################### CONFIG ###########################
@@ -505,11 +506,21 @@ async def main_async():
     # === Telethon client ===
     telethon_client = None
     if API_ID and API_HASH:
+        session_str = os.getenv("TELETHON_USER_SESSION")
         try:
-            telethon_client = TelegramClient("analytics", API_ID, API_HASH)
-            await telethon_client.start(bot_token=TOKEN)
+            if session_str:
+                telethon_client = TelegramClient(
+                    StringSession(session_str), API_ID, API_HASH)
+                await telethon_client.start()
+                me = await telethon_client.get_me()
+                log.info("Telethon client started with user session %s",
+                         me.username or me.id)
+            else:
+                telethon_client = TelegramClient("analytics", API_ID, API_HASH)
+                await telethon_client.start(bot_token=TOKEN)
+                log.info("Telethon client started as bot for analytics")
+
             application.bot_data["telethon"] = telethon_client
-            log.info("Telethon client started for analytics")
         except Exception as e:
             log.error(
                 "Telethon init failed: %s. Analytics & external posting disabled.", e)
