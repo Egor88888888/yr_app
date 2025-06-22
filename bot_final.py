@@ -465,10 +465,17 @@ async def main_async():
     application.bot_data["db_sessionmaker"] = async_sessionmaker
 
     # === Telethon client ===
-    telethon_client = TelegramClient("analytics", API_ID, API_HASH)
-    await telethon_client.start(bot_token=TOKEN)
-    application.bot_data["telethon"] = telethon_client
-    log.info("Telethon client started for analytics")
+    telethon_client = None
+    if API_ID and API_HASH:
+        try:
+            telethon_client = TelegramClient("analytics", API_ID, API_HASH)
+            await telethon_client.start(bot_token=TOKEN)
+            application.bot_data["telethon"] = telethon_client
+            log.info("Telethon client started for analytics")
+        except Exception as e:
+            log.error(
+                "Telethon init failed: %s. Analytics & external posting disabled.", e)
+            telethon_client = None
 
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
