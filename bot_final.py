@@ -35,6 +35,7 @@ import io
 from db import init_models, async_sessionmaker
 from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job
 from telethon import TelegramClient
+from collections import deque
 
 ########################### CONFIG ###########################
 TOKEN = os.getenv("YOUR_BOT_TOKEN")
@@ -82,6 +83,9 @@ MEDIA_POOL = [
     # Short thematic video (dashcam)
     {"url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4", "kind": "video"},
 ]
+
+# Keep track of last 5 media URLs, module-level to avoid attribute errors
+RECENT_MEDIA: deque[str] = deque(maxlen=5)
 
 # ===================== Domain facts for AI =====================
 # Сжатый список достоверных фактов об ОСАГО и ОСГОП на 2025 год. Используется
@@ -441,11 +445,7 @@ async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
 
 async def send_media(bot, chat_id: int, caption: str, reply_markup):
     """Send photo or video with fallback to text-only."""
-    # Avoid повторений: храним 5 последних url в bot_data
-    recent: list[str] = bot.application.bot_data.setdefault(
-        "_recent_media", [])  # type: ignore[attr-defined]
-
-    tried_urls: set[str] = set(recent)
+    tried_urls: set[str] = set(RECENT_MEDIA)
     max_attempts = min(5, len(MEDIA_POOL))
     for _ in range(max_attempts):
         # pick media that hasn't been tried yet to avoid repeat attempts
@@ -468,9 +468,7 @@ async def send_media(bot, chat_id: int, caption: str, reply_markup):
             else:
                 await bot.send_video(chat_id=chat_id, video=input_file, caption=caption, reply_markup=reply_markup)
             # success — запоминаем url
-            recent.append(media["url"])
-            if len(recent) > 5:
-                recent.pop(0)
+            RECENT_MEDIA.append(media["url"])
             return True
         except Exception as e:
             log.warning("send_%s failed: %s", media["kind"], e)

@@ -72,10 +72,11 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     for channel in EXTERNAL_CHANNELS:
+        log.info("scan_external: fetching %s", channel)
         try:
             messages = await telethon_client.get_messages(channel, limit=50)
         except Exception as e:
-            ctx.job.logger.warning("failed to fetch %s: %s", channel, e)
+            log.warning("failed to fetch %s: %s", channel, e)
             continue
 
         popular = [m for m in messages if (
