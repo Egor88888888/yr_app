@@ -83,6 +83,23 @@ MEDIA_POOL = [
     {"url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4", "kind": "video"},
 ]
 
+# ===================== Domain facts for AI =====================
+# Сжатый список достоверных фактов об ОСАГО и ОСГОП на 2025 год. Используется
+# для law-постов, чтобы всегда содержать правильные цифры.
+
+FACTS_OSAGO_OSGOP: list[str] = [
+    "ОСАГО: лимит ущерба имуществу — 400 000 ₽ (§40-ФЗ)",
+    "ОСАГО: лимит вреда жизни/здоровью — 500 000 ₽ (475 000 ₽ лечение + 25 000 ₽ погребение)",
+    "ОСАГО: по европротоколу выплаты 100–400 тыс. ₽ в зависимости от фиксации ДТП",
+    "ОСАГО: штраф за отсутствие полиса — 800 ₽ (КоАП 12.37)",
+    "ОСАГО: срок выплаты страховой — 20 дней после обращения",
+    "ОСАГО: с 1 марта 2025 г. новый автомобиль можно поставить на учёт, оформив полис в течение 10 дней",
+    "ОСГОП: гибель пассажира — 2 025 000 ₽, тяжкий вред здоровью — до 2 000 000 ₽",
+    "ОСГОП: обязательна для перевозчиков пассажиров, включая такси с 1 сентября 2024 г.",
+    "ОСГОП: штраф за отсутствие полиса — до 1 млн ₽ и остановка маршрута",
+    "ОСГОП: срок выплаты — 30 дней; аванс 100 000 ₽ при тяжком вреде здоровью",
+]
+
 
 def _media_url(item):
     return item["url"] + f"&rand={random.randint(1,999999)}" if "?" in item["url"] else item["url"] + f"?rand={random.randint(1,999999)}"
@@ -211,16 +228,20 @@ async def generate_ai_post() -> Optional[str]:
 
     mode = random.choice(["promo", "case", "law"])
     if mode == "promo":
-        user_prompt = "Сделай мотивирующий пост о том, почему важно бороться со страховой и как мы помогаем клиентам получить максимум выплат."
-    elif mode == "case":
         user_prompt = (
-            "Приведи короткую историю успешного клиента (выдумай имя и цифры, реалистичные). "
-            "Опиши проблему, наши действия и результат — сумма выплаты."
+            "Напиши мотивационный пост: почему важно добиваться выплат и как мы помогаем. "
+            "Используй реальный лимит ОСАГО 400/500 тыс. ₽ или ОСГОП 2 млн ₽ — выбери подходящий."
+        )
+    elif mode == "case":
+        # Случайно выбираем диапазон выплат для правдоподобия
+        sum_case = random.randint(120, 450) * 1000  # 120 000–450 000
+        user_prompt = (
+            f"Приведи короткую историю клиента: ДТП, страховая занижала выплату. Мы добились {sum_case:,} ₽. "
+            "Опиши проблему, наши действия и результат лаконично."
         )
     else:  # law
-        user_prompt = (
-            "Поделись интересным фактом или выдержкой из законодательства об ОСАГО или КАСКО, объясни, как это помогает пострадавшим получить компенсацию."
-        )
+        fact = random.choice(FACTS_OSAGO_OSGOP)
+        user_prompt = f"Расскажи аудитории один факт: {fact}. Сохрани цифры и ссылку на закон (коротко). Объясни, чем это полезно пострадавшим."
 
     messages = [
         {"role": "system", "content": site_brief},
@@ -420,7 +441,11 @@ async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
 
 async def send_media(bot, chat_id: int, caption: str, reply_markup):
     """Send photo or video with fallback to text-only."""
-    tried_urls = set()
+    # Avoid повторений: храним 5 последних url в bot_data
+    recent: list[str] = bot.application.bot_data.setdefault(
+        "_recent_media", [])  # type: ignore[attr-defined]
+
+    tried_urls: set[str] = set(recent)
     max_attempts = min(5, len(MEDIA_POOL))
     for _ in range(max_attempts):
         # pick media that hasn't been tried yet to avoid repeat attempts
@@ -442,7 +467,11 @@ async def send_media(bot, chat_id: int, caption: str, reply_markup):
                 await bot.send_photo(chat_id=chat_id, photo=input_file, caption=caption, reply_markup=reply_markup)
             else:
                 await bot.send_video(chat_id=chat_id, video=input_file, caption=caption, reply_markup=reply_markup)
-            return True  # success
+            # success — запоминаем url
+            recent.append(media["url"])
+            if len(recent) > 5:
+                recent.pop(0)
+            return True
         except Exception as e:
             log.warning("send_%s failed: %s", media["kind"], e)
     # fallback

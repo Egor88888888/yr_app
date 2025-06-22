@@ -78,6 +78,7 @@ class ExternalPost(Base):
     views: Mapped[Optional[int]] = mapped_column(Integer)
     reactions: Mapped[Optional[int]] = mapped_column(Integer)
     text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    posted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     __table_args__ = (
         Index("idx_channel_msg", "channel", "message_id", unique=True),
@@ -92,3 +93,12 @@ async def init_models() -> None:
     """Create tables if they don't exist (simple metadata.create_all)."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Ensure new columns exist when code updated without migrations
+        try:
+            await conn.exec_driver_sql(
+                "ALTER TABLE external_posts ADD COLUMN IF NOT EXISTS posted BOOLEAN DEFAULT FALSE"
+            )
+        except Exception:
+            # Ignore if DB not postgres or column already exists
+            pass
