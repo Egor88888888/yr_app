@@ -512,27 +512,46 @@ async def main_async():
     telethon_client = None
     if API_ID and API_HASH:
         session_str = os.getenv("TELETHON_USER_SESSION")
-        try:
-            if session_str and session_str.strip():
+        log.info("TELETHON_USER_SESSION status: %s",
+                 "SET" if session_str and session_str.strip() else "EMPTY/NOT_SET")
+
+        if session_str and session_str.strip():
+            try:
                 # Используем пользовательскую сессию для чтения каналов
+                log.info("Creating Telethon client with user session...")
                 telethon_client = TelegramClient(
                     StringSession(session_str), API_ID, API_HASH)
-                await telethon_client.start()
-                me = await telethon_client.get_me()
-                log.info("Telethon client started with user session %s",
-                         me.username or me.id)
-                application.bot_data["telethon"] = telethon_client
-            else:
-                # Без пользовательской сессии внешние каналы недоступны
-                log.warning(
-                    "TELETHON_USER_SESSION not set - external channel parsing disabled")
-                log.warning(
-                    "To enable: generate session with session_gen.py and set TELETHON_USER_SESSION variable")
+
+                # Важно: подключаемся без интерактивной аутентификации
+                await telethon_client.connect()
+                if not await telethon_client.is_user_authorized():
+                    log.error(
+                        "TELETHON_USER_SESSION is invalid - user not authorized")
+                    await telethon_client.disconnect()
+                    telethon_client = None
+                else:
+                    me = await telethon_client.get_me()
+                    log.info("✅ Telethon client started with user session: %s",
+                             me.username or f"ID:{me.id}")
+                    application.bot_data["telethon"] = telethon_client
+            except Exception as e:
+                log.error(
+                    "Telethon session error: %s. External parsing disabled.", e)
+                if telethon_client:
+                    try:
+                        await telethon_client.disconnect()
+                    except:
+                        pass
                 telethon_client = None
-        except Exception as e:
-            log.error(
-                "Telethon init failed: %s. Analytics & external posting disabled.", e)
+        else:
+            # Без пользовательской сессии внешние каналы недоступны
+            log.warning(
+                "⚠️ TELETHON_USER_SESSION not set - external channel parsing disabled")
+            log.warning(
+                "To enable: generate session with session_gen.py and set TELETHON_USER_SESSION variable")
             telethon_client = None
+    else:
+        log.warning("⚠️ API_ID or API_HASH missing - Telethon disabled")
 
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
