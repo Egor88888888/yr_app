@@ -4,9 +4,13 @@ from __future__ import annotations
 """Background jobs for analytics and external channel parsing."""
 
 import os
+import aiohttp
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict, Optional
 import logging
+import re
+import hashlib
 
 from telethon import functions, types
 from telethon.client import TelegramClient
@@ -17,21 +21,50 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from db import Subscriber, ExternalPost
 
 # Environment thresholds
-VIEWS_THRESHOLD = int(os.getenv("VIEWS_THRESHOLD", 300))
-REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 5))
+VIEWS_THRESHOLD = int(os.getenv("VIEWS_THRESHOLD", 300))  # Снизил порог
+REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 5))  # Снизил порог
 EXTERNAL_CHANNELS: List[str] = [c.strip() for c in os.getenv(
     "EXTERNAL_CHANNELS", "").split(',') if c.strip()]
+
+# RSS источники для альтернативного парсинга
+RSS_SOURCES = [
+    {
+        "name": "banki_ru_news",
+        "url": "https://www.banki.ru/xml/news.rss",
+        "category": "banking"
+    },
+    {
+        "name": "rbc_business",
+        "url": "https://rssexport.rbc.ru/rbcnews/news/20/full.rss",
+        "category": "business"
+    },
+    {
+        "name": "kommersant_auto",
+        "url": "https://www.kommersant.ru/RSS/section-auto.xml",
+        "category": "auto"
+    },
+    {
+        "name": "garant_news",
+        "url": "https://www.garant.ru/rss/news.xml",
+        "category": "legal"
+    }
+]
 
 # Дополнительные источники контента
 NEWS_KEYWORDS = [
     "страхование", "страховая", "выплата", "ущерб", "ДТП", "ОСАГО", "КАСКО",
     "страховщик", "возмещение", "компенсация", "полис", "франшиза",
-    "автострахование", "медстрахование", "страхование жизни"
+    "автострахование", "медстрахование", "страхование жизни", "РСА",
+    "страхователь", "выплаты по ОСАГО", "суд", "возмещение ущерба"
 ]
 
 EXCLUDED_KEYWORDS = [
-    "реклама", "продаю", "купить", "скидка", "акция", "промокод"
+    "реклама", "продаю", "купить", "скидка", "акция", "промокод",
+    "партнерский", "спонсор", "реклама", "bitcoin", "криптовалюта"
 ]
+
+# Кэш обработанных новостей (по хэшу заголовка)
+PROCESSED_NEWS = set()
 
 log = logging.getLogger(__name__)
 
@@ -161,6 +194,130 @@ async def scan_external_channels_job(ctx: ContextTypes.DEFAULT_TYPE):
             log.info("scan_external: saved %s new posts from %s", saved, channel)
         else:
             log.info("scan_external: no new popular posts from %s", channel)
+
+
+# ---------------------------------------------------------------------------
+# RSS Parsing Functions
+# ---------------------------------------------------------------------------
+
+async def fetch_rss_feed(url: str, timeout: int = 10) -> Optional[str]:
+    """Получает RSS ленту по URL."""
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    return await response.text()
+    except Exception as e:
+        log.warning("RSS fetch failed for %s: %s", url, e)
+    return None
+
+
+def parse_rss_items(rss_content: str) -> List[Dict[str, str]]:
+    """Парсит RSS XML и возвращает список новостей."""
+    items = []
+    try:
+        root = ET.fromstring(rss_content)
+
+        # Поддержка разных форматов RSS
+        for item in root.findall(".//item"):
+            title = item.find("title")
+            description = item.find("description")
+            link = item.find("link")
+            pub_date = item.find("pubDate")
+
+            if title is not None and title.text:
+                # Очистка HTML тегов из описания
+                desc_text = ""
+                if description is not None and description.text:
+                    desc_text = re.sub(
+                        r'<[^>]+>', '', description.text).strip()
+
+                items.append({
+                    "title": title.text.strip(),
+                    "description": desc_text,
+                    "link": link.text.strip() if link is not None and link.text else "",
+                    "pub_date": pub_date.text.strip() if pub_date is not None and pub_date.text else ""
+                })
+    except Exception as e:
+        log.error("RSS parsing failed: %s", e)
+
+    return items
+
+
+def get_content_hash(title: str, description: str) -> str:
+    """Создает хэш контента для проверки уникальности."""
+    content = f"{title}{description}".lower()
+    return hashlib.md5(content.encode()).hexdigest()
+
+
+async def scan_rss_sources_job(ctx: ContextTypes.DEFAULT_TYPE):
+    """Сканирует RSS источники и сохраняет релевантные новости."""
+    session_maker: async_sessionmaker = ctx.bot_data["db_sessionmaker"]
+
+    for source in RSS_SOURCES:
+        log.info("scan_rss: fetching %s (%s)",
+                 source["name"], source["category"])
+
+        try:
+            rss_content = await fetch_rss_feed(source["url"])
+            if not rss_content:
+                log.warning("scan_rss: failed to fetch %s", source["name"])
+                continue
+
+            items = parse_rss_items(rss_content)
+            log.info("scan_rss: parsed %d items from %s",
+                     len(items), source["name"])
+
+            relevant_items = []
+            for item in items:
+                # Проверяем релевантность
+                full_text = f"{item['title']} {item['description']}"
+                if _is_relevant_content(full_text):
+                    # Проверяем уникальность
+                    content_hash = get_content_hash(
+                        item['title'], item['description'])
+                    if content_hash not in PROCESSED_NEWS:
+                        relevant_items.append((item, content_hash))
+                        PROCESSED_NEWS.add(content_hash)
+
+            log.info("scan_rss: found %d relevant + unique items from %s",
+                     len(relevant_items), source["name"])
+
+            # Сохраняем в базу
+            saved = 0
+            async with session_maker() as session:
+                for item, content_hash in relevant_items:
+                    # Используем хэш как message_id для RSS источников
+                    exists = await session.scalar(select(ExternalPost.id).where(
+                        ExternalPost.channel == source["name"],
+                        # Первые 8 символов хэша как int
+                        ExternalPost.message_id == int(content_hash[:8], 16)
+                    ))
+                    if exists:
+                        continue
+
+                    # Готовим сжатый текст для AI
+                    clean_text = f"{item['title']}\n\n{_extract_key_facts(item['description'])}"
+
+                    post = ExternalPost(
+                        channel=source["name"],
+                        message_id=int(content_hash[:8], 16),
+                        date=datetime.utcnow(),
+                        views=500,  # Фиксированный "рейтинг" для RSS
+                        reactions=10,
+                        text=clean_text,
+                    )
+                    session.add(post)
+                    saved += 1
+
+                await session.commit()
+
+            if saved:
+                log.info("scan_rss: saved %d new posts from %s",
+                         saved, source["name"])
+
+        except Exception as e:
+            log.error("scan_rss: error processing %s: %s", source["name"], e)
 
 
 # ---------------------------------------------------------------------------

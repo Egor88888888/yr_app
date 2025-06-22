@@ -33,7 +33,7 @@ import aiohttp
 import io
 # === Analytics & External parsing ===
 from db import init_models, async_sessionmaker
-from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job, EXTERNAL_CHANNELS
+from jobs import collect_subscribers_job, scan_external_channels_job, post_from_external_job, scan_rss_sources_job, EXTERNAL_CHANNELS
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from collections import deque
@@ -72,21 +72,49 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger(__name__)
 
 MEDIA_POOL = [
-    # Photos
-    {"url": "https://images.pexels.com/photos/701775/pexels-photo-701775.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/806137/pexels-photo-806137.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/5668840/pexels-photo-5668840.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/4425839/pexels-photo-4425839.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/235569/pexels-photo-235569.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/5682738/pexels-photo-5682738.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/672630/pexels-photo-672630.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    {"url": "https://images.pexels.com/photos/3768893/pexels-photo-3768893.jpeg?auto=compress&cs=tinysrgb&w=800", "kind": "photo"},
-    # Short thematic video (dashcam)
-    {"url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4", "kind": "video"},
+    # Автомобильные и страховые фото
+    {"url": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800",
+        "kind": "photo"},  # Автокатастрофа
+    {"url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800",
+        "kind": "photo"},  # Поврежденная машина
+    {"url": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+        "kind": "photo"},  # Автострахование
+    {"url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800",
+        "kind": "photo"},  # Документы
+    {"url": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800",
+        "kind": "photo"},  # Подписание документов
+    {"url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800",
+        "kind": "photo"},  # Деньги/выплаты
+    {"url": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800",
+        "kind": "photo"},  # Бизнес консультация
+    {"url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800",
+        "kind": "photo"},  # Офис юристов
+    {"url": "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800",
+        "kind": "photo"},  # Юридические книги
+    {"url": "https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=800",
+        "kind": "photo"},  # Автомобили
+    {"url": "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800",
+        "kind": "photo"},  # Рукопожатие/сделка
+    {"url": "https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?w=800",
+        "kind": "photo"},  # Офисная работа
+    # Дополнительные уникальные изображения
+    {"url": "https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=800",
+        "kind": "photo"},  # Калькулятор
+    {"url": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800",
+        "kind": "photo"},  # Контракт
+    {"url": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800",
+        "kind": "photo"},  # Суд/правосудие
 ]
 
 # Keep track of last 5 media URLs, module-level to avoid attribute errors
-RECENT_MEDIA: deque[str] = deque(maxlen=5)
+# Увеличил до 8 для лучшего разнообразия
+RECENT_MEDIA: deque[str] = deque(maxlen=8)
+
+# Кэш последних постов для предотвращения повторов
+RECENT_POSTS: deque[str] = deque(maxlen=10)
+
+# Кэш использованных фактов
+USED_FACTS: deque[str] = deque(maxlen=5)
 
 # ===================== Domain facts for AI =====================
 # Сжатый список достоверных фактов об ОСАГО и ОСГОП на 2025 год. Используется
@@ -254,7 +282,14 @@ async def generate_ai_post() -> Optional[str]:
             "Опиши проблему, наши действия и результат лаконично."
         )
     else:  # law
-        fact = random.choice(FACTS_OSAGO_OSGOP)
+        # Выбираем факт который не использовали недавно
+        available_facts = [f for f in FACTS_OSAGO_OSGOP if f not in USED_FACTS]
+        if not available_facts:
+            USED_FACTS.clear()  # Сбрасываем если все использованы
+            available_facts = FACTS_OSAGO_OSGOP
+
+        fact = random.choice(available_facts)
+        USED_FACTS.append(fact)
         user_prompt = f"Расскажи аудитории один факт: {fact}. Сохрани цифры и ссылку на закон (коротко). Объясни, чем это полезно пострадавшим."
 
     messages = [
@@ -264,6 +299,20 @@ async def generate_ai_post() -> Optional[str]:
     text = await _ai_complete(messages, temperature=0.8, max_tokens=600)
     if text:
         text = await humanize(text)
+
+        # Проверяем уникальность (простая проверка по первым 50 символам)
+        text_signature = text[:50].lower()
+        if text_signature in RECENT_POSTS:
+            log.warning(
+                "Generated post is too similar to recent ones, regenerating...")
+            # Повторная генерация с более высокой температурой
+            text = await _ai_complete(messages, temperature=1.0, max_tokens=600)
+            if text:
+                text = await humanize(text)
+
+        if text:
+            RECENT_POSTS.append(text[:50].lower())
+
     return text
 
 
@@ -639,7 +688,7 @@ async def main_async():
 
     # === Schedule analytics jobs ===
     if telethon_client:
-        log.info("Scheduling external channel jobs...")
+        log.info("Scheduling Telethon-based external channel jobs...")
         application.job_queue.run_repeating(
             collect_subscribers_job,
             interval=timedelta(days=1),
@@ -655,17 +704,27 @@ async def main_async():
             name="scan_external_channels",
         )
         log.info("✓ scan_external_channels_job scheduled (every 10 min)")
-
-        application.job_queue.run_repeating(
-            post_from_external_job,
-            interval=timedelta(minutes=10),
-            first=timedelta(minutes=1),
-            name="post_external_content",
-        )
-        log.info("✓ post_external_content_job scheduled (every 10 min)")
     else:
-        log.warning(
-            "❌ External jobs NOT scheduled - Telethon client unavailable")
+        log.warning("⚠️ Telethon unavailable - using RSS alternative")
+
+    # === RSS парсинг как альтернатива (работает всегда) ===
+    log.info("Scheduling RSS-based content parsing...")
+    application.job_queue.run_repeating(
+        scan_rss_sources_job,
+        interval=timedelta(minutes=15),
+        first=timedelta(minutes=2),
+        name="scan_rss_sources",
+    )
+    log.info("✓ scan_rss_sources_job scheduled (every 15 min)")
+
+    # === Постинг из внешних источников (работает всегда) ===
+    application.job_queue.run_repeating(
+        post_from_external_job,
+        interval=timedelta(minutes=12),
+        first=timedelta(minutes=3),
+        name="post_external_content",
+    )
+    log.info("✓ post_external_content_job scheduled (every 12 min)")
 
     runner = web.AppRunner(app)
     await runner.setup()
