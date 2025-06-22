@@ -7,6 +7,7 @@ Usage:
 """
 
 import os
+import logging
 from datetime import datetime
 from typing import Optional
 
@@ -18,9 +19,15 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 # Engine & session
 # ---------------------------------------------------------------------------
 
+log = logging.getLogger(__name__)
+
 RAW_DATABASE_URL = os.getenv("DATABASE_URL")
+
+# If var missing, fallback to in-memory SQLite to keep bot alive (analytics disabled)
 if not RAW_DATABASE_URL:
-    raise RuntimeError("DATABASE_URL env var not set")
+    log.warning(
+        "DATABASE_URL not set – analytics DB will run in-memory SQLite (volatile).")
+    RAW_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 # Railway gives sync DSN; convert to asyncpg driver if necessary
 if RAW_DATABASE_URL.startswith("postgresql://"):
