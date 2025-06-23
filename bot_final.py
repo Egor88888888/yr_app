@@ -40,7 +40,7 @@ from collections import deque
 
 ########################### CONFIG ###########################
 TOKEN = os.getenv("YOUR_BOT_TOKEN")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")  # string
+ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))  # string
 # e.g. poetic-simplicity-production-xxx.up.railway.app
 PUBLIC_HOST = os.getenv("MY_RAILWAY_PUBLIC_URL")
 WEB_APP_URL = "https://egor88888888.github.io/yr_app/"
