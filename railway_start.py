@@ -1,46 +1,26 @@
 #!/usr/bin/env python3
-"""Startup script for Railway deployment."""
+"""Railway startup script."""
 
 import os
 import sys
 import asyncio
-from pathlib import Path
-
-
-def check_env():
-    """Check required environment variables"""
-    required = ["BOT_TOKEN", "DATABASE_URL", "ADMIN_CHAT_ID"]
-    missing = []
-
-    for var in required:
-        if not os.getenv(var):
-            missing.append(var)
-
-    if missing:
-        print(
-            f"❌ Missing required environment variables: {', '.join(missing)}")
-        print("📖 See SETUP.md for configuration instructions")
-        sys.exit(1)
-
-    print("✅ All required environment variables set")
 
 
 def main():
-    """Main entry point"""
-    print("🚀 Starting Telegram Bot on Railway...")
+    print("🚀 Starting Telegram Bot...")
 
-    # Check environment
-    check_env()
-
-    # Import and run the bot
-    try:
-        from bot.main import main as bot_main
-        asyncio.run(bot_main())
-    except Exception as e:
-        print(f"❌ Error starting bot: {e}")
-        import traceback
-        traceback.print_exc()
+    # Check critical env vars
+    if not os.getenv("BOT_TOKEN"):
+        print("❌ BOT_TOKEN not set")
         sys.exit(1)
+
+    if not os.getenv("DATABASE_URL"):
+        print("❌ DATABASE_URL not set")
+        sys.exit(1)
+
+    # Start bot
+    from bot.main import main as bot_main
+    asyncio.run(bot_main())
 
 
 if __name__ == "__main__":
