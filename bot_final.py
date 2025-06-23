@@ -173,12 +173,28 @@ async def handle_submit(request: web.Request) -> web.Response:
 
     # Handle GET request - return HTML form
     if request.method == "GET":
-        # Simple fallback without file reading
-        simple_html = """<!DOCTYPE html>
-<html><head><title>Страховая справедливость</title><meta charset="UTF-8"></head>
-<body><h1>Мини-приложение временно недоступно</h1>
-<p>Для подачи заявки используйте кнопку в чате бота</p></body></html>"""
-        return web.Response(text=simple_html, content_type="text/html")
+        # Сначала пытаемся отдать полноценный index.html, расположенный рядом с bot_final.py
+        try:
+            from pathlib import Path
+            html_path = Path(__file__).with_name("index.html")
+            if html_path.exists():
+                html_content = html_path.read_text(encoding="utf-8")
+                return web.Response(
+                    text=html_content,
+                    content_type="text/html; charset=utf-8",
+                    headers={"Cache-Control": "no-cache",
+                             "Access-Control-Allow-Origin": "*"}
+                )
+        except Exception as e:
+            log.error("Failed to read index.html: %s", e)
+
+        # Fallback минимальный HTML, если файл не найден
+        simple_html = (
+            "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Страховая справедливость</title></head>"
+            "<body><h3 style='font-family: sans-serif'>Мини-приложение временно недоступно.<br/>"
+            "Попробуйте позже или свяжитесь через чат бота.</h3></body></html>"
+        )
+        return web.Response(text=simple_html, content_type="text/html; charset=utf-8")
 
     try:
         data = await request.json()
