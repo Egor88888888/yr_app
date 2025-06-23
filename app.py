@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Alternative entry point for Railway."""
 
-from bot.main import main as bot_main
 import os
 import sys
 import asyncio
@@ -20,5 +19,16 @@ if not os.getenv("DATABASE_URL"):
     print("❌ DATABASE_URL not set")
     sys.exit(1)
 
+print("✅ Environment variables OK")
+print(f"🔗 Database URL: {os.getenv('DATABASE_URL')[:30]}...")
+
 # Start bot
-asyncio.run(bot_main())
+try:
+    from bot.main import main as bot_main
+    print("✅ Bot module imported")
+    asyncio.run(bot_main())
+except Exception as e:
+    print(f"❌ Error: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
