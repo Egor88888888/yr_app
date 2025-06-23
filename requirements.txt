@@ -6,3 +6,7 @@ sqlalchemy[asyncio]>=2.0
 asyncpg>=0.28
 sqlalchemy>=2.0
 aiosqlite>=0.19
+alembic>=1.13
+google-auth>=2.25
+gspread>=6.0
+google-api-python-client>=2.99
