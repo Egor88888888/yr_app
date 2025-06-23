@@ -28,6 +28,12 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.file",
 ]
 
+# Check if Google Sheets is configured
+SHEETS_ENABLED = bool(os.getenv("GSERVICE_KEY") and os.getenv("GSHEET_ID"))
+
+if not SHEETS_ENABLED:
+    print("⚠️ Google Sheets disabled: GSERVICE_KEY or GSHEET_ID not set")
+
 
 @lru_cache(maxsize=1)
 def _get_client() -> gspread.Client:
@@ -74,16 +80,23 @@ def _get_sheet():
 
 def append_lead(app: "Application", user: "User", category: "Category") -> None:
     """Append new lead to Google Sheet. Works synchronously (fast single row)."""
-    ws = _get_sheet()
-    row: List[Any] = [
-        datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        category.name if category else "-",
-        app.subcategory or "-",
-        f"{user.first_name or ''} {user.last_name or ''}".strip() or "-",
-        user.phone or "-",
-        user.email or "-",
-        (app.description or "-")[:500],
-        str(app.price or "-"),
-        app.status,
-    ]
-    ws.append_row(row, value_input_option="USER_ENTERED")
+    if not SHEETS_ENABLED:
+        print("⚠️ Skipping Google Sheets: not configured")
+        return
+
+    try:
+        ws = _get_sheet()
+        row: List[Any] = [
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            category.name if category else "-",
+            app.subcategory or "-",
+            f"{user.first_name or ''} {user.last_name or ''}".strip() or "-",
+            user.phone or "-",
+            user.email or "-",
+            (app.description or "-")[:500],
+            str(app.price or "-"),
+            app.status,
+        ]
+        ws.append_row(row, value_input_option="USER_ENTERED")
+    except Exception as e:
+        print(f"⚠️ Google Sheets error: {e}")

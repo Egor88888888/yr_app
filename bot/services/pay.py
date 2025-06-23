@@ -32,8 +32,11 @@ CP_PUBLIC_ID = os.getenv("CP_PUBLIC_ID")
 PAY_BASE_URL = os.getenv(
     "PAY_BASE_URL", "https://pay.cloudpayments.ru/payments/form")
 
-if not CP_PUBLIC_ID:
-    raise RuntimeError("CP_PUBLIC_ID env not set")
+# Make payment optional - bot can work without it
+PAYMENTS_ENABLED = bool(CP_PUBLIC_ID)
+
+if not PAYMENTS_ENABLED:
+    print("⚠️ Payment system disabled: CP_PUBLIC_ID not set")
 
 
 def _encode(data: dict) -> str:
@@ -44,6 +47,9 @@ def _encode(data: dict) -> str:
 
 def create_payment(app: "Application", user: "User", amount: Decimal) -> str:
     """Return redirect link to CloudPayments payment form."""
+    if not PAYMENTS_ENABLED:
+        return "# Платежная система не настроена"
+
     data = {
         "publicId": CP_PUBLIC_ID,
         "description": f"Оплата заявки #{app.id}",
