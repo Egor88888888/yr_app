@@ -167,14 +167,23 @@ async def handle_submit(request: web.Request) -> web.Response:
     if request.method == "OPTIONS":
         return web.Response(headers={
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type",
         })
 
-    data = await request.json()
-    query_id = data.get("queryId")
-    payload = data.get("payload", {})
-    log.info("/submit payload=%s", payload)
+    # Handle GET request - return HTML form
+    if request.method == "GET":
+        html_content = open("index.html", "r", encoding="utf-8").read()
+        return web.Response(text=html_content, content_type="text/html")
+
+    try:
+        data = await request.json()
+        query_id = data.get("queryId")
+        payload = data.get("payload", {})
+        log.info("/submit payload=%s", payload)
+    except Exception as e:
+        log.error("Failed to parse JSON: %s", e)
+        return web.json_response({"error": "Invalid JSON"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
     # Добавляем пользователя в список подавших заявки
     user_id = None
@@ -238,43 +247,40 @@ async def handle_submit(request: web.Request) -> web.Response:
 
     # Сохраняем заявку в базу данных
     try:
-        session_maker = request.app["application"].bot_data.get(
-            "db_sessionmaker")
-        if session_maker:
-            from db import async_sessionmaker
-            from sqlalchemy import text
+        from db import async_sessionmaker
+        from sqlalchemy import text
 
-            async with session_maker() as session:
-                # Создаем таблицу заявок если не существует
-                await session.execute(text("""
-                    CREATE TABLE IF NOT EXISTS applications (
-                        id SERIAL PRIMARY KEY,
-                        user_id VARCHAR(255),
-                        name VARCHAR(255),
-                        phone VARCHAR(50),
-                        problems TEXT,
-                        description TEXT,
-                        status VARCHAR(50) DEFAULT 'new',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        assigned_admin VARCHAR(255),
-                        notes TEXT
-                    )
-                """))
+        async with async_sessionmaker() as session:
+            # Создаем таблицу заявок если не существует
+            await session.execute(text("""
+                CREATE TABLE IF NOT EXISTS applications (
+                    id SERIAL PRIMARY KEY,
+                    user_id VARCHAR(255),
+                    name VARCHAR(255),
+                    phone VARCHAR(50),
+                    problems TEXT,
+                    description TEXT,
+                    status VARCHAR(50) DEFAULT 'new',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    assigned_admin VARCHAR(255),
+                    notes TEXT
+                )
+            """))
 
-                # Вставляем заявку
-                problems_str = ", ".join(payload.get("problems", []))
-                await session.execute(text("""
-                    INSERT INTO applications (user_id, name, phone, problems, description)
-                    VALUES (:user_id, :name, :phone, :problems, :description)
-                """), {
-                    "user_id": str(user_id) if user_id else None,
-                    "name": payload.get("name", ""),
-                    "phone": payload.get("phone", ""),
-                    "problems": problems_str,
-                    "description": payload.get("description", "")
-                })
-                await session.commit()
-                log.info("Application saved to database")
+            # Вставляем заявку
+            problems_str = ", ".join(payload.get("problems", []))
+            await session.execute(text("""
+                INSERT INTO applications (user_id, name, phone, problems, description)
+                VALUES (:user_id, :name, :phone, :problems, :description)
+            """), {
+                "user_id": str(user_id) if user_id else None,
+                "name": payload.get("name", ""),
+                "phone": payload.get("phone", ""),
+                "problems": problems_str,
+                "description": payload.get("description", "")
+            })
+            await session.commit()
+            log.info("Application saved to database")
     except Exception as e:
         log.error("Failed to save application to database: %s", e)
 
@@ -285,23 +291,32 @@ async def handle_submit(request: web.Request) -> web.Response:
         phone = payload.get("phone", "-")
         desc = payload.get("description", "-")
         text = f"🔔 Новая заявка #{user_id or 'unknown'}\n👤 {name}\n📞 {phone}\n⚠️ {problems}\n📝 {desc}\n\n💼 Используйте /admin для управления заявками"
-        await request.app["bot"].send_message(chat_id=ADMIN_CHAT_ID, text=text)
+        bot = request.app.get("bot")
+        if bot:
+            await bot.send_message(chat_id=ADMIN_CHAT_ID, text=text)
+            log.info("Admin notification sent successfully")
     except Exception as e:
         log.error("Admin send failed: %s", e)
 
-    # Close mini-app
+    # Close mini-app only if query_id exists
     try:
-        result = InlineQueryResultArticle(
-            id=str(uuid.uuid4()),
-            title="Заявка принята",
-            input_message_content=InputTextMessageContent(
-                "✅ Спасибо! Заявка получена и передана нашим специалистам.\n\n🕐 Мы свяжемся с вами в ближайшее время для уточнения деталей."),
-        )
-        await request.app["bot"].answer_web_app_query(query_id, result)
+        if query_id:
+            import uuid
+            from telegram import InlineQueryResultArticle, InputTextMessageContent
+            result = InlineQueryResultArticle(
+                id=str(uuid.uuid4()),
+                title="Заявка принята",
+                input_message_content=InputTextMessageContent(
+                    "✅ Спасибо! Заявка получена и передана нашим специалистам.\n\n🕐 Мы свяжемся с вами в ближайшее время для уточнения деталей."),
+            )
+            bot = request.app.get("bot")
+            if bot:
+                await bot.answer_web_app_query(query_id, result)
+                log.info("WebApp query answered successfully")
     except Exception as e:
         log.error("answerWebAppQuery failed: %s", e)
 
-    return web.json_response({"status": "ok"}, headers={"Access-Control-Allow-Origin": "*"})
+    return web.json_response({"status": "ok", "message": "Заявка успешно отправлена!"}, headers={"Access-Control-Allow-Origin": "*"})
 
 
 async def handle_telegram(request: web.Request) -> web.Response:
