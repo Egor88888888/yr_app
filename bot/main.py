@@ -96,8 +96,10 @@ async def check_admin_permission(user_id: int, permission: str) -> bool:
 
     async with async_sessionmaker() as session:
         result = await session.execute(
-            select(Admin).where(Admin.tg_id ==
-                                user_id, Admin.is_active == True)
+            select(Admin).where(
+                Admin.tg_id == user_id,
+                Admin.is_active == True
+            )
         )
         admin = result.scalar_one_or_none()
         if not admin:
@@ -111,6 +113,18 @@ async def check_admin_permission(user_id: int, permission: str) -> bool:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Welcome message with inline webapp button"""
     user = update.effective_user
+
+    # Set menu button for this user
+    try:
+        await context.bot.set_chat_menu_button(
+            chat_id=user.id,
+            menu_button=MenuButtonWebApp(
+                text="📝 Подать заявку",
+                web_app=WebAppInfo(url=WEB_APP_URL)
+            )
+        )
+    except Exception as e:
+        log.error(f"Failed to set menu button: {e}")
 
     # Store user in DB
     async with async_sessionmaker() as session:
@@ -144,7 +158,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Миграционное право
 • И многое другое!
 
-💬 Задайте вопрос прямо в чате или нажмите кнопку меню для подачи заявки.
+💬 Задайте вопрос прямо в чате или нажмите синюю кнопку меню рядом с полем ввода для подачи заявки.
 
 ✅ Работаем по всей России
 💰 Оплата по результату
@@ -717,13 +731,18 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application: Application):
     """Инициализация после запуска"""
-    # Устанавливаем кнопку меню
-    await application.bot.set_chat_menu_button(
-        menu_button=MenuButtonWebApp(
-            text="📝 Подать заявку",
-            web_app=WebAppInfo(url=WEB_APP_URL)
+    try:
+        # Устанавливаем кнопку меню
+        await application.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="📝 Подать заявку",
+                web_app=WebAppInfo(url=WEB_APP_URL)
+            )
         )
-    )
+        print("✅ Menu button set successfully")
+    except Exception as e:
+        print(f"❌ Failed to set menu button: {e}")
+        log.error(f"Menu button error: {e}")
 
 
 async def main():
