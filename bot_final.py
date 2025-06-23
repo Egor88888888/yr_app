@@ -1778,6 +1778,14 @@ async def main_async():
             log.warning(
                 "Bot will continue without webhook - polling mode disabled")
 
+        # === CRITICAL: Start HTTP server IMMEDIATELY ===
+        log.info("🚀 Starting HTTP server setup...")
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", PORT)
+        await site.start()
+        log.info("✅ HTTP server running on port %s - webhook ready!", PORT)
+
         # === Schedule autoposting job ===
         if target_channel_id:
             application.job_queue.run_repeating(
@@ -1890,12 +1898,6 @@ async def main_async():
                 name="cross_promotion",
             )
             log.info("✓ Cross promotion job scheduled (every 8 hours)")
-
-        log.info("🚀 Starting HTTP server setup...")
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, "0.0.0.0", PORT)
-        await site.start()
 
         async with application:
             await application.start()
