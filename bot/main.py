@@ -42,6 +42,7 @@ from bot.services.db import (
 from bot.services.sheets import append_lead
 from bot.services.pay import create_payment
 from bot.services.ai import generate_ai_response, generate_post_content
+from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
 
 # Configuration
 TOKEN = os.getenv("BOT_TOKEN")
@@ -486,6 +487,14 @@ async def handle_submit(request: web.Request) -> web.Response:
         )
     except Exception as e:
         log.error(f"Admin notify error: {e}")
+
+    # Уведомляем клиента
+    try:
+        await notify_client_application_received(
+            user.email, user.phone, app.id, category.name
+        )
+    except Exception as e:
+        log.error(f"Client notification error: {e}")
 
     # Отвечаем клиенту
     return web.json_response({
