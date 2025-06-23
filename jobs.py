@@ -26,13 +26,60 @@ REACTIONS_THRESHOLD = int(os.getenv("REACTIONS_THRESHOLD", 5))  # Снизил �
 EXTERNAL_CHANNELS: List[str] = [c.strip() for c in os.getenv(
     "EXTERNAL_CHANNELS", "").split(',') if c.strip()]
 
-# RSS источники для альтернативного парсинга
+# RSS источники для альтернативного парсинга - РАСШИРЕННЫЙ СПИСОК
 RSS_SOURCES = [
+    # === Страховые и финансовые сайты ===
     {
-        "name": "banki_ru_news",
+        "name": "banki_ru_insurance",
         "url": "https://www.banki.ru/xml/news.rss",
-        "category": "banking"
+        "category": "insurance"
     },
+    {
+        "name": "finmarket_ru",
+        "url": "https://www.finmarket.ru/rss/news.xml",
+        "category": "finance"
+    },
+    {
+        "name": "interfax_finance",
+        "url": "https://www.interfax.ru/rss.asp?sec=1208",
+        "category": "finance"
+    },
+
+    # === Юридические и правовые ресурсы ===
+    {
+        "name": "garant_law",
+        "url": "https://www.garant.ru/rss/news.xml",
+        "category": "legal"
+    },
+    {
+        "name": "pravo_gov_ru",
+        "url": "http://pravo.gov.ru/rss.xml",
+        "category": "legal"
+    },
+    {
+        "name": "rapsinews_legal",
+        "url": "https://rapsinews.ru/rss/",
+        "category": "legal"
+    },
+
+    # === Автомобильные новости ===
+    {
+        "name": "autostat_news",
+        "url": "https://www.autostat.ru/rss/news/",
+        "category": "auto"
+    },
+    {
+        "name": "autoreview_ru",
+        "url": "https://autoreview.ru/rss/all",
+        "category": "auto"
+    },
+    {
+        "name": "kolesa_ru",
+        "url": "https://www.kolesa.ru/rss",
+        "category": "auto"
+    },
+
+    # === Деловые и новостные сайты ===
     {
         "name": "rbc_business",
         "url": "https://rssexport.rbc.ru/rbcnews/news/20/full.rss",
@@ -41,21 +88,75 @@ RSS_SOURCES = [
     {
         "name": "kommersant_auto",
         "url": "https://www.kommersant.ru/RSS/section-auto.xml",
-        "category": "auto"
+        "category": "business"
     },
     {
-        "name": "garant_news",
-        "url": "https://www.garant.ru/rss/news.xml",
-        "category": "legal"
+        "name": "ria_news",
+        "url": "https://ria.ru/export/rss2/archive/index.xml",
+        "category": "news"
+    },
+
+    # === Специализированные ресурсы ===
+    {
+        "name": "rsa_autoins",
+        "url": "https://www.autoins.ru/ru/rss/news.xml",
+        "category": "auto_insurance"
+    },
+    {
+        "name": "cbr_news",
+        "url": "https://www.cbr.ru/rss/news/",
+        "category": "finance"
+    },
+    {
+        "name": "tass_economics",
+        "url": "https://tass.ru/rss/v2.xml?section=51",
+        "category": "economics"
     }
 ]
 
-# Дополнительные источники контента
+# Дополнительные источники контента - РАСШИРЕННЫЕ КЛЮЧЕВЫЕ СЛОВА
 NEWS_KEYWORDS = [
-    "страхование", "страховая", "выплата", "ущерб", "ДТП", "ОСАГО", "КАСКО",
-    "страховщик", "возмещение", "компенсация", "полис", "франшиза",
-    "автострахование", "медстрахование", "страхование жизни", "РСА",
-    "страхователь", "выплаты по ОСАГО", "суд", "возмещение ущерба"
+    # === Основные страховые термины ===
+    "страхование", "страховая", "страховщик", "страхователь", "страховой",
+    "выплата", "выплаты", "возмещение", "компенсация", "ущерб",
+    "полис", "франшиза", "премия", "тариф",
+
+    # === Виды страхования ===
+    "ОСАГО", "КАСКО", "ОСГОП", "ДМС", "ОМС",
+    "автострахование", "медстрахование", "страхование жизни",
+    "страхование имущества", "страхование ответственности",
+    "добровольное страхование", "обязательное страхование",
+
+    # === ДТП и автомобильная тематика ===
+    "ДТП", "авария", "столкновение", "наезд", "переворот",
+    "ремонт авто", "оценка ущерба", "независимая экспертиза",
+    "автоэксперт", "техосмотр", "ГИБДД", "ПДД",
+
+    # === Юридические термины ===
+    "суд", "иск", "исковое заявление", "претензия", "жалоба",
+    "арбитраж", "мировой суд", "апелляция", "кассация",
+    "судебное решение", "взыскание", "исполнительный лист",
+
+    # === Организации ===
+    "РСА", "ЦБ РФ", "Росгосстрах", "СОГАЗ", "Ингосстрах",
+    "АльфаСтрахование", "ВСК", "РЕСО", "страховой омбудсмен",
+    "финансовый уполномоченный", "ФАС", "Роспотребнадзор",
+
+    # === Процедуры и документы ===
+    "европротокол", "извещение о ДТП", "справка из ГИБДД",
+    "медицинская справка", "экспертиза", "оценка",
+    "досудебное урегулирование", "прямое возмещение убытков",
+    "регрессное требование", "суброгация",
+
+    # === Финансовые термины ===
+    "лимит", "лимит возмещения", "страховая сумма", "страховая премия",
+    "тарифный коридор", "бонус-малус", "скидка", "коэффициент",
+    "КБМ", "территориальный коэффициент", "мошенничество",
+
+    # === Проблемы и споры ===
+    "занижение выплат", "отказ в выплате", "страховой спор",
+    "недоплата", "доплата", "пересчет", "переоценка",
+    "нарушение сроков", "затягивание выплат", "недобросовестность"
 ]
 
 EXCLUDED_KEYWORDS = [
@@ -94,8 +195,14 @@ def _is_relevant_content(text: str) -> bool:
     relevant_score = sum(
         1 for keyword in NEWS_KEYWORDS if keyword in text_lower)
 
-    # Контент релевантен если есть минимум 1 ключевое слово
-    return relevant_score >= 1
+    # Контент релевантен если есть минимум 2 ключевых слова (повысили требования)
+    # ИЛИ есть 1 ключевое слово из особо важных
+    high_priority_keywords = ["ОСАГО", "КАСКО", "ДТП",
+                              "страховая выплата", "возмещение ущерба", "РСА"]
+    has_priority = any(
+        keyword in text_lower for keyword in high_priority_keywords)
+
+    return relevant_score >= 2 or (relevant_score >= 1 and has_priority)
 
 
 def _extract_key_facts(text: str) -> str:
@@ -254,17 +361,24 @@ async def scan_rss_sources_job(ctx: ContextTypes.DEFAULT_TYPE):
     """Сканирует RSS источники и сохраняет релевантные новости."""
     session_maker: async_sessionmaker = ctx.bot_data["db_sessionmaker"]
 
-    for source in RSS_SOURCES:
-        log.info("scan_rss: fetching %s (%s)",
-                 source["name"], source["category"])
+    total_sources = len(RSS_SOURCES)
+    total_processed = 0
+    total_relevant = 0
+    total_saved = 0
+
+    for i, source in enumerate(RSS_SOURCES, 1):
+        log.info("scan_rss: [%d/%d] fetching %s (%s)",
+                 i, total_sources, source["name"], source["category"])
 
         try:
             rss_content = await fetch_rss_feed(source["url"])
             if not rss_content:
-                log.warning("scan_rss: failed to fetch %s", source["name"])
+                log.warning(
+                    "scan_rss: failed to fetch %s - RSS unavailable", source["name"])
                 continue
 
             items = parse_rss_items(rss_content)
+            total_processed += len(items)
             log.info("scan_rss: parsed %d items from %s",
                      len(items), source["name"])
 
@@ -280,44 +394,63 @@ async def scan_rss_sources_job(ctx: ContextTypes.DEFAULT_TYPE):
                         relevant_items.append((item, content_hash))
                         PROCESSED_NEWS.add(content_hash)
 
-            log.info("scan_rss: found %d relevant + unique items from %s",
-                     len(relevant_items), source["name"])
+            total_relevant += len(relevant_items)
+            log.info("scan_rss: found %d relevant + unique items from %s (%.1f%% relevance)",
+                     len(relevant_items), source["name"],
+                     (len(relevant_items) / len(items) * 100) if items else 0)
 
             # Сохраняем в базу
             saved = 0
             async with session_maker() as session:
                 for item, content_hash in relevant_items:
-                    # Используем хэш как message_id для RSS источников
-                    exists = await session.scalar(select(ExternalPost.id).where(
-                        ExternalPost.channel == source["name"],
-                        # Первые 8 символов хэша как int
-                        ExternalPost.message_id == int(content_hash[:8], 16)
-                    ))
-                    if exists:
-                        continue
+                    try:
+                        # Используем хэш как message_id для RSS источников
+                        exists = await session.scalar(select(ExternalPost.id).where(
+                            ExternalPost.channel == source["name"],
+                            # Первые 8 символов хэша как int
+                            ExternalPost.message_id == int(
+                                content_hash[:8], 16)
+                        ))
+                        if exists:
+                            continue
 
-                    # Готовим сжатый текст для AI
-                    clean_text = f"{item['title']}\n\n{_extract_key_facts(item['description'])}"
+                        # Готовим сжатый текст для AI
+                        clean_text = f"{item['title']}\n\n{_extract_key_facts(item['description'])}"
 
-                    post = ExternalPost(
-                        channel=source["name"],
-                        message_id=int(content_hash[:8], 16),
-                        date=datetime.utcnow(),
-                        views=500,  # Фиксированный "рейтинг" для RSS
-                        reactions=10,
-                        text=clean_text,
-                    )
-                    session.add(post)
-                    saved += 1
+                        post = ExternalPost(
+                            channel=source["name"],
+                            message_id=int(content_hash[:8], 16),
+                            date=datetime.utcnow(),
+                            views=500,  # Фиксированный "рейтинг" для RSS
+                            reactions=10,
+                            text=clean_text,
+                        )
+                        session.add(post)
+                        saved += 1
+                    except Exception as e:
+                        log.warning(
+                            "scan_rss: failed to save item from %s: %s", source["name"], e)
 
                 await session.commit()
 
+            total_saved += saved
             if saved:
-                log.info("scan_rss: saved %d new posts from %s",
+                log.info("scan_rss: ✅ saved %d new posts from %s",
                          saved, source["name"])
+            elif relevant_items:
+                log.info("scan_rss: 📝 %d items from %s already exist",
+                         len(relevant_items), source["name"])
+            else:
+                log.info("scan_rss: ❌ no relevant content from %s",
+                         source["name"])
 
         except Exception as e:
-            log.error("scan_rss: error processing %s: %s", source["name"], e)
+            log.error("scan_rss: ⚠️ error processing %s: %s",
+                      source["name"], e)
+
+    # Общая статистика
+    log.info("scan_rss: SUMMARY - processed %d items from %d sources, found %d relevant, saved %d new posts",
+             total_processed, total_sources, total_relevant, total_saved)
 
 
 # ---------------------------------------------------------------------------
@@ -367,3 +500,49 @@ async def post_from_external_job(ctx: ContextTypes.DEFAULT_TYPE):
 
         post.posted = True
         await session.commit()
+
+
+async def get_rss_stats_job(ctx: ContextTypes.DEFAULT_TYPE):
+    """Выводит статистику по RSS источникам."""
+    session_maker: async_sessionmaker = ctx.bot_data["db_sessionmaker"]
+
+    try:
+        async with session_maker() as session:
+            # Статистика по источникам
+            from sqlalchemy import func, text
+
+            result = await session.execute(text("""
+                SELECT 
+                    channel,
+                    COUNT(*) as total_posts,
+                    COUNT(CASE WHEN posted = true THEN 1 END) as posted_count,
+                    AVG(views) as avg_views,
+                    MAX(date) as last_post_date
+                FROM external_posts 
+                WHERE channel LIKE '%rss%' OR channel LIKE '%news%' 
+                GROUP BY channel 
+                ORDER BY total_posts DESC
+            """))
+
+            stats = result.fetchall()
+
+            log.info("=== RSS SOURCES STATISTICS ===")
+            for stat in stats:
+                channel, total, posted, avg_views, last_date = stat
+                usage_rate = (posted / total * 100) if total > 0 else 0
+                log.info("📊 %s: %d posts, %d used (%.1f%%), avg_views: %.0f, last: %s",
+                         channel, total, posted, usage_rate, avg_views or 0,
+                         last_date.strftime("%Y-%m-%d") if last_date else "N/A")
+
+            # Общая статистика
+            total_external = sum(stat[1] for stat in stats)
+            total_used = sum(stat[2] for stat in stats)
+            overall_rate = (total_used / total_external *
+                            100) if total_external > 0 else 0
+
+            log.info("=== OVERALL RSS STATS ===")
+            log.info("📈 Total external posts: %d, Used: %d (%.1f%% usage rate)",
+                     total_external, total_used, overall_rate)
+
+    except Exception as e:
+        log.error("get_rss_stats_job failed: %s", e)

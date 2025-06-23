@@ -33,7 +33,7 @@ import aiohttp
 import io
 # === Analytics & External parsing ===
 from db import init_models, async_sessionmaker
-from jobs import collect_subscribers_job, scan_external_channels_job, scan_rss_sources_job, EXTERNAL_CHANNELS
+from jobs import collect_subscribers_job, scan_external_channels_job, scan_rss_sources_job, get_rss_stats_job, EXTERNAL_CHANNELS
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from collections import deque
@@ -800,6 +800,15 @@ async def main_async():
         )
         log.info("✓ Fast RSS scanning enabled (every 8 min)")
 
+    # === RSS статистика ===
+    application.job_queue.run_repeating(
+        get_rss_stats_job,
+        interval=timedelta(minutes=60),  # Статистика каждый час
+        first=timedelta(minutes=10),     # Первая статистика через 10 минут
+        name="rss_statistics",
+    )
+    log.info("✓ RSS statistics job scheduled (every 60 min)")
+
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
@@ -810,11 +819,11 @@ async def main_async():
         log.info("Bot & HTTP server running on port %s", PORT)
         # Notify admin that bot started and autoposting scheduled
         try:
-            status_msg = f"🤖 Бот запущен в МАКСИМАЛЬНОЙ АКТИВНОСТИ!\n📊 Постинг каждый {POST_INTERVAL_HOURS}ч (60% парсинг / 40% AI)\n💬 Комментирование каждые 20 мин\n🚀 Быстрый RSS-парсинг каждые 8 мин\n🚫 Картинки убраны - только текст"
+            status_msg = f"🤖 Бот запущен в МАКСИМАЛЬНОЙ АКТИВНОСТИ!\n📊 Постинг каждый {POST_INTERVAL_HOURS}ч (60% парсинг / 40% AI)\n💬 Комментирование каждые 20 мин\n🚀 Быстрый RSS-парсинг каждые 8 мин\n📈 RSS статистика каждый час\n🚫 Картинки убраны - только текст\n🔄 15 RSS источников активно"
             if telethon_client:
                 status_msg += f"\n✅ Внешние каналы: {', '.join(EXTERNAL_CHANNELS) if EXTERNAL_CHANNELS else 'не настроены'}"
             else:
-                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)\n✅ RSS-парсинг активен"
+                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)\n✅ RSS-парсинг активен (15 источников)"
             await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=status_msg)
         except Exception as e:
             log.warning("Cannot notify admin: %s", e)
