@@ -1628,7 +1628,8 @@ async def main_async():
     log.info("  - ADMIN_CHAT_ID: %s", ADMIN_CHAT_ID)
     log.info("  - OPENROUTER_API_KEY: %s",
              "SET" if OPENROUTER_API_KEY else "NOT_SET")
-    log.info("  - WEBHOOK_URL: %s", WEBHOOK_URL)
+    log.info("  - WEBHOOK_URL: %s",
+             f"https://{PUBLIC_HOST}/{TOKEN}" if PUBLIC_HOST and TOKEN else "NOT_SET")
     log.info("  - PORT: %s", PORT)
     log.info("  - DATABASE_URL: %s",
              "SET" if os.getenv("DATABASE_URL") else "NOT_SET")
