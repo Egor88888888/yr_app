@@ -65,6 +65,30 @@ log = logging.getLogger(__name__)
 # Global admin set
 ADMIN_USERS = {ADMIN_CHAT_ID}
 
+# Role permissions
+ROLE_PERMISSIONS = {
+    "operator": ["view_applications", "update_status"],
+    "lawyer": ["view_applications", "update_status", "assign_lawyer", "add_notes", "bill_client"],
+    "superadmin": ["view_applications", "update_status", "assign_lawyer", "add_notes", "bill_client", "manage_admins", "view_all_stats"]
+}
+
+
+async def check_admin_permission(user_id: int, permission: str) -> bool:
+    """Check if user has specific permission"""
+    if user_id == ADMIN_CHAT_ID:  # Superadmin by default
+        return True
+
+    async with async_sessionmaker() as session:
+        result = await session.execute(
+            select(Admin).where(Admin.tg_id ==
+                                user_id, Admin.is_active == True)
+        )
+        admin = result.scalar_one_or_none()
+        if not admin:
+            return False
+
+        return permission in ROLE_PERMISSIONS.get(admin.role, [])
+
 
 # ================ HANDLERS ================
 
@@ -268,6 +292,13 @@ async def handle_application_action(query, context):
 
         app, user, cat = row
 
+        contact_methods = {
+            'phone': '📞 Телефонный звонок',
+            'telegram': '💬 Telegram',
+            'email': '📧 Email',
+            'whatsapp': '💚 WhatsApp'
+        }
+
         text = f"""
 📋 **ЗАЯВКА #{app.id}**
 
@@ -276,11 +307,16 @@ async def handle_application_action(query, context):
 
 👤 **Клиент:**
 Имя: {user.first_name} {user.last_name or ''}
-Телефон: {user.phone or '-'}
-Email: {user.email or '-'}
+📞 {user.phone or '-'}
+📧 {user.email or '-'}
+💬 Связь: {contact_methods.get(app.contact_method, app.contact_method or '-')}
+🕐 Время: {app.contact_time or 'любое'}
 
 📄 **Описание:**
 {app.description or '-'}
+
+{f'📎 Файлов: {len(app.files_data or [])}' if app.files_data else ''}
+{f'🏷️ UTM: {app.utm_source}' if app.utm_source else ''}
 
 💰 Стоимость: {app.price or 'не определена'} ₽
 📊 Статус: {app.status}
@@ -327,6 +363,10 @@ async def handle_submit(request: web.Request) -> web.Response:
     name = data.get("name", "")
     phone = data.get("phone", "")
     email = data.get("email", "")
+    contact_method = data.get("contact_method", "")
+    contact_time = data.get("contact_time", "any")
+    files = data.get("files", [])
+    utm_source = data.get("utm_source")
     tg_user_id = data.get("tg_user_id")
 
     async with async_sessionmaker() as session:
@@ -363,6 +403,10 @@ async def handle_submit(request: web.Request) -> web.Response:
             category_id=category_id,
             subcategory=subcategory,
             description=description,
+            contact_method=contact_method,
+            contact_time=contact_time,
+            files_data=files if files else None,
+            utm_source=utm_source,
             status="new"
         )
         session.add(app)
@@ -395,15 +439,31 @@ async def handle_submit(request: web.Request) -> web.Response:
     # Уведомляем админа
     try:
         bot = request.app["bot"]
+
+        contact_methods = {
+            'phone': '📞 Телефонный звонок',
+            'telegram': '💬 Telegram',
+            'email': '📧 Email',
+            'whatsapp': '💚 WhatsApp'
+        }
+
         text = f"""
 🆕 **НОВАЯ ЗАЯВКА #{app.id}**
 
 📂 {category.name}
-👤 {name or 'Без имени'}
+{f'📝 {subcategory}' if subcategory else ''}
+
+👤 **Клиент:**
+Имя: {name or 'Без имени'}
 📞 {phone or 'Нет телефона'}
 📧 {email or 'Нет email'}
+💬 Связь: {contact_methods.get(contact_method, contact_method)}
 
-📝 {description[:200]}...
+📄 **Проблема:**
+{description[:200] + '...' if len(description) > 200 else description}
+
+{f'📎 Файлов: {len(files)}' if files else ''}
+{f'🏷️ UTM: {utm_source}' if utm_source else ''}
 
 💰 К оплате: {app.price} ₽
 """

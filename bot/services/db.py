@@ -28,6 +28,7 @@ from sqlalchemy import (
     Numeric,
     ForeignKey,
     Text,
+    JSON,
     func,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -108,6 +109,10 @@ class Application(Base, TimestampMixin):
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     subcategory: Mapped[Optional[str]] = mapped_column(String(120))
     description: Mapped[Optional[str]] = mapped_column(Text)
+    contact_method: Mapped[Optional[str]] = mapped_column(String(32))
+    contact_time: Mapped[Optional[str]] = mapped_column(String(32))
+    files_data: Mapped[Optional[dict]] = mapped_column(JSON)
+    utm_source: Mapped[Optional[str]] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(
         String(32), default="new")  # new/processing/completed
     price: Mapped[Optional[Numeric]] = mapped_column(Numeric(10, 2))

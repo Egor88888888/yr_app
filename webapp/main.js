@@ -20,6 +20,7 @@ const categories = [
 
 // State
 let currentStep = 1;
+let uploadedFiles = [];
 let formData = {
     category_id: null,
     category_name: "",
@@ -28,7 +29,11 @@ let formData = {
     name: "",
     phone: "",
     email: "",
-    tg_user_id: tg.initDataUnsafe?.user?.id || null
+    contact_method: "",
+    contact_time: "any",
+    files: [],
+    tg_user_id: tg.initDataUnsafe?.user?.id || null,
+    utm_source: new URLSearchParams(tg.initData).get('start_param') || null
 };
 
 // Initialize
@@ -48,19 +53,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderCategories() {
     const container = document.getElementById('categories');
     container.innerHTML = categories.map(cat => `
-        <div class="category-card bg-white p-4 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all"
+        <div class="category-card bg-white p-4 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all flex items-center"
              data-id="${cat.id}" data-name="${cat.name}">
-            <div class="text-3xl mb-2">${cat.icon}</div>
-            <div class="font-medium">${cat.name}</div>
+            <div class="text-2xl mr-4">${cat.icon}</div>
+            <div class="font-medium text-left">${cat.name}</div>
+            <div class="ml-auto text-gray-400">›</div>
         </div>
     `).join('');
     
     // Add click handlers
     container.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
+            // Visual feedback
+            card.style.borderColor = '#3b82f6';
+            card.style.backgroundColor = '#eff6ff';
+            
             formData.category_id = parseInt(card.dataset.id);
             formData.category_name = card.dataset.name;
-            nextStep();
+            
+            setTimeout(() => nextStep(), 200);
         });
     });
 }
@@ -119,14 +130,78 @@ function updateUI() {
     }
 }
 
+// File handling
+function handleFiles(files) {
+    const fileList = document.getElementById('file-list');
+    
+    Array.from(files).forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+            tg.showAlert(`Файл ${file.name} слишком большой (макс. 10MB)`);
+            return;
+        }
+        
+        if (uploadedFiles.length >= 5) {
+            tg.showAlert('Максимум 5 файлов');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileData = {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: e.target.result.split(',')[1] // Base64 без префикса
+            };
+            
+            uploadedFiles.push(fileData);
+            formData.files = uploadedFiles;
+            
+            // Add preview
+            const preview = document.createElement('div');
+            preview.className = 'flex items-center bg-gray-50 p-2 rounded';
+            preview.innerHTML = `
+                <span class="text-sm">${file.name}</span>
+                <span class="text-xs text-gray-500 ml-2">${(file.size/1024).toFixed(1)}KB</span>
+                <button type="button" onclick="removeFile(${uploadedFiles.length-1})" 
+                        class="ml-auto text-red-500 text-sm">✕</button>
+            `;
+            fileList.appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeFile(index) {
+    uploadedFiles.splice(index, 1);
+    formData.files = uploadedFiles;
+    
+    // Refresh file list
+    const fileList = document.getElementById('file-list');
+    fileList.innerHTML = '';
+    uploadedFiles.forEach((file, i) => {
+        const preview = document.createElement('div');
+        preview.className = 'flex items-center bg-gray-50 p-2 rounded';
+        preview.innerHTML = `
+            <span class="text-sm">${file.name}</span>
+            <span class="text-xs text-gray-500 ml-2">${(file.size/1024).toFixed(1)}KB</span>
+            <button type="button" onclick="removeFile(${i})" 
+                    class="ml-auto text-red-500 text-sm">✕</button>
+        `;
+        fileList.appendChild(preview);
+    });
+}
+
 // Validation
 function validateStep3() {
     formData.name = document.getElementById('name').value.trim();
     formData.phone = document.getElementById('phone').value.trim();
     formData.email = document.getElementById('email').value.trim();
+    formData.contact_method = document.getElementById('contact-method').value;
+    formData.contact_time = document.getElementById('contact-time').value;
     
-    if (!formData.name || !formData.phone) {
-        tg.showAlert('Пожалуйста, заполните имя и телефон');
+    if (!formData.name || !formData.phone || !formData.contact_method) {
+        tg.showAlert('Пожалуйста, заполните все обязательные поля');
         return false;
     }
     
@@ -145,6 +220,20 @@ function showReview() {
     formData.subcategory = document.getElementById('subcategory').value.trim();
     formData.description = document.getElementById('description').value.trim();
     
+    const contactMethods = {
+        'phone': '📞 Телефонный звонок',
+        'telegram': '💬 Telegram',
+        'email': '📧 Email',
+        'whatsapp': '💚 WhatsApp'
+    };
+    
+    const contactTimes = {
+        'any': 'В любое время',
+        'morning': 'Утром (9:00-12:00)',
+        'afternoon': 'Днем (12:00-17:00)',
+        'evening': 'Вечером (17:00-20:00)'
+    };
+    
     const reviewHtml = `
         <div class="border-b pb-3">
             <div class="text-sm text-gray-600">Категория</div>
@@ -162,6 +251,12 @@ function showReview() {
             <div class="font-medium">${formData.description}</div>
         </div>
         ` : ''}
+        ${formData.files.length > 0 ? `
+        <div class="border-b pb-3">
+            <div class="text-sm text-gray-600">Документы</div>
+            <div class="font-medium">${formData.files.length} файл(ов)</div>
+        </div>
+        ` : ''}
         <div class="border-b pb-3">
             <div class="text-sm text-gray-600">Имя</div>
             <div class="font-medium">${formData.name}</div>
@@ -171,11 +266,19 @@ function showReview() {
             <div class="font-medium">${formData.phone}</div>
         </div>
         ${formData.email ? `
-        <div>
+        <div class="border-b pb-3">
             <div class="text-sm text-gray-600">Email</div>
             <div class="font-medium">${formData.email}</div>
         </div>
         ` : ''}
+        <div class="border-b pb-3">
+            <div class="text-sm text-gray-600">Способ связи</div>
+            <div class="font-medium">${contactMethods[formData.contact_method]}</div>
+        </div>
+        <div>
+            <div class="text-sm text-gray-600">Время связи</div>
+            <div class="font-medium">${contactTimes[formData.contact_time]}</div>
+        </div>
     `;
     
     document.getElementById('review-content').innerHTML = reviewHtml;

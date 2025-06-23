@@ -28,15 +28,15 @@
         <h2 class="text-2xl font-bold mb-2">Выберите категорию</h2>
         <p class="text-gray-600 mb-6">В какой области вам нужна юридическая помощь?</p>
         
-        <div id="categories" class="grid grid-cols-2 gap-3">
+        <div id="categories" class="space-y-3 max-h-96 overflow-y-auto">
             <!-- Categories will be inserted here -->
         </div>
     </div>
 
-    <!-- Step 2: Problem Details -->
+    <!-- Step 2: Problem Details + Files -->
     <div id="step-2" class="step hidden max-w-2xl mx-auto p-4">
         <h2 class="text-2xl font-bold mb-2">Опишите проблему</h2>
-        <p class="text-gray-600 mb-6">Расскажите подробнее о вашей ситуации</p>
+        <p class="text-gray-600 mb-6">Расскажите подробнее о вашей ситуации и приложите документы</p>
         
         <div class="space-y-4">
             <div>
@@ -47,13 +47,29 @@
             
             <div>
                 <label class="block text-sm font-medium mb-2">Подробное описание</label>
-                <textarea id="description" rows="5" class="w-full px-4 py-2 border rounded-lg" 
+                <textarea id="description" rows="4" class="w-full px-4 py-2 border rounded-lg" 
                           placeholder="Опишите вашу ситуацию..."></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Документы (опционально)</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <input type="file" id="files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+                           class="hidden" onchange="handleFiles(this.files)">
+                    <button type="button" onclick="document.getElementById('files').click()" 
+                            class="text-blue-600 font-medium">
+                        📎 Прикрепить файлы
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1">PDF, DOC, JPG до 10MB каждый</p>
+                </div>
+                <div id="file-list" class="mt-2 space-y-2">
+                    <!-- File previews will appear here -->
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Step 3: Contact Info -->
+    <!-- Step 3: Contact Info + Preferences -->
     <div id="step-3" class="step hidden max-w-2xl mx-auto p-4">
         <h2 class="text-2xl font-bold mb-2">Контактные данные</h2>
         <p class="text-gray-600 mb-6">Как с вами связаться?</p>
@@ -75,6 +91,27 @@
                 <label class="block text-sm font-medium mb-2">Email</label>
                 <input type="email" id="email" class="w-full px-4 py-2 border rounded-lg" 
                        placeholder="example@mail.ru">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Предпочитаемый способ связи*</label>
+                <select id="contact-method" class="w-full px-4 py-2 border rounded-lg" required>
+                    <option value="">Выберите способ связи</option>
+                    <option value="phone">📞 Телефонный звонок</option>
+                    <option value="telegram">💬 Telegram</option>
+                    <option value="email">📧 Email</option>
+                    <option value="whatsapp">💚 WhatsApp</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Удобное время для связи</label>
+                <select id="contact-time" class="w-full px-4 py-2 border rounded-lg">
+                    <option value="any">В любое время</option>
+                    <option value="morning">Утром (9:00-12:00)</option>
+                    <option value="afternoon">Днем (12:00-17:00)</option>
+                    <option value="evening">Вечером (17:00-20:00)</option>
+                </select>
             </div>
         </div>
     </div>
