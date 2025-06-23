@@ -14,7 +14,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -24,87 +24,270 @@
             --tg-theme-link-color: var(--tg-theme-link-color, #007aff);
             --tg-theme-button-color: var(--tg-theme-button-color, #007aff);
             --tg-theme-button-text-color: var(--tg-theme-button-text-color, #ffffff);
-            --tg-theme-secondary-bg-color: var(--tg-theme-secondary-bg-color, #f3f4f6);
+            --tg-theme-secondary-bg-color: var(--tg-theme-secondary-bg-color, #f8fafc);
+            
+            /* Добавляем кастомные переменные для улучшенного дизайна */
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --card-shadow-hover: 0 20px 40px -5px rgba(0, 0, 0, 0.15), 0 8px 12px -2px rgba(0, 0, 0, 0.1);
         }
         
+        * { box-sizing: border-box; }
+        
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--tg-theme-bg-color);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: var(--tg-theme-text-color);
             margin: 0; padding: 0;
             overscroll-behavior: none;
+            font-feature-settings: 'kern' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
         .page-container {
             position: relative; width: 100vw; height: 100vh; overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
         .page {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            padding: 20px; padding-bottom: 90px;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto; background-color: var(--tg-theme-bg-color);
+            padding: 24px; padding-bottom: 100px;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow-y: auto; 
+            background: var(--tg-theme-bg-color);
             box-sizing: border-box;
             visibility: hidden;
+            border-radius: 20px 20px 0 0;
+            margin-top: 60px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
         }
 
         .page.active { visibility: visible; }
-        .page.left { transform: translateX(-100%); }
-        .page.center { transform: translateX(0); }
-        .page.right { transform: translateX(100%); }
+        .page.left { transform: translateX(-100%) scale(0.95); opacity: 0; }
+        .page.center { transform: translateX(0) scale(1); opacity: 1; }
+        .page.right { transform: translateX(100%) scale(0.95); opacity: 0; }
+        
+        /* Элегантные заголовки */
+        .page-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            background: var(--primary-gradient);
+            color: white;
+            padding: 20px 24px;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
         
         .service-card {
-            background-color: var(--tg-theme-secondary-bg-color);
+            background: var(--tg-theme-secondary-bg-color);
             border: 2px solid transparent;
-            border-radius: 18px;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
         }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
         .service-card.selected {
             border-color: var(--tg-theme-button-color);
-            transform: scale(1.03);
-            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.25);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: var(--card-shadow-hover);
         }
-        .service-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        
+        .service-card.selected::before {
+            opacity: 1;
+        }
+        
+        .service-card:hover { 
+            transform: translateY(-3px) scale(1.01); 
+            box-shadow: var(--card-shadow-hover);
+        }
+        
         .service-card .icon-container {
-            background-color: rgba(0, 122, 255, 0.1);
-            color: var(--tg-theme-link-color);
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 16px;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
         .form-input {
-            width: 100%; padding: 12px 16px; border-radius: 12px;
-            border: 2px solid var(--tg-theme-secondary-bg-color);
-            background-color: var(--tg-theme-secondary-bg-color);
-            color: var(--tg-theme-text-color); font-size: 16px;
-            transition: border-color 0.2s;
+            width: 100%; 
+            padding: 16px 20px; 
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            color: var(--tg-theme-text-color); 
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        .form-input::placeholder { color: var(--tg-theme-hint-color); }
-        .form-input:focus { outline: none; border-color: var(--tg-theme-button-color); }
-        .form-input.invalid { border-color: #ef4444; }
+        
+        .form-input::placeholder { 
+            color: var(--tg-theme-hint-color); 
+            font-weight: 400;
+        }
+        
+        .form-input:focus { 
+            outline: none; 
+            border-color: var(--tg-theme-button-color);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1), 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .form-input.invalid { 
+            border-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
         
         .progress-bar {
-            background-color: var(--tg-theme-secondary-bg-color);
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
             overflow: hidden;
+            backdrop-filter: blur(10px);
         }
+        
         .progress-bar-fill {
-            background-color: var(--tg-theme-button-color);
-            transition: width 0.4s ease;
+            background: var(--primary-gradient);
+            transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Анимации появления */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .animate-slide-up {
+            animation: slideInUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        
+        .animate-pulse-gentle {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Улучшенные лейблы */
+        .form-label {
+            color: var(--tg-theme-text-color);
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+            position: relative;
+        }
+        
+        .form-label::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 12px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+        
+        /* Стилизация для страницы успеха */
+        .success-container {
+            background: var(--primary-gradient);
+            border-radius: 24px;
+            padding: 32px;
+            text-align: center;
+            color: white;
+            box-shadow: var(--card-shadow-hover);
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Responsive адаптация */
+        @media (max-width: 375px) {
+            .page { padding: 20px; padding-bottom: 90px; }
+            .service-card .icon-container { width: 40px; height: 40px; }
+            .form-input { padding: 14px 16px; font-size: 15px; }
+        }
+        
+        /* Темная тема */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --tg-theme-secondary-bg-color: rgba(255,255,255,0.05);
+            }
+            
+            .form-input {
+                background: rgba(255,255,255,0.1);
+                border-color: rgba(255,255,255,0.1);
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="page-container">
+    <!-- Заголовок приложения -->
+    <div class="page-header">
+        <h1 class="text-2xl font-bold text-center">⚖️ Страховая справедливость</h1>
+        <p class="text-center text-sm opacity-90 mt-1">Профессиональная помощь по страховым выплатам</p>
+    </div>
+
     <div id="page-problems" class="page active center">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-extrabold">Страховая справедливость</h1>
-            <p class="mt-2 text-md" style="color: var(--tg-theme-hint-color);">Выберите, что у вас случилось</p>
-             <p class="text-xs mt-2" style="color: var(--tg-theme-hint-color);">🔥 ОБНОВЛЕНО! v3.0</p>
+        <header class="text-center mb-8 animate-slide-up">
+            <h2 class="text-2xl font-bold mb-3">Что у вас случилось?</h2>
+            <p class="text-sm text-gray-600">Выберите вашу ситуацию для получения персонализированной помощи</p>
         </header>
-        <div class="progress-bar w-full h-2 rounded-full mb-6">
+        
+        <div class="progress-bar w-full h-3 rounded-full mb-8">
             <div class="progress-bar-fill h-full rounded-full" style="width: 25%;"></div>
         </div>
-        <div id="services-grid" class="grid grid-cols-2 gap-4"></div>
+        
+        <div id="services-grid" class="grid grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.2s;"></div>
+        
+        <!-- Добавляем информацию о компании -->
+        <div class="mt-8 p-4 bg-white bg-opacity-50 rounded-2xl backdrop-blur-sm animate-slide-up" style="animation-delay: 0.4s;">
+            <p class="text-xs text-center text-gray-600">
+                ✨ <strong>95% успешных дел</strong> • 💰 <strong>Оплата по результату</strong> • ⚖️ <strong>Опыт 5+ лет</strong>
+            </p>
+        </div>
     </div>
 
     <div id="page-details" class="page right">
@@ -112,19 +295,30 @@
     </div>
 
     <div id="page-contacts" class="page right">
-        <h1 class="text-2xl font-bold mb-2">Контактные данные</h1>
-        <p class="mb-6" style="color: var(--tg-theme-hint-color);">Чтобы мы могли с вами связаться</p>
-        <div class="progress-bar w-full h-2 rounded-full mb-6">
-            <div class="progress-bar-fill h-full rounded-full" style="width: 50%;"></div>
-        </div>
-        <div class="space-y-4">
-            <div>
-                <label for="name" class="font-medium text-sm ml-1 mb-1 block">Ваше имя</label>
-                <input type="text" id="name" class="form-input" placeholder="Иван Иванов">
+        <div class="animate-slide-up">
+            <h2 class="text-2xl font-bold mb-3">Контактные данные</h2>
+            <p class="text-sm text-gray-600 mb-8">Укажите, как с вами связаться для консультации</p>
+            
+            <div class="progress-bar w-full h-3 rounded-full mb-8">
+                <div class="progress-bar-fill h-full rounded-full" style="width: 50%;"></div>
             </div>
-            <div>
-                <label for="phone" class="font-medium text-sm ml-1 mb-1 block">Номер телефона</label>
-                <input type="tel" id="phone" class="form-input" placeholder="+7 (999) 123-45-67">
+            
+            <div class="space-y-6">
+                <div>
+                    <label for="name" class="form-label">👤 Ваше имя</label>
+                    <input type="text" id="name" class="form-input" placeholder="Например: Иван Петров">
+                </div>
+                <div>
+                    <label for="phone" class="form-label">📞 Номер телефона</label>
+                    <input type="tel" id="phone" class="form-input" placeholder="+7 (999) 123-45-67">
+                </div>
+            </div>
+            
+            <!-- Добавляем информацию о безопасности -->
+            <div class="mt-8 p-4 bg-blue-50 bg-opacity-50 rounded-2xl backdrop-blur-sm">
+                <p class="text-xs text-center text-gray-600">
+                    🔒 Ваши данные защищены и не передаются третьим лицам
+                </p>
             </div>
         </div>
     </div>
@@ -148,12 +342,26 @@
     </div>
 
     <div id="page-success" class="page right flex flex-col items-center justify-center text-center">
-        <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6" style="background-color: #34c7591a;">
-            <i data-lucide="check" class="w-12 h-12" style="color: #34c759;"></i>
+        <div class="success-container animate-slide-up">
+            <div class="success-icon animate-pulse-gentle">
+                <i data-lucide="check" class="w-10 h-10"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-4">🎉 Заявка отправлена!</h2>
+            <p class="mb-6 opacity-90">Наш юрист-эксперт свяжется с вами в течение 15 минут для бесплатной консультации</p>
+            
+            <!-- Что дальше */
+            <div class="bg-white bg-opacity-20 rounded-2xl p-4 mb-6">
+                <h3 class="font-semibold mb-3">📋 Что будет дальше:</h3>
+                <ul class="text-sm space-y-2 text-left">
+                    <li>• Экспресс-анализ вашего дела</li>
+                    <li>• Оценка шансов на успех</li>
+                    <li>• План действий для максимальной выплаты</li>
+                    <li>• Ответы на все ваши вопросы</li>
+                </ul>
+            </div>
+            
+            <div id="success-actions" class="w-full"></div>
         </div>
-        <h1 class="text-2xl font-bold mb-2">Заявка отправлена!</h1>
-        <p style="color: var(--tg-theme-hint-color);" class="mb-6">Наш юрист скоро свяжется с вами.</p>
-        <div id="success-actions" class="w-full"></div>
     </div>
 </div>
 
