@@ -1624,9 +1624,10 @@ async def main_async():
     # --- ДИАГНОСТИЧЕСКАЯ ИНФОРМАЦИЯ ---
     log.info("🚀 BOT STARTING - Version 3.1")
     log.info("📊 Environment check:")
-    log.info("  - BOT_TOKEN: %s", "SET" if BOT_TOKEN else "NOT_SET")
+    log.info("  - BOT_TOKEN: %s", "SET" if TOKEN else "NOT_SET")
     log.info("  - ADMIN_CHAT_ID: %s", ADMIN_CHAT_ID)
-    log.info("  - OPENAI_API_KEY: %s", "SET" if OPENAI_API_KEY else "NOT_SET")
+    log.info("  - OPENROUTER_API_KEY: %s",
+             "SET" if OPENROUTER_API_KEY else "NOT_SET")
     log.info("  - WEBHOOK_URL: %s", WEBHOOK_URL)
     log.info("  - PORT: %s", PORT)
     log.info("  - DATABASE_URL: %s",
