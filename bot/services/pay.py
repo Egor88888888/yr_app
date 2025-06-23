@@ -1,3 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from urllib.parse import urlencode
+from decimal import Decimal
+import base64
+import os
+import json
+
 """Payment integration (CloudPayments/YooKassa).
 Generate payment links and verify callbacks.
 """
@@ -14,10 +22,6 @@ Env vars:
 Function create_payment(app: Application, amount: Decimal) -> str
 returns redirect URL with encoded params (json, base64) ready to open in browser.
 """
-
-
-from __future__ import annotations
-import json
 
 
 if TYPE_CHECKING:
