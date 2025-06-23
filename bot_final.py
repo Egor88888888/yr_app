@@ -1656,10 +1656,15 @@ async def main_async():
         application = Application.builder().token(TOKEN).updater(None).build()
 
         # === Init database ===
+        log.info("🗄️ Initializing database...")
+        log.info("🗄️ Initializing database...")
         await init_models()
+        log.info("✅ Database initialized successfully")
+        log.info("✅ Database initialized successfully")
         application.bot_data["db_sessionmaker"] = async_sessionmaker
 
         # === Telethon client ===
+        log.info("🔗 Setting up Telethon client...")
         telethon_client = None
         if API_ID and API_HASH:
             session_str = os.getenv("TELETHON_USER_SESSION")
@@ -1886,6 +1891,7 @@ async def main_async():
             )
             log.info("✓ Cross promotion job scheduled (every 8 hours)")
 
+        log.info("🚀 Starting HTTP server setup...")
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, "0.0.0.0", PORT)
