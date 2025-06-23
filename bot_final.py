@@ -583,8 +583,8 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
                     else:
                         log.info(
                             "[ai_post_job] No external posts available, generating AI content")
-    except Exception as e:
-        log.error("[ai_post_job] Database error: %s", e)
+            except Exception as e:
+                log.error("[ai_post_job] Database error: %s", e)
 
     # === ПРИОРИТЕТ 2: Генерируем AI контент ===
     text = await generate_ai_post()
