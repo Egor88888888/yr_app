@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Local test runner for the bot without Railway dependencies."""
 
-from aiohttp import web
-from bot.main import main as bot_main
 from bot.services.db import init_db, async_sessionmaker, Category
+from aiohttp import web
 import os
 import asyncio
 from pathlib import Path
 
-# Set environment variables for local testing
+# Set environment variables for local testing FIRST
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
 os.environ["BOT_TOKEN"] = "test_token_123"
 os.environ["ADMIN_CHAT_ID"] = "123456789"
