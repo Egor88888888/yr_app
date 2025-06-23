@@ -1621,8 +1621,20 @@ async def cmd_add_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def main_async():
+    # --- ДИАГНОСТИЧЕСКАЯ ИНФОРМАЦИЯ ---
+    log.info("🚀 BOT STARTING - Version 3.1")
+    log.info("📊 Environment check:")
+    log.info("  - BOT_TOKEN: %s", "SET" if BOT_TOKEN else "NOT_SET")
+    log.info("  - ADMIN_CHAT_ID: %s", ADMIN_CHAT_ID)
+    log.info("  - OPENAI_API_KEY: %s", "SET" if OPENAI_API_KEY else "NOT_SET")
+    log.info("  - WEBHOOK_URL: %s", WEBHOOK_URL)
+    log.info("  - PORT: %s", PORT)
+    log.info("  - DATABASE_URL: %s",
+             "SET" if os.getenv("DATABASE_URL") else "NOT_SET")
+
     # --- Quick diagnostics of critical env-vars (redacted where needed) ---
-    masked_hash = (API_HASH[:5] + "…" + API_HASH[-2:]) if API_HASH else "None"
+    masked_hash = (API_HASH[:5] + "…" + API_HASH[-2:]
+                   ) if API_HASH else "None"
     log.info(
         "Startup config ⇒ API_ID=%s, API_HASH=%s (len=%d), TARGET_CHANNEL_ID=%s, TARGET_CHANNEL_USERNAME=%s",
         API_ID,
@@ -1637,254 +1649,263 @@ async def main_async():
             "Missing env vars: YOUR_BOT_TOKEN / ADMIN_CHAT_ID / MY_RAILWAY_PUBLIC_URL")
         return
 
-    application = Application.builder().token(TOKEN).updater(None).build()
+    try:
 
-    # === Init database ===
-    await init_models()
-    application.bot_data["db_sessionmaker"] = async_sessionmaker
+        application = Application.builder().token(TOKEN).updater(None).build()
 
-    # === Telethon client ===
-    telethon_client = None
-    if API_ID and API_HASH:
-        session_str = os.getenv("TELETHON_USER_SESSION")
-        log.info("TELETHON_USER_SESSION status: %s",
-                 "SET" if session_str and session_str.strip() else "EMPTY/NOT_SET")
+        # === Init database ===
+        await init_models()
+        application.bot_data["db_sessionmaker"] = async_sessionmaker
 
-        if session_str and session_str.strip():
-            try:
-                # Используем пользовательскую сессию для чтения каналов
-                log.info("Creating Telethon client with user session...")
-                telethon_client = TelegramClient(
-                    StringSession(session_str), API_ID, API_HASH)
+        # === Telethon client ===
+        telethon_client = None
+        if API_ID and API_HASH:
+            session_str = os.getenv("TELETHON_USER_SESSION")
+            log.info("TELETHON_USER_SESSION status: %s",
+                     "SET" if session_str and session_str.strip() else "EMPTY/NOT_SET")
 
-                # Важно: подключаемся без интерактивной аутентификации
-                await telethon_client.connect()
-                if not await telethon_client.is_user_authorized():
-                    log.error(
-                        "TELETHON_USER_SESSION is invalid - user not authorized")
-                    await telethon_client.disconnect()
-                    telethon_client = None
-                else:
-                    me = await telethon_client.get_me()
-                    log.info("✅ Telethon client started with user session: %s",
-                             me.username or f"ID:{me.id}")
-                    application.bot_data["telethon"] = telethon_client
-            except Exception as e:
-                log.error(
-                    "Telethon session error: %s. External parsing disabled.", e)
-                if telethon_client:
-                    try:
+            if session_str and session_str.strip():
+                try:
+                    # Используем пользовательскую сессию для чтения каналов
+                    log.info("Creating Telethon client with user session...")
+                    telethon_client = TelegramClient(
+                        StringSession(session_str), API_ID, API_HASH)
+
+                    # Важно: подключаемся без интерактивной аутентификации
+                    await telethon_client.connect()
+                    if not await telethon_client.is_user_authorized():
+                        log.error(
+                            "TELETHON_USER_SESSION is invalid - user not authorized")
                         await telethon_client.disconnect()
-                    except:
-                        pass
+                        telethon_client = None
+                    else:
+                        me = await telethon_client.get_me()
+                        log.info("✅ Telethon client started with user session: %s",
+                                 me.username or f"ID:{me.id}")
+                        application.bot_data["telethon"] = telethon_client
+                except Exception as e:
+                    log.error(
+                        "Telethon session error: %s. External parsing disabled.", e)
+                    if telethon_client:
+                        try:
+                            await telethon_client.disconnect()
+                        except:
+                            pass
+                    telethon_client = None
+            else:
+                # Без пользовательской сессии внешние каналы недоступны
+                log.warning(
+                    "⚠️ TELETHON_USER_SESSION not set - external channel parsing disabled")
+                log.warning(
+                    "To enable: generate session with session_gen.py and set TELETHON_USER_SESSION variable")
                 telethon_client = None
         else:
-            # Без пользовательской сессии внешние каналы недоступны
-            log.warning(
-                "⚠️ TELETHON_USER_SESSION not set - external channel parsing disabled")
-            log.warning(
-                "To enable: generate session with session_gen.py and set TELETHON_USER_SESSION variable")
-            telethon_client = None
-    else:
-        log.warning("⚠️ API_ID or API_HASH missing - Telethon disabled")
+            log.warning("⚠️ API_ID or API_HASH missing - Telethon disabled")
 
-    application.add_handler(CommandHandler("start", cmd_start))
-    application.add_handler(CommandHandler("setup_menu", cmd_setup_menu))
-    application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
-    application.add_handler(CommandHandler("admin", cmd_admin))
-    application.add_handler(CommandHandler("add_admin", cmd_add_admin))
-    application.add_handler(CommandHandler(
-        "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
-    application.add_handler(CommandHandler(
-        "set_channel_id", cmd_set_channel_id, filters.ChatType.PRIVATE))
-    application.add_handler(CallbackQueryHandler(admin_callback_handler))
-    application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & filters.FORWARDED, handle_forward))
-    application.add_handler(MessageHandler(
-        filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, ai_private_chat))
-    application.add_handler(MessageHandler(
-        filters.ALL & ~filters.COMMAND, debug))
+        application.add_handler(CommandHandler("start", cmd_start))
+        application.add_handler(CommandHandler("setup_menu", cmd_setup_menu))
+        application.add_handler(CommandHandler(
+            ["postai", "post"], cmd_post_ai))
+        application.add_handler(CommandHandler("admin", cmd_admin))
+        application.add_handler(CommandHandler("add_admin", cmd_add_admin))
+        application.add_handler(CommandHandler(
+            "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
+        application.add_handler(CommandHandler(
+            "set_channel_id", cmd_set_channel_id, filters.ChatType.PRIVATE))
+        application.add_handler(CallbackQueryHandler(admin_callback_handler))
+        application.add_handler(MessageHandler(
+            filters.ChatType.PRIVATE & filters.FORWARDED, handle_forward))
+        application.add_handler(MessageHandler(
+            filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, ai_private_chat))
+        application.add_handler(MessageHandler(
+            filters.ALL & ~filters.COMMAND, debug))
 
-    # aiohttp app
-    app = web.Application()
-    app["bot"] = application.bot
-    app["application"] = application
-    app.router.add_post(f"/{TOKEN}", handle_telegram)
-    app.router.add_route("*", "/submit", handle_submit)
+        # aiohttp app
+        app = web.Application()
+        app["bot"] = application.bot
+        app["application"] = application
+        app.router.add_post(f"/{TOKEN}", handle_telegram)
+        app.router.add_route("*", "/submit", handle_submit)
 
-    # === Configure OpenRouter ===
-    if OPENROUTER_API_KEY:
-        openai.api_key = OPENROUTER_API_KEY
-        openai.api_base = "https://openrouter.ai/api/v1"
+        # === Configure OpenRouter ===
+        if OPENROUTER_API_KEY:
+            openai.api_key = OPENROUTER_API_KEY
+            openai.api_base = "https://openrouter.ai/api/v1"
 
-    # === Resolve channel ID (once) ===
-    target_channel_id = None
-    if TARGET_CHANNEL_ID:
-        target_channel_id = int(TARGET_CHANNEL_ID)
-    else:
-        try:
-            chat = await application.bot.get_chat(TARGET_CHANNEL_USERNAME)
-            target_channel_id = chat.id
-            log.info("Resolved @%s -> %s",
-                     TARGET_CHANNEL_USERNAME, target_channel_id)
-        except Exception as e:
-            log.error("Cannot resolve channel username %s: %s",
-                      TARGET_CHANNEL_USERNAME, e)
-
-    application.bot_data["TARGET_CHANNEL_ID"] = target_channel_id
-
-    # Set webhook & default menu button with error handling
-    try:
-        await setup_menu(application.bot)
-        log.info("Menu button set successfully")
-    except Exception as e:
-        log.error("Failed to set menu button: %s", e)
-
-    try:
-        # Проверяем текущий webhook перед установкой
-        webhook_info = await application.bot.get_webhook_info()
-        current_url = f"https://{PUBLIC_HOST}/{TOKEN}"
-
-        if webhook_info.url != current_url:
-            await application.bot.set_webhook(url=current_url)
-            log.info("Webhook set to https://%s/%s", PUBLIC_HOST, TOKEN)
+        # === Resolve channel ID (once) ===
+        target_channel_id = None
+        if TARGET_CHANNEL_ID:
+            target_channel_id = int(TARGET_CHANNEL_ID)
         else:
-            log.info("Webhook already set correctly: %s", webhook_info.url)
-    except Exception as e:
-        log.error("Failed to set webhook: %s", e)
-        # Продолжаем работу даже если webhook не установился
-        log.warning("Bot will continue without webhook - polling mode disabled")
+            try:
+                chat = await application.bot.get_chat(TARGET_CHANNEL_USERNAME)
+                target_channel_id = chat.id
+                log.info("Resolved @%s -> %s",
+                         TARGET_CHANNEL_USERNAME, target_channel_id)
+            except Exception as e:
+                log.error("Cannot resolve channel username %s: %s",
+                          TARGET_CHANNEL_USERNAME, e)
 
-    # === Schedule autoposting job ===
-    if target_channel_id:
-        application.job_queue.run_repeating(
-            ai_post_job,
-            interval=timedelta(hours=POST_INTERVAL_HOURS),
-            first=timedelta(minutes=1),
-            name="ai_posting",
-        )
-        log.info("Autoposting job scheduled every %s hours",
-                 POST_INTERVAL_HOURS)
+        application.bot_data["TARGET_CHANNEL_ID"] = target_channel_id
 
-    # === Schedule analytics jobs ===
-    if telethon_client:
-        log.info("Scheduling Telethon-based external channel jobs...")
-        application.job_queue.run_repeating(
-            collect_subscribers_job,
-            interval=timedelta(days=1),
-            first=timedelta(minutes=5),
-            name="collect_subscribers",
-        )
-        log.info("✓ collect_subscribers_job scheduled (daily)")
+        # Set webhook & default menu button with error handling
+        try:
+            await setup_menu(application.bot)
+            log.info("Menu button set successfully")
+        except Exception as e:
+            log.error("Failed to set menu button: %s", e)
 
-        application.job_queue.run_repeating(
-            scan_external_channels_job,
-            interval=timedelta(minutes=10),
-            first=timedelta(seconds=30),
-            name="scan_external_channels",
-        )
-        log.info("✓ scan_external_channels_job scheduled (every 10 min)")
-    else:
-        log.warning("⚠️ Telethon unavailable - using RSS alternative")
+        try:
+            # Проверяем текущий webhook перед установкой
+            webhook_info = await application.bot.get_webhook_info()
+            current_url = f"https://{PUBLIC_HOST}/{TOKEN}"
 
-    # === RSS парсинг как альтернатива (работает всегда) ===
-    log.info("Scheduling RSS-based content parsing...")
-    application.job_queue.run_repeating(
-        scan_rss_sources_job,
-        interval=timedelta(minutes=15),
-        first=timedelta(seconds=30),
-        name="scan_rss_sources",
-    )
-    log.info("✓ scan_rss_sources_job scheduled (every 15 min)")
+            if webhook_info.url != current_url:
+                await application.bot.set_webhook(url=current_url)
+                log.info("Webhook set to https://%s/%s", PUBLIC_HOST, TOKEN)
+            else:
+                log.info("Webhook already set correctly: %s", webhook_info.url)
+        except Exception as e:
+            log.error("Failed to set webhook: %s", e)
+            # Продолжаем работу даже если webhook не установился
+            log.warning(
+                "Bot will continue without webhook - polling mode disabled")
 
-    # === Комментирование для максимальной активности ===
-    if target_channel_id:
-        application.job_queue.run_repeating(
-            comment_on_post_job,
-            interval=timedelta(minutes=20),  # Комментируем каждые 20 минут
-            first=timedelta(minutes=3),     # Первый комментарий через 3 минуты
-            name="comment_posts",
-        )
-        log.info("✓ comment_on_post_job scheduled (every 20 min)")
+        # === Schedule autoposting job ===
+        if target_channel_id:
+            application.job_queue.run_repeating(
+                ai_post_job,
+                interval=timedelta(hours=POST_INTERVAL_HOURS),
+                first=timedelta(minutes=1),
+                name="ai_posting",
+            )
+            log.info("Autoposting job scheduled every %s hours",
+                     POST_INTERVAL_HOURS)
 
-        # Дополнительный быстрый RSS парсинг для максимальной активности
+        # === Schedule analytics jobs ===
+        if telethon_client:
+            log.info("Scheduling Telethon-based external channel jobs...")
+            application.job_queue.run_repeating(
+                collect_subscribers_job,
+                interval=timedelta(days=1),
+                first=timedelta(minutes=5),
+                name="collect_subscribers",
+            )
+            log.info("✓ collect_subscribers_job scheduled (daily)")
+
+            application.job_queue.run_repeating(
+                scan_external_channels_job,
+                interval=timedelta(minutes=10),
+                first=timedelta(seconds=30),
+                name="scan_external_channels",
+            )
+            log.info("✓ scan_external_channels_job scheduled (every 10 min)")
+        else:
+            log.warning("⚠️ Telethon unavailable - using RSS alternative")
+
+        # === RSS парсинг как альтернатива (работает всегда) ===
+        log.info("Scheduling RSS-based content parsing...")
         application.job_queue.run_repeating(
             scan_rss_sources_job,
-            interval=timedelta(minutes=8),  # Ускоренный парсинг
-            first=timedelta(minutes=1),
-            name="scan_rss_fast",
+            interval=timedelta(minutes=15),
+            first=timedelta(seconds=30),
+            name="scan_rss_sources",
         )
-        log.info("✓ Fast RSS scanning enabled (every 8 min)")
+        log.info("✓ scan_rss_sources_job scheduled (every 15 min)")
 
-    # === RSS статистика ===
-    application.job_queue.run_repeating(
-        get_rss_stats_job,
-        interval=timedelta(minutes=60),  # Статистика каждый час
-        first=timedelta(minutes=10),     # Первая статистика через 10 минут
-        name="rss_statistics",
-    )
-    log.info("✓ RSS statistics job scheduled (every 60 min)")
+        # === Комментирование для максимальной активности ===
+        if target_channel_id:
+            application.job_queue.run_repeating(
+                comment_on_post_job,
+                interval=timedelta(minutes=20),  # Комментируем каждые 20 минут
+                # Первый комментарий через 3 минуты
+                first=timedelta(minutes=3),
+                name="comment_posts",
+            )
+            log.info("✓ comment_on_post_job scheduled (every 20 min)")
 
-    # === Система опросов для удержания пользователей ===
-    if target_channel_id:
+            # Дополнительный быстрый RSS парсинг для максимальной активности
+            application.job_queue.run_repeating(
+                scan_rss_sources_job,
+                interval=timedelta(minutes=8),  # Ускоренный парсинг
+                first=timedelta(minutes=1),
+                name="scan_rss_fast",
+            )
+            log.info("✓ Fast RSS scanning enabled (every 8 min)")
+
+        # === RSS статистика ===
         application.job_queue.run_repeating(
-            create_poll_job,
-            interval=timedelta(hours=12),   # Опросы 2 раза в день
-            first=timedelta(minutes=15),    # Первый опрос через 15 минут
-            name="channel_polls",
+            get_rss_stats_job,
+            interval=timedelta(minutes=60),  # Статистика каждый час
+            first=timedelta(minutes=10),     # Первая статистика через 10 минут
+            name="rss_statistics",
         )
-        log.info("✓ Poll creation job scheduled (every 12 hours)")
+        log.info("✓ RSS statistics job scheduled (every 60 min)")
 
-        # Активности для удержания подписчиков
-        application.job_queue.run_repeating(
-            channel_activity_job,
-            interval=timedelta(minutes=45),  # Активности каждые 45 минут
-            first=timedelta(minutes=7),      # Первая активность через 7 минут
-            name="channel_activities",
-        )
-        log.info("✓ Channel activity job scheduled (every 45 min)")
+        # === Система опросов для удержания пользователей ===
+        if target_channel_id:
+            application.job_queue.run_repeating(
+                create_poll_job,
+                interval=timedelta(hours=12),   # Опросы 2 раза в день
+                first=timedelta(minutes=15),    # Первый опрос через 15 минут
+                name="channel_polls",
+            )
+            log.info("✓ Poll creation job scheduled (every 12 hours)")
 
-    # === Автоматическое привлечение новых подписчиков ===
-    if target_channel_id:
-        # Вирусный контент для привлечения аудитории
-        application.job_queue.run_repeating(
-            auto_subscriber_attraction_job,
-            interval=timedelta(hours=6),     # Вирусный контент 4 раза в день
-            # Первый вирусный пост через 25 минут
-            first=timedelta(minutes=25),
-            name="viral_content",
-        )
-        log.info("✓ Viral content job scheduled (every 6 hours)")
+            # Активности для удержания подписчиков
+            application.job_queue.run_repeating(
+                channel_activity_job,
+                interval=timedelta(minutes=45),  # Активности каждые 45 минут
+                # Первая активность через 7 минут
+                first=timedelta(minutes=7),
+                name="channel_activities",
+            )
+            log.info("✓ Channel activity job scheduled (every 45 min)")
 
-        # Кросс-промо активности
-        application.job_queue.run_repeating(
-            cross_promotion_job,
-            interval=timedelta(hours=8),     # Промо контент 3 раза в день
-            first=timedelta(minutes=35),     # Первое промо через 35 минут
-            name="cross_promotion",
-        )
-        log.info("✓ Cross promotion job scheduled (every 8 hours)")
+        # === Автоматическое привлечение новых подписчиков ===
+        if target_channel_id:
+            # Вирусный контент для привлечения аудитории
+            application.job_queue.run_repeating(
+                auto_subscriber_attraction_job,
+                # Вирусный контент 4 раза в день
+                interval=timedelta(hours=6),
+                # Первый вирусный пост через 25 минут
+                first=timedelta(minutes=25),
+                name="viral_content",
+            )
+            log.info("✓ Viral content job scheduled (every 6 hours)")
 
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
+            # Кросс-промо активности
+            application.job_queue.run_repeating(
+                cross_promotion_job,
+                interval=timedelta(hours=8),     # Промо контент 3 раза в день
+                first=timedelta(minutes=35),     # Первое промо через 35 минут
+                name="cross_promotion",
+            )
+            log.info("✓ Cross promotion job scheduled (every 8 hours)")
 
-    async with application:
-        await application.start()
-        log.info("Bot & HTTP server running on port %s", PORT)
-        # Notify admin that bot started and autoposting scheduled
-        try:
-            status_msg = f"🤖 Бот запущен в МАКСИМАЛЬНОЙ АКТИВНОСТИ!\n📊 Постинг каждый {POST_INTERVAL_HOURS}ч (60% парсинг / 40% AI)\n💬 Комментирование каждые 20 мин\n🚀 Быстрый RSS-парсинг каждые 8 мин\n📈 RSS статистика каждый час\n🗳️ Опросы каждые 12 часов\n🎯 Активности каждые 45 мин\n🔥 Вирусный контент каждые 6 часов\n⭐ Промо контент каждые 8 часов\n🚫 Картинки убраны - только текст\n🔄 15 RSS источников активно\n✅ Умная коммуникация с клиентами"
-            if telethon_client:
-                status_msg += f"\n✅ Внешние каналы: {', '.join(EXTERNAL_CHANNELS) if EXTERNAL_CHANNELS else 'не настроены'}"
-            else:
-                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)\n✅ RSS-парсинг активен (15 источников)"
-            await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=status_msg)
-        except Exception as e:
-            log.warning("Cannot notify admin: %s", e)
-        # run forever
-        await asyncio.Event().wait()
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", PORT)
+        await site.start()
+
+        async with application:
+            await application.start()
+            log.info("Bot & HTTP server running on port %s", PORT)
+            # Notify admin that bot started and autoposting scheduled
+            try:
+                status_msg = f"🤖 Бот запущен в МАКСИМАЛЬНОЙ АКТИВНОСТИ!\n📊 Постинг каждый {POST_INTERVAL_HOURS}ч (60% парсинг / 40% AI)\n💬 Комментирование каждые 20 мин\n🚀 Быстрый RSS-парсинг каждые 8 мин\n📈 RSS статистика каждый час\n🗳️ Опросы каждые 12 часов\n🎯 Активности каждые 45 мин\n🔥 Вирусный контент каждые 6 часов\n⭐ Промо контент каждые 8 часов\n🚫 Картинки убраны - только текст\n🔄 15 RSS источников активно\n✅ Умная коммуникация с клиентами"
+                if telethon_client:
+                    status_msg += f"\n✅ Внешние каналы: {', '.join(EXTERNAL_CHANNELS) if EXTERNAL_CHANNELS else 'не настроены'}"
+                else:
+                    status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)\n✅ RSS-парсинг активен (15 источников)"
+                await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=status_msg)
+            except Exception as e:
+                log.warning("Cannot notify admin: %s", e)
+            # run forever
+            await asyncio.Event().wait()
+    except Exception as e:
+        log.error("Main async function failed: %s", e)
 
 
 def main():

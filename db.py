@@ -36,8 +36,14 @@ if RAW_DATABASE_URL.startswith("postgresql://"):
 else:
     DATABASE_URL = RAW_DATABASE_URL
 
-engine = create_async_engine(
-    DATABASE_URL, echo=False, pool_size=5, max_overflow=10)
+# Создаем engine с учетом типа базы данных
+if DATABASE_URL.startswith("sqlite"):
+    # SQLite не поддерживает pool_size и max_overflow
+    engine = create_async_engine(DATABASE_URL, echo=False)
+else:
+    # PostgreSQL поддерживает пулинг соединений
+    engine = create_async_engine(
+        DATABASE_URL, echo=False, pool_size=5, max_overflow=10)
 async_sessionmaker: async_sessionmaker[AsyncSession] = async_sessionmaker(
     engine, expire_on_commit=False)
 
