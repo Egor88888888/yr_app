@@ -353,15 +353,25 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
-    """Periodic job: post from external content OR AI-generated text."""
-    log.info("[ai_post_job] tick")
+    """Periodic job: post from external content OR AI-generated text with 60/40 ratio."""
+    global POST_COUNTER
+    log.info("[ai_post_job] tick #%d", POST_COUNTER + 1)
     channel_id = ctx.bot_data.get("TARGET_CHANNEL_ID")
     if not channel_id:
         log.warning(
             "[ai_post_job] TARGET_CHANNEL_ID not resolved; skip posting")
         return
 
-    # === ПРИОРИТЕТ 1: Проверяем внешние посты ===
+    POST_COUNTER += 1
+    cycle_position = POST_COUNTER % 10  # Цикл из 10 постов
+    should_use_external = cycle_position <= EXTERNAL_POST_TARGET  # Первые 6 - внешние
+
+    log.info("[ai_post_job] Post %d/10 in cycle, target: %s",
+             cycle_position if cycle_position > 0 else 10,
+             "EXTERNAL" if should_use_external else "AI")
+
+    # === ПРИОРИТЕТ 1: Внешний контент (60%) ===
+    if should_use_external:
     session_maker = ctx.bot_data.get("db_sessionmaker")
     if session_maker:
         try:
@@ -799,11 +809,11 @@ async def main_async():
         log.info("Bot & HTTP server running on port %s", PORT)
         # Notify admin that bot started and autoposting scheduled
         try:
-            status_msg = f"🤖 Бот запущен. AI-постинг каждые {POST_INTERVAL_HOURS}ч."
+            status_msg = f"🤖 Бот запущен в МАКСИМАЛЬНОЙ АКТИВНОСТИ!\n📊 Постинг каждый {POST_INTERVAL_HOURS}ч (60% парсинг / 40% AI)\n💬 Комментирование каждые 20 мин\n🚀 Быстрый RSS-парсинг каждые 8 мин\n🚫 Картинки убраны - только текст"
             if telethon_client:
                 status_msg += f"\n✅ Внешние каналы: {', '.join(EXTERNAL_CHANNELS) if EXTERNAL_CHANNELS else 'не настроены'}"
             else:
-                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)"
+                status_msg += "\n⚠️ Парсинг внешних каналов отключен (нет TELETHON_USER_SESSION)\n✅ RSS-парсинг активен"
             await application.bot.send_message(chat_id=ADMIN_CHAT_ID, text=status_msg)
         except Exception as e:
             log.warning("Cannot notify admin: %s", e)
