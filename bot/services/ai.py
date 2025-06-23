@@ -3,29 +3,46 @@ Functions: chat_complete, humanize, generate_content.
 """
 
 import os
-import openai
+import aiohttp
+import json
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-if OPENROUTER_API_KEY:
-    openai.api_key = OPENROUTER_API_KEY
-    openai.api_base = "https://openrouter.ai/api/v1"
 
 
-async def generate_ai_response(messages: list[dict], model: str = "gpt-3.5-turbo", max_tokens: int = 800) -> str:
+async def generate_ai_response(messages: list[dict], model: str = "openai/gpt-4o-mini", max_tokens: int = 800) -> str:
     """Generate AI response using OpenRouter"""
     if not OPENROUTER_API_KEY:
-        return "AI временно недоступен"
+        return "🤖 AI консультант временно недоступен. Обратитесь к администратору."
 
     try:
-        response = await openai.ChatCompletion.acreate(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            }
+
+            data = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": 0.7
+            }
+
+            async with session.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=data
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result["choices"][0]["message"]["content"].strip()
+                else:
+                    error_text = await response.text()
+                    return f"🤖 AI временно недоступен (код {response.status})"
+
     except Exception as e:
-        return f"Ошибка AI: {str(e)}"
+        print(f"AI Error: {e}")
+        return "🤖 Произошла ошибка при обращении к AI консультанту. Попробуйте позже."
 
 
 async def generate_post_content(topic: str) -> str:

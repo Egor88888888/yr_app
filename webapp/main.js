@@ -289,15 +289,31 @@ async function submitForm() {
     tg.MainButton.showProgress();
     
     try {
-        const response = await fetch('/submit', {
+        // Get submit URL - try relative first, then full domain
+        const submitUrl = window.location.hostname === 'localhost' 
+            ? '/submit' 
+            : `${window.location.protocol}//${window.location.host}/submit`;
+            
+        console.log('Submitting to:', submitUrl);
+        console.log('Form data:', formData);
+        
+        const response = await fetch(submitUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(formData)
         });
         
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const result = await response.json();
+        console.log('Result:', result);
         
         if (result.status === 'ok') {
             // Show success
@@ -305,7 +321,7 @@ async function submitForm() {
             document.getElementById('success').classList.remove('hidden');
             
             // Show payment if needed
-            if (result.pay_url) {
+            if (result.pay_url && result.pay_url !== '# Платежная система не настроена') {
                 document.getElementById('payment-section').classList.remove('hidden');
                 document.getElementById('pay-button').href = result.pay_url;
             }
@@ -319,10 +335,11 @@ async function submitForm() {
                 tg.close();
             }, 5000);
         } else {
-            tg.showAlert('Произошла ошибка. Попробуйте еще раз.');
+            tg.showAlert(`Ошибка: ${result.error || 'Неизвестная ошибка'}`);
         }
     } catch (error) {
-        tg.showAlert('Ошибка отправки. Проверьте соединение.');
+        console.error('Submit error:', error);
+        tg.showAlert(`Ошибка отправки: ${error.message}. Проверьте соединение.`);
     } finally {
         tg.MainButton.hideProgress();
     }

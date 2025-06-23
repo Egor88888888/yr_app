@@ -398,6 +398,10 @@ async def handle_submit(request: web.Request) -> web.Response:
         if name and not user.first_name:
             user.first_name = name.split()[0]
 
+        # Коммитим пользователя сначала
+        await session.commit()
+        await session.refresh(user)
+
         # Создаем заявку
         app = AppModel(
             user_id=user.id,
@@ -412,6 +416,7 @@ async def handle_submit(request: web.Request) -> web.Response:
         )
         session.add(app)
         await session.commit()
+        await session.refresh(app)
 
         # Определяем цену (можно сделать динамически)
         app.price = Decimal("5000")  # базовая консультация
@@ -490,9 +495,7 @@ async def handle_submit(request: web.Request) -> web.Response:
 
     # Уведомляем клиента
     try:
-        await notify_client_application_received(
-            user.email, user.phone, app.id, category.name
-        )
+        await notify_client_application_received(user, app)
     except Exception as e:
         log.error(f"Client notification error: {e}")
 
