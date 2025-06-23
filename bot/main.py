@@ -21,8 +21,8 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
-import openai
 from aiohttp import web
 from sqlalchemy import select, text, func
 from telegram import (
@@ -44,18 +44,33 @@ from bot.services.pay import create_payment
 from bot.services.ai import generate_ai_response, generate_post_content
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
 
-# Configuration
+# ================ CONFIG ================
+
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
-PUBLIC_HOST = os.getenv("RAILWAY_PUBLIC_DOMAIN", "localhost")
+# Get Railway public domain
+RAILWAY_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv(
+    "MY_RAILWAY_PUBLIC_URL")
+
+# Use known Railway domain if env var contains placeholder
+if RAILWAY_DOMAIN and "MY_RAILWAY_PUBLIC_URL" in RAILWAY_DOMAIN:
+    # Your actual Railway domain
+    PUBLIC_HOST = "poetic-simplicity-production-60e7.up.railway.app"
+else:
+    PUBLIC_HOST = RAILWAY_DOMAIN if RAILWAY_DOMAIN else "localhost"
+
+# If Railway domain contains full URL, extract domain
+if PUBLIC_HOST.startswith("http"):
+    from urllib.parse import urlparse
+    PUBLIC_HOST = urlparse(PUBLIC_HOST).netloc
+
 WEB_APP_URL = f"https://{PUBLIC_HOST}/webapp/"
+
+print(f"🌐 WebApp URL: {WEB_APP_URL}")
+print(f"🔗 Webhook URL: https://{PUBLIC_HOST}/{TOKEN}")
 PORT = int(os.getenv("PORT", 8080))
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-
-if OPENROUTER_API_KEY:
-    openai.api_key = OPENROUTER_API_KEY
-    openai.api_base = "https://openrouter.ai/api/v1"
 
 logging.basicConfig(
     level=logging.INFO,
