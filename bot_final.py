@@ -102,9 +102,9 @@ EXTERNAL_POST_TARGET = 6  # Из 10 постов 6 должны быть вне�
 SUBMITTED_USERS = set()  # ID пользователей, подавших заявки
 USER_POLLS = {}  # Активные опросы для пользователей
 
-# Отслеживание пользователей
-SUBMITTED_USERS = set()  # ID пользователей, подавших заявки
-USER_POLLS = {}  # Активные опросы для пользователей
+# Администраторы системы
+ADMIN_USERS = {ADMIN_CHAT_ID}  # Главный админ всегда есть
+ADMIN_PERMISSIONS = {ADMIN_CHAT_ID: ["all"]}  # Права доступа админов
 
 
 def _media_url(item):
@@ -147,24 +147,106 @@ async def handle_submit(request: web.Request) -> web.Response:
     log.info("/submit payload=%s", payload)
 
     # Добавляем пользователя в список подавших заявки
+    user_id = None
     try:
-        # Получаем user_id из initDataUnsafe если доступен
-        import json
-        from urllib.parse import unquote
+        # Telegram WebApp передает user_id через query_id или другие способы
+        # Попробуем несколько методов получения user_id
+
+        # Метод 1: Из самого query_id (содержит user_id)
+        if query_id:
+            import base64
+            try:
+                # query_id часто содержит закодированную информацию о пользователе
+                decoded = base64.b64decode(
+                    query_id + "==")  # Добавляем padding
+                decoded_str = decoded.decode('utf-8', errors='ignore')
+                # Ищем паттерн user_id в декодированной строке
+                import re
+                user_match = re.search(r'"user_id":(\d+)', decoded_str)
+                if user_match:
+                    user_id = int(user_match.group(1))
+                    log.info("Extracted user_id from query_id: %s", user_id)
+            except Exception as e:
+                log.debug("Failed to decode query_id: %s", e)
+
+        # Метод 2: Из initData если есть
         init_data = data.get("initData", "")
-        if init_data:
-            # Парсим initData для получения user_id
-            params = dict(x.split('=')
-                          for x in init_data.split('&') if '=' in x)
-            user_data = params.get('user', '')
-            if user_data:
-                user_info = json.loads(unquote(user_data))
-                user_id = user_info.get('id')
-                if user_id:
-                    SUBMITTED_USERS.add(user_id)
-                    log.info("User %s added to submitted users list", user_id)
+        if init_data and not user_id:
+            try:
+                import json
+                from urllib.parse import unquote
+                # Парсим initData для получения user_id
+                params = dict(x.split('=', 1)
+                              for x in init_data.split('&') if '=' in x)
+                user_data = params.get('user', '')
+                if user_data:
+                    user_info = json.loads(unquote(user_data))
+                    user_id = user_info.get('id')
+                    log.info("Extracted user_id from initData: %s", user_id)
+            except Exception as e:
+                log.debug("Failed to parse initData: %s", e)
+
+        # Метод 3: Создаем временный user_id из имени и телефона для отслеживания
+        if not user_id:
+            name = payload.get("name", "")
+            phone = payload.get("phone", "")
+            if name and phone:
+                # Создаем хеш из имени и телефона как временный ID
+                import hashlib
+                temp_id = hashlib.md5(
+                    f"{name}_{phone}".encode()).hexdigest()[:8]
+                user_id = f"temp_{temp_id}"
+                log.info("Created temporary user_id: %s", user_id)
+
+        # Добавляем в список подавших заявки
+        if user_id:
+            SUBMITTED_USERS.add(user_id)
+            log.info("User %s added to submitted users list", user_id)
+
     except Exception as e:
-        log.error("Failed to parse user ID from initData: %s", e)
+        log.error("Failed to extract user ID: %s", e)
+
+    # Сохраняем заявку в базу данных
+    try:
+        session_maker = request.app["application"].bot_data.get(
+            "db_sessionmaker")
+        if session_maker:
+            from db import async_sessionmaker
+            from sqlalchemy import text
+
+            async with session_maker() as session:
+                # Создаем таблицу заявок если не существует
+                await session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS applications (
+                        id SERIAL PRIMARY KEY,
+                        user_id VARCHAR(255),
+                        name VARCHAR(255),
+                        phone VARCHAR(50),
+                        problems TEXT,
+                        description TEXT,
+                        status VARCHAR(50) DEFAULT 'new',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        assigned_admin VARCHAR(255),
+                        notes TEXT
+                    )
+                """))
+
+                # Вставляем заявку
+                problems_str = ", ".join(payload.get("problems", []))
+                await session.execute(text("""
+                    INSERT INTO applications (user_id, name, phone, problems, description)
+                    VALUES (:user_id, :name, :phone, :problems, :description)
+                """), {
+                    "user_id": str(user_id) if user_id else None,
+                    "name": payload.get("name", ""),
+                    "phone": payload.get("phone", ""),
+                    "problems": problems_str,
+                    "description": payload.get("description", "")
+                })
+                await session.commit()
+                log.info("Application saved to database")
+    except Exception as e:
+        log.error("Failed to save application to database: %s", e)
 
     # Notify admin
     try:
@@ -172,7 +254,7 @@ async def handle_submit(request: web.Request) -> web.Response:
         name = payload.get("name", "-")
         phone = payload.get("phone", "-")
         desc = payload.get("description", "-")
-        text = f"🔔 Заявка\n{name}\n{phone}\n{problems}\n{desc}"
+        text = f"🔔 Новая заявка #{user_id or 'unknown'}\n👤 {name}\n📞 {phone}\n⚠️ {problems}\n📝 {desc}\n\n💼 Используйте /admin для управления заявками"
         await request.app["bot"].send_message(chat_id=ADMIN_CHAT_ID, text=text)
     except Exception as e:
         log.error("Admin send failed: %s", e)
@@ -183,7 +265,7 @@ async def handle_submit(request: web.Request) -> web.Response:
             id=str(uuid.uuid4()),
             title="Заявка принята",
             input_message_content=InputTextMessageContent(
-                "✅ Спасибо! Заявка получена."),
+                "✅ Спасибо! Заявка получена и передана нашим специалистам.\n\n🕐 Мы свяжемся с вами в ближайшее время для уточнения деталей."),
         )
         await request.app["bot"].answer_web_app_query(query_id, result)
     except Exception as e:
@@ -309,6 +391,35 @@ async def generate_ai_post() -> Optional[str]:
     return text
 
 
+# === Отслеживание пользователей ===
+
+async def check_user_submitted_application(user_name: str, session_maker) -> bool:
+    """Проверяет, подавал ли пользователь заявку, используя базу данных."""
+    if not session_maker or not user_name:
+        return False
+
+    try:
+        from sqlalchemy import text
+        async with session_maker() as session:
+            result = await session.execute(text("""
+                SELECT COUNT(*) FROM applications 
+                WHERE name ILIKE :name
+            """), {"name": f"%{user_name}%"})
+            count = result.scalar()
+            return count > 0
+    except Exception as e:
+        log.error("Error checking user application: %s", e)
+        return False
+
+
+async def get_user_name_from_telegram(update: Update) -> str:
+    """Получает имя пользователя из Telegram."""
+    user = update.effective_user
+    if user:
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        return full_name
+    return ""
+
 # ---------- Role detection helper ----------
 
 
@@ -344,12 +455,19 @@ async def ai_private_chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
+    user_name = await get_user_name_from_telegram(update)
 
     # show typing
     await ctx.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
-    # Проверяем, подавал ли пользователь заявку
+    # Проверяем, подавал ли пользователь заявку (проверяем и в памяти и в БД)
     has_submitted = user_id in SUBMITTED_USERS
+    if not has_submitted and user_name:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        has_submitted = await check_user_submitted_application(user_name, session_maker)
+        if has_submitted:
+            # Добавляем в кэш для быстрой проверки в следующий раз
+            SUBMITTED_USERS.add(user_id)
 
     if has_submitted:
         # Для пользователей, подавших заявку, меняем подход
@@ -865,6 +983,499 @@ async def cross_promotion_job(ctx: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         log.error("[cross_promotion] Failed to post promotion: %s", e)
 
+# ===================== Админ панель =====================
+
+
+async def cmd_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Главная админ панель с интерактивными кнопками."""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("⛔️ У вас нет доступа к админ панели")
+        return
+
+    keyboard = [
+        [InlineKeyboardButton("📋 Заявки", callback_data="admin_applications"),
+         InlineKeyboardButton("👥 Администраторы", callback_data="admin_users")],
+        [InlineKeyboardButton("📊 Статистика", callback_data="admin_stats"),
+         InlineKeyboardButton("🚀 Постинг", callback_data="admin_posting")],
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings"),
+         InlineKeyboardButton("📈 Аналитика", callback_data="admin_analytics")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        "🔧 **АДМИН ПАНЕЛЬ**\n\n"
+        "Выберите раздел для управления:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+
+async def admin_callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Обработчик callbacks админ панели."""
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if user_id not in ADMIN_USERS:
+        await query.answer("⛔️ Нет доступа", show_alert=True)
+        return
+
+    await query.answer()
+
+    if query.data == "admin_applications":
+        await show_applications(query, ctx)
+    elif query.data == "admin_users":
+        await show_admin_users(query, ctx)
+    elif query.data == "admin_stats":
+        await show_statistics(query, ctx)
+    elif query.data == "admin_posting":
+        await show_posting_panel(query, ctx)
+    elif query.data == "admin_settings":
+        await show_settings(query, ctx)
+    elif query.data == "admin_analytics":
+        await show_analytics(query, ctx)
+    elif query.data.startswith("app_"):
+        await handle_application_action(query, ctx)
+    elif query.data.startswith("user_"):
+        await handle_user_action(query, ctx)
+    elif query.data == "back_to_admin":
+        await show_main_admin_panel(query, ctx)
+
+
+async def show_applications(query, ctx):
+    """Показывает список заявок."""
+    try:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        if not session_maker:
+            await query.edit_message_text("❌ База данных недоступна")
+            return
+
+        from sqlalchemy import text
+        async with session_maker() as session:
+            result = await session.execute(text("""
+                SELECT id, name, phone, problems, status, created_at 
+                FROM applications 
+                ORDER BY created_at DESC 
+                LIMIT 10
+            """))
+            applications = result.fetchall()
+
+        if not applications:
+            text = "📋 **ЗАЯВКИ**\n\nНет заявок в системе"
+            keyboard = [[InlineKeyboardButton(
+                "🔙 Назад", callback_data="back_to_admin")]]
+        else:
+            text = "📋 **ЗАЯВКИ** (последние 10)\n\n"
+            keyboard = []
+
+            for app in applications:
+                status_emoji = {"new": "🆕", "processing": "🔄",
+                                "completed": "✅", "rejected": "❌"}.get(app[4], "❓")
+                text += f"{status_emoji} #{app[0]} | {app[1]} | {app[2]}\n"
+                text += f"   📅 {app[5].strftime('%d.%m %H:%M')}\n\n"
+
+                keyboard.append([InlineKeyboardButton(
+                    f"#{app[0]} {app[1][:15]}...",
+                    callback_data=f"app_view_{app[0]}"
+                )])
+
+            keyboard.append([InlineKeyboardButton(
+                "🔙 Назад", callback_data="back_to_admin")])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+    except Exception as e:
+        log.error("Error showing applications: %s", e)
+        await query.edit_message_text("❌ Ошибка загрузки заявок")
+
+
+async def show_admin_users(query, ctx):
+    """Показывает список администраторов."""
+    text = "👥 **АДМИНИСТРАТОРЫ**\n\n"
+    keyboard = []
+
+    for admin_id in ADMIN_USERS:
+        permissions = ADMIN_PERMISSIONS.get(admin_id, [])
+        text += f"👤 ID: {admin_id}\n"
+        text += f"🔑 Права: {', '.join(permissions)}\n\n"
+
+        if admin_id != ADMIN_CHAT_ID:  # Нельзя удалить главного админа
+            keyboard.append([InlineKeyboardButton(
+                f"🗑️ Удалить {admin_id}",
+                callback_data=f"user_remove_{admin_id}"
+            )])
+
+    keyboard.extend([
+        [InlineKeyboardButton("➕ Добавить админа", callback_data="user_add")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="back_to_admin")]
+    ])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+
+async def show_statistics(query, ctx):
+    """Показывает статистику системы."""
+    try:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        stats_text = "📊 **СТАТИСТИКА СИСТЕМЫ**\n\n"
+
+        if session_maker:
+            from sqlalchemy import text
+            async with session_maker() as session:
+                # Статистика заявок
+                result = await session.execute(text("""
+                    SELECT status, COUNT(*) 
+                    FROM applications 
+                    GROUP BY status
+                """))
+                app_stats = dict(result.fetchall())
+
+                total_apps = sum(app_stats.values())
+                stats_text += f"📋 **Заявки**: {total_apps} всего\n"
+                for status, count in app_stats.items():
+                    emoji = {"new": "🆕", "processing": "🔄",
+                             "completed": "✅", "rejected": "❌"}.get(status, "❓")
+                    stats_text += f"  {emoji} {status}: {count}\n"
+
+                # Статистика по дням
+                result = await session.execute(text("""
+                    SELECT DATE(created_at), COUNT(*) 
+                    FROM applications 
+                    WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+                    GROUP BY DATE(created_at)
+                    ORDER BY DATE(created_at) DESC
+                """))
+                daily_stats = result.fetchall()
+
+                stats_text += f"\n📅 **За последние 7 дней**:\n"
+                for date, count in daily_stats:
+                    stats_text += f"  {date.strftime('%d.%m')}: {count} заявок\n"
+
+        stats_text += f"\n👥 **Администраторы**: {len(ADMIN_USERS)}\n"
+        stats_text += f"📝 **Подавших заявки**: {len(SUBMITTED_USERS)}\n"
+
+        keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="admin_stats"),
+                    InlineKeyboardButton("🔙 Назад", callback_data="back_to_admin")]]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(stats_text, reply_markup=reply_markup, parse_mode='Markdown')
+
+    except Exception as e:
+        log.error("Error showing statistics: %s", e)
+        await query.edit_message_text("❌ Ошибка загрузки статистики")
+
+
+async def show_posting_panel(query, ctx):
+    """Панель управления постингом."""
+    text = "🚀 **ПАНЕЛЬ ПОСТИНГА**\n\n"
+    text += f"📊 Постинг каждый {POST_INTERVAL_HOURS}ч\n"
+    text += f"🔄 Соотношение: 60% парсинг / 40% AI\n"
+    text += f"📈 Счетчик постов: {POST_COUNTER}\n\n"
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Создать пост сейчас", callback_data="post_now"),
+         InlineKeyboardButton("🔄 Внешний контент", callback_data="post_external")],
+        [InlineKeyboardButton("📊 Статистика RSS", callback_data="rss_stats"),
+         InlineKeyboardButton("⚙️ Настройки постинга", callback_data="post_settings")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="back_to_admin")]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+
+async def show_settings(query, ctx):
+    """Показывает настройки системы."""
+    text = "⚙️ **НАСТРОЙКИ СИСТЕМЫ**\n\n"
+    text += f"🤖 Интервал постинга: {POST_INTERVAL_HOURS}ч\n"
+    text += f"📱 Канал: {ctx.bot_data.get('TARGET_CHANNEL_ID', 'Не настроен')}\n"
+    text += f"🔄 RSS источников: 15\n"
+    text += f"👥 Админов: {len(ADMIN_USERS)}\n\n"
+
+    keyboard = [
+        [InlineKeyboardButton("🕐 Изменить интервал", callback_data="set_interval"),
+         InlineKeyboardButton("📱 Настроить канал", callback_data="set_channel")],
+        [InlineKeyboardButton("🔄 Перезапуск RSS", callback_data="restart_rss"),
+         InlineKeyboardButton("🧹 Очистить кэш", callback_data="clear_cache")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="back_to_admin")]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+
+async def show_analytics(query, ctx):
+    """Показывает аналитику каналов и активности."""
+    text = "📈 **АНАЛИТИКА**\n\n"
+
+    try:
+        # Аналитика RSS
+        text += "🔄 **RSS Источники**:\n"
+        from jobs import RSS_SOURCES
+        text += f"  📡 Всего источников: {len(RSS_SOURCES)}\n"
+
+        # Аналитика активности
+        text += f"\n🎯 **Активность**:\n"
+        text += f"  💬 Комментарии: каждые 20 мин\n"
+        text += f"  🗳️ Опросы: каждые 12 часов\n"
+        text += f"  🔥 Вирусный контент: каждые 6 часов\n"
+        text += f"  ⭐ Промо: каждые 8 часов\n"
+
+    except Exception as e:
+        log.error("Error in analytics: %s", e)
+        text += "❌ Ошибка загрузки данных\n"
+
+    keyboard = [
+        [InlineKeyboardButton("🔄 Обновить", callback_data="admin_analytics"),
+         InlineKeyboardButton("📊 Детальная статистика", callback_data="admin_stats")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="back_to_admin")]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+
+async def show_main_admin_panel(query, ctx):
+    """Возвращает к главной админ панели."""
+    keyboard = [
+        [InlineKeyboardButton("📋 Заявки", callback_data="admin_applications"),
+         InlineKeyboardButton("👥 Администраторы", callback_data="admin_users")],
+        [InlineKeyboardButton("📊 Статистика", callback_data="admin_stats"),
+         InlineKeyboardButton("🚀 Постинг", callback_data="admin_posting")],
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings"),
+         InlineKeyboardButton("📈 Аналитика", callback_data="admin_analytics")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        "🔧 **АДМИН ПАНЕЛЬ**\n\n"
+        "Выберите раздел для управления:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+
+async def handle_application_action(query, ctx):
+    """Обработка действий с заявками."""
+    action_data = query.data.split("_")
+    if len(action_data) >= 3:
+        action = action_data[1]  # view, take, reject, note
+        app_id = action_data[2]
+
+        if action == "view":
+            await show_application_details(query, ctx, app_id)
+        elif action == "take":
+            await take_application(query, ctx, app_id)
+        elif action == "reject":
+            await reject_application(query, ctx, app_id)
+        elif action == "note":
+            await add_note_to_application(query, ctx, app_id)
+
+
+async def take_application(query, ctx, app_id):
+    """Берет заявку в работу."""
+    try:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        if not session_maker:
+            await query.answer("❌ База данных недоступна", show_alert=True)
+            return
+
+        admin_username = query.from_user.username or f"ID:{query.from_user.id}"
+
+        from sqlalchemy import text
+        async with session_maker() as session:
+            # Обновляем статус заявки
+            await session.execute(text("""
+                UPDATE applications 
+                SET status = 'processing', assigned_admin = :admin
+                WHERE id = :app_id
+            """), {"admin": admin_username, "app_id": app_id})
+            await session.commit()
+
+        await query.answer("✅ Заявка взята в работу", show_alert=True)
+        await show_application_details(query, ctx, app_id)
+
+    except Exception as e:
+        log.error("Error taking application: %s", e)
+        await query.answer("❌ Ошибка обновления заявки", show_alert=True)
+
+
+async def reject_application(query, ctx, app_id):
+    """Отклоняет заявку."""
+    try:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        if not session_maker:
+            await query.answer("❌ База данных недоступна", show_alert=True)
+            return
+
+        from sqlalchemy import text
+        async with session_maker() as session:
+            # Обновляем статус заявки
+            await session.execute(text("""
+                UPDATE applications 
+                SET status = 'rejected'
+                WHERE id = :app_id
+            """), {"app_id": app_id})
+            await session.commit()
+
+        await query.answer("❌ Заявка отклонена", show_alert=True)
+        await show_application_details(query, ctx, app_id)
+
+    except Exception as e:
+        log.error("Error rejecting application: %s", e)
+        await query.answer("❌ Ошибка обновления заявки", show_alert=True)
+
+
+async def add_note_to_application(query, ctx, app_id):
+    """Добавляет заметку к заявке."""
+    text = "📝 **ДОБАВЛЕНИЕ ЗАМЕТКИ**\n\n"
+    text += f"Заявка #{app_id}\n\n"
+    text += "Отправьте текст заметки следующим сообщением."
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 К заявке", callback_data=f"app_view_{app_id}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+    # Устанавливаем состояние ожидания заметки
+    ctx.user_data["awaiting_note_for_app"] = app_id
+
+
+async def handle_user_action(query, ctx):
+    """Обработка действий с пользователями."""
+    action_data = query.data.split("_")
+    if len(action_data) >= 3:
+        action = action_data[1]  # add, remove
+        if action == "add":
+            await start_add_admin_process(query, ctx)
+        elif action == "remove":
+            user_id = int(action_data[2])
+            await remove_admin(query, ctx, user_id)
+
+
+async def show_application_details(query, ctx, app_id):
+    """Показывает детали заявки."""
+    try:
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        if not session_maker:
+            await query.edit_message_text("❌ База данных недоступна")
+            return
+
+        from sqlalchemy import text
+        async with session_maker() as session:
+            result = await session.execute(text("""
+                SELECT * FROM applications WHERE id = :app_id
+            """), {"app_id": app_id})
+            app = result.fetchone()
+
+        if not app:
+            await query.edit_message_text("❌ Заявка не найдена")
+            return
+
+        status_emoji = {"new": "🆕", "processing": "🔄",
+                        "completed": "✅", "rejected": "❌"}.get(app[6], "❓")
+
+        text = f"📋 **ЗАЯВКА #{app[0]}** {status_emoji}\n\n"
+        text += f"👤 **Имя**: {app[2]}\n"
+        text += f"📞 **Телефон**: {app[3]}\n"
+        text += f"⚠️ **Проблемы**: {app[4]}\n"
+        text += f"📝 **Описание**: {app[5]}\n"
+        text += f"📅 **Дата**: {app[7].strftime('%d.%m.%Y %H:%M')}\n"
+        if app[8]:
+            text += f"👨‍💼 **Ответственный**: {app[8]}\n"
+        if app[9]:
+            text += f"📋 **Заметки**: {app[9]}\n"
+
+        keyboard = [
+            [InlineKeyboardButton("✅ Взять в работу", callback_data=f"app_take_{app[0]}"),
+             InlineKeyboardButton("❌ Отклонить", callback_data=f"app_reject_{app[0]}")],
+            [InlineKeyboardButton("📝 Добавить заметку", callback_data=f"app_note_{app[0]}"),
+             InlineKeyboardButton("📞 Связаться", url=f"tel:{app[3]}")],
+            [InlineKeyboardButton(
+                "🔙 К заявкам", callback_data="admin_applications")]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+    except Exception as e:
+        log.error("Error showing application details: %s", e)
+        await query.edit_message_text("❌ Ошибка загрузки заявки")
+
+
+async def start_add_admin_process(query, ctx):
+    """Начинает процесс добавления админа."""
+    text = "➕ **ДОБАВЛЕНИЕ АДМИНИСТРАТОРА**\n\n"
+    text += "Отправьте ID пользователя или перешлите сообщение от него.\n\n"
+    text += "ℹ️ ID можно узнать через @userinfobot"
+
+    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="admin_users")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
+    # Устанавливаем состояние ожидания ID
+    ctx.user_data["awaiting_admin_id"] = True
+
+
+async def remove_admin(query, ctx, user_id):
+    """Удаляет администратора."""
+    if user_id == ADMIN_CHAT_ID:
+        await query.answer("❌ Нельзя удалить главного админа", show_alert=True)
+        return
+
+    if user_id in ADMIN_USERS:
+        ADMIN_USERS.remove(user_id)
+        if user_id in ADMIN_PERMISSIONS:
+            del ADMIN_PERMISSIONS[user_id]
+
+        await query.answer("✅ Администратор удален", show_alert=True)
+        await show_admin_users(query, ctx)
+    else:
+        await query.answer("❌ Пользователь не является админом", show_alert=True)
+
+
+async def cmd_add_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Команда для добавления админа по ID."""
+    user_id = update.effective_user.id
+    if user_id != ADMIN_CHAT_ID:  # Только главный админ может добавлять
+        await update.message.reply_text("⛔️ Только главный администратор может добавлять новых админов")
+        return
+
+    if not ctx.args:
+        await update.message.reply_text("Использование: /add_admin <user_id> [permissions]\n\nПример: /add_admin 123456789 applications,stats")
+        return
+
+    try:
+        new_admin_id = int(ctx.args[0])
+        permissions = ctx.args[1].split(",") if len(
+            ctx.args) > 1 else ["applications", "stats"]
+
+        ADMIN_USERS.add(new_admin_id)
+        ADMIN_PERMISSIONS[new_admin_id] = permissions
+
+        await update.message.reply_text(f"✅ Пользователь {new_admin_id} добавлен как администратор\n"
+                                        f"🔑 Права доступа: {', '.join(permissions)}")
+
+        # Уведомляем нового админа
+        try:
+            await ctx.bot.send_message(
+                chat_id=new_admin_id,
+                text="🎉 Вы назначены администратором бота!\n\n"
+                     "Используйте команду /admin для доступа к панели управления."
+            )
+        except Exception as e:
+            log.warning("Failed to notify new admin: %s", e)
+
+    except ValueError:
+        await update.message.reply_text("❌ Неверный формат ID пользователя")
+    except Exception as e:
+        log.error("Error adding admin: %s", e)
+        await update.message.reply_text("❌ Ошибка при добавлении администратора")
+
 # ========================= Main ==============================
 
 
@@ -939,10 +1550,13 @@ async def main_async():
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("setup_menu", cmd_setup_menu))
     application.add_handler(CommandHandler(["postai", "post"], cmd_post_ai))
+    application.add_handler(CommandHandler("admin", cmd_admin))
+    application.add_handler(CommandHandler("add_admin", cmd_add_admin))
     application.add_handler(CommandHandler(
         "set_channel", cmd_set_channel, filters.ChatType.CHANNEL))
     application.add_handler(CommandHandler(
         "set_channel_id", cmd_set_channel_id, filters.ChatType.PRIVATE))
+    application.add_handler(CallbackQueryHandler(admin_callback_handler))
     application.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & filters.FORWARDED, handle_forward))
     application.add_handler(MessageHandler(
