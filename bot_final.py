@@ -372,63 +372,64 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
 
     # === ПРИОРИТЕТ 1: Внешний контент (60%) ===
     if should_use_external:
-    session_maker = ctx.bot_data.get("db_sessionmaker")
-    if session_maker:
-        try:
-            from db import ExternalPost
-            from sqlalchemy import select
+        session_maker = ctx.bot_data.get("db_sessionmaker")
+        if session_maker:
+            try:
+                from db import ExternalPost
+                from sqlalchemy import select
 
-            async with session_maker() as session:
-                # Ищем непрошенный пост с наибольшими просмотрами
-                external_post = await session.scalar(
-                    select(ExternalPost).where(ExternalPost.posted.is_(False))
-                    .order_by(ExternalPost.views.desc()).limit(1)
-                )
-
-                if external_post:
-                    # Есть внешний контент - используем его
-                    log.info("[ai_post_job] Found external post from %s (views=%s)",
-                             external_post.channel, external_post.views)
-
-                    # AI rewrite внешнего контента
-                    site_brief = (
-                        "Ты копирайтер канала 'Страховая справедливость'. Перепиши новость для нашей аудитории страховых выплат, сохраняя факты, добавь один вывод, но убери упоминания конкурентов. 400-500 символов, максимум две эмодзи."
+                async with session_maker() as session:
+                    # Ищем непрошенный пост с наибольшими просмотрами
+                    external_post = await session.scalar(
+                        select(ExternalPost).where(
+                            ExternalPost.posted.is_(False))
+                        .order_by(ExternalPost.views.desc()).limit(1)
                     )
-                    messages = [
-                        {"role": "system", "content": site_brief},
-                        {"role": "user", "content": external_post.text or ""},
-                    ]
-                    text = await _ai_complete(messages, temperature=0.7, max_tokens=600)
-                    if text:
-                        text = await humanize(text)
+
+                    if external_post:
+                        # Есть внешний контент - используем его
+                        log.info("[ai_post_job] Found external post from %s (views=%s)",
+                                 external_post.channel, external_post.views)
+
+                        # AI rewrite внешнего контента
+                        site_brief = (
+                            "Ты копирайтер канала 'Страховая справедливость'. Перепиши новость для нашей аудитории страховых выплат, сохраняя факты, добавь один вывод, но убери упоминания конкурентов. 400-500 символов, максимум две эмодзи."
+                        )
+                        messages = [
+                            {"role": "system", "content": site_brief},
+                            {"role": "user", "content": external_post.text or ""},
+                        ]
+                        text = await _ai_complete(messages, temperature=0.7, max_tokens=600)
+                        if text:
+                            text = await humanize(text)
+                        else:
+                            text = external_post.text or ""
+
+                        bot_username = ctx.bot.username or ""
+                        startapp_link = f"https://t.me/{bot_username}?startapp"
+                        markup = InlineKeyboardMarkup([
+                            [InlineKeyboardButton(
+                                "📝 Подать заявку", url=startapp_link)],
+                            [InlineKeyboardButton("💬 Получить помощь онлайн",
+                                                  url=f"https://t.me/{bot_username}?start=channel")]
+                        ])
+
+                        ok = await send_text_only(ctx.bot, channel_id, text, markup)
+                        if ok:
+                            log.info(
+                                "[ai_post_job] External post sent to channel %s", channel_id)
+                            # Помечаем как прошенный
+                            external_post.posted = True
+                            await session.commit()
+                        else:
+                            log.warning(
+                                "[ai_post_job] Failed to send external post")
+                        return
                     else:
-                        text = external_post.text or ""
-
-                    bot_username = ctx.bot.username or ""
-                    startapp_link = f"https://t.me/{bot_username}?startapp"
-                    markup = InlineKeyboardMarkup([
-                        [InlineKeyboardButton(
-                            "📝 Подать заявку", url=startapp_link)],
-                        [InlineKeyboardButton("💬 Получить помощь онлайн",
-                                              url=f"https://t.me/{bot_username}?start=channel")]
-                    ])
-
-                    ok = await send_text_only(ctx.bot, channel_id, text, markup)
-                    if ok:
                         log.info(
-                            "[ai_post_job] External post sent to channel %s", channel_id)
-                        # Помечаем как прошенный
-                        external_post.posted = True
-                        await session.commit()
-                    else:
-                        log.warning(
-                            "[ai_post_job] Failed to send external post")
-                    return
-                else:
-                    log.info(
-                        "[ai_post_job] No external posts available, generating AI content")
-        except Exception as e:
-            log.error("[ai_post_job] Database error: %s", e)
+                            "[ai_post_job] No external posts available, generating AI content")
+            except Exception as e:
+                log.error("[ai_post_job] Database error: %s", e)
 
     # === ПРИОРИТЕТ 2: Генерируем AI контент ===
     text = await generate_ai_post()
