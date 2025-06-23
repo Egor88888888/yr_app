@@ -1,14 +1,114 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Юр-Сервис</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Юридический центр - Подать заявку</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-    <h1 class="text-xl">🏗️ Мини-приложение строится…</h1>
-    <script src="main.js"></script>
+<body class="bg-gray-50">
+
+<div id="app" class="min-h-screen">
+    <!-- Progress Bar -->
+    <div class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-2xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between mb-2">
+                <h1 class="text-lg font-semibold">Юридический центр</h1>
+                <span id="step-indicator" class="text-sm text-gray-600">Шаг 1 из 4</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 25%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: Category Selection -->
+    <div id="step-1" class="step max-w-2xl mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-2">Выберите категорию</h2>
+        <p class="text-gray-600 mb-6">В какой области вам нужна юридическая помощь?</p>
+        
+        <div id="categories" class="grid grid-cols-2 gap-3">
+            <!-- Categories will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Step 2: Problem Details -->
+    <div id="step-2" class="step hidden max-w-2xl mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-2">Опишите проблему</h2>
+        <p class="text-gray-600 mb-6">Расскажите подробнее о вашей ситуации</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Уточните проблему</label>
+                <input type="text" id="subcategory" class="w-full px-4 py-2 border rounded-lg" 
+                       placeholder="Например: Раздел имущества">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">Подробное описание</label>
+                <textarea id="description" rows="5" class="w-full px-4 py-2 border rounded-lg" 
+                          placeholder="Опишите вашу ситуацию..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Contact Info -->
+    <div id="step-3" class="step hidden max-w-2xl mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-2">Контактные данные</h2>
+        <p class="text-gray-600 mb-6">Как с вами связаться?</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Ваше имя*</label>
+                <input type="text" id="name" class="w-full px-4 py-2 border rounded-lg" 
+                       placeholder="Иван Иванов" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">Телефон*</label>
+                <input type="tel" id="phone" class="w-full px-4 py-2 border rounded-lg" 
+                       placeholder="+7 (999) 123-45-67" required>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">Email</label>
+                <input type="email" id="email" class="w-full px-4 py-2 border rounded-lg" 
+                       placeholder="example@mail.ru">
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Review -->
+    <div id="step-4" class="step hidden max-w-2xl mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-2">Проверьте данные</h2>
+        <p class="text-gray-600 mb-6">Убедитесь, что все указано верно</p>
+        
+        <div id="review-content" class="bg-white rounded-lg p-4 space-y-3">
+            <!-- Review content will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Success -->
+    <div id="success" class="step hidden max-w-2xl mx-auto p-4 text-center">
+        <div class="bg-green-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h2 class="text-2xl font-bold mb-2">Заявка отправлена!</h2>
+        <p class="text-gray-600 mb-6">Мы свяжемся с вами в ближайшее время</p>
+        
+        <div id="payment-section" class="hidden">
+            <p class="mb-4">Стоимость консультации: <strong id="price-display">5000 ₽</strong></p>
+            <a id="pay-button" href="#" class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg">
+                Оплатить онлайн
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="/webapp/main.js"></script>
+
 </body>
-</html>
+</html> 
