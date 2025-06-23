@@ -24,7 +24,7 @@ from telegram import (
     InlineKeyboardButton,
     InputFile,
 )
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from datetime import timedelta, datetime
 import openai
 from typing import Optional
