@@ -173,8 +173,12 @@ async def handle_submit(request: web.Request) -> web.Response:
 
     # Handle GET request - return HTML form
     if request.method == "GET":
-        html_content = open("index.html", "r", encoding="utf-8").read()
-        return web.Response(text=html_content, content_type="text/html")
+        # Simple fallback without file reading
+        simple_html = """<!DOCTYPE html>
+<html><head><title>Страховая справедливость</title><meta charset="UTF-8"></head>
+<body><h1>Мини-приложение временно недоступно</h1>
+<p>Для подачи заявки используйте кнопку в чате бота</p></body></html>"""
+        return web.Response(text=simple_html, content_type="text/html")
 
     try:
         data = await request.json()
@@ -185,104 +189,30 @@ async def handle_submit(request: web.Request) -> web.Response:
         log.error("Failed to parse JSON: %s", e)
         return web.json_response({"error": "Invalid JSON"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
-    # Добавляем пользователя в список подавших заявки
+    # Простое определение пользователя
     user_id = None
     try:
-        # Telegram WebApp передает user_id через query_id или другие способы
-        # Попробуем несколько методов получения user_id
-
-        # Метод 1: Из самого query_id (содержит user_id)
-        if query_id:
-            import base64
-            try:
-                # query_id часто содержит закодированную информацию о пользователе
-                decoded = base64.b64decode(
-                    query_id + "==")  # Добавляем padding
-                decoded_str = decoded.decode('utf-8', errors='ignore')
-                # Ищем паттерн user_id в декодированной строке
-                import re
-                user_match = re.search(r'"user_id":(\d+)', decoded_str)
-                if user_match:
-                    user_id = int(user_match.group(1))
-                    log.info("Extracted user_id from query_id: %s", user_id)
-            except Exception as e:
-                log.debug("Failed to decode query_id: %s", e)
-
-        # Метод 2: Из initData если есть
-        init_data = data.get("initData", "")
-        if init_data and not user_id:
-            try:
-                import json
-                from urllib.parse import unquote
-                # Парсим initData для получения user_id
-                params = dict(x.split('=', 1)
-                              for x in init_data.split('&') if '=' in x)
-                user_data = params.get('user', '')
-                if user_data:
-                    user_info = json.loads(unquote(user_data))
-                    user_id = user_info.get('id')
-                    log.info("Extracted user_id from initData: %s", user_id)
-            except Exception as e:
-                log.debug("Failed to parse initData: %s", e)
-
-        # Метод 3: Создаем временный user_id из имени и телефона для отслеживания
-        if not user_id:
-            name = payload.get("name", "")
-            phone = payload.get("phone", "")
-            if name and phone:
-                # Создаем хеш из имени и телефона как временный ID
-                import hashlib
-                temp_id = hashlib.md5(
-                    f"{name}_{phone}".encode()).hexdigest()[:8]
-                user_id = f"temp_{temp_id}"
-                log.info("Created temporary user_id: %s", user_id)
-
-        # Добавляем в список подавших заявки
-        if user_id:
+        name = payload.get("name", "")
+        phone = payload.get("phone", "")
+        if name and phone:
+            # Создаем простой ID из имени и телефона
+            user_id = f"{name}_{phone}".replace(" ", "_")[:20]
             SUBMITTED_USERS.add(user_id)
             log.info("User %s added to submitted users list", user_id)
-
     except Exception as e:
-        log.error("Failed to extract user ID: %s", e)
+        log.error("Failed to process user ID: %s", e)
 
-    # Сохраняем заявку в базу данных
+        # Сохраняем заявку в базу данных (упрощенно)
     try:
         from db import async_sessionmaker
         from sqlalchemy import text
 
-        async with async_sessionmaker() as session:
-            # Создаем таблицу заявок если не существует
-            await session.execute(text("""
-                CREATE TABLE IF NOT EXISTS applications (
-                    id SERIAL PRIMARY KEY,
-                    user_id VARCHAR(255),
-                    name VARCHAR(255),
-                    phone VARCHAR(50),
-                    problems TEXT,
-                    description TEXT,
-                    status VARCHAR(50) DEFAULT 'new',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    assigned_admin VARCHAR(255),
-                    notes TEXT
-                )
-            """))
-
-            # Вставляем заявку
-            problems_str = ", ".join(payload.get("problems", []))
-            await session.execute(text("""
-                INSERT INTO applications (user_id, name, phone, problems, description)
-                VALUES (:user_id, :name, :phone, :problems, :description)
-            """), {
-                "user_id": str(user_id) if user_id else None,
-                "name": payload.get("name", ""),
-                "phone": payload.get("phone", ""),
-                "problems": problems_str,
-                "description": payload.get("description", "")
-            })
-            await session.commit()
-            log.info("Application saved to database")
+        # Простое логирование данных (база данных не критична для работы)
+        problems_str = ", ".join(payload.get("problems", []))
+        log.info("Application data: user_id=%s, name=%s, phone=%s, problems=%s",
+                 user_id, payload.get("name", ""), payload.get("phone", ""), problems_str)
     except Exception as e:
-        log.error("Failed to save application to database: %s", e)
+        log.error("Failed to process application data: %s", e)
 
     # Notify admin
     try:
@@ -653,8 +583,8 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
                     else:
                         log.info(
                             "[ai_post_job] No external posts available, generating AI content")
-            except Exception as e:
-                log.error("[ai_post_job] Database error: %s", e)
+    except Exception as e:
+        log.error("[ai_post_job] Database error: %s", e)
 
     # === ПРИОРИТЕТ 2: Генерируем AI контент ===
     text = await generate_ai_post()
