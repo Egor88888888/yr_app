@@ -358,10 +358,10 @@ async def post_from_external_job(ctx: ContextTypes.DEFAULT_TYPE):
         else:
             text = post.text or ""
 
-        from bot_final import send_media
-        # Reuse send_media helper
+        from bot_final import send_text_only
+        # Используем только текст без медиа
         bot = ctx.bot
-        await send_media(bot, channel_id, text, reply_markup=None)
+        await send_text_only(bot, channel_id, text, reply_markup=None)
         log.info("post_external: posted message %s from %s views=%s",
                  post.message_id, post.channel, post.views)
 

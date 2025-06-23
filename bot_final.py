@@ -25,7 +25,7 @@ from telegram import (
     InputFile,
 )
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
-from datetime import timedelta
+from datetime import timedelta, datetime
 import openai
 from typing import Optional
 from telegram.constants import ChatAction
@@ -61,7 +61,7 @@ if raw_username.lstrip("-").isdigit():
 else:
     TARGET_CHANNEL_USERNAME = "@" + raw_username.lstrip("@")
 
-POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", 4))
+POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", 1))
 # === Telethon & analytics config ===
 API_ID = int(os.getenv("API_ID", 0))
 API_HASH = os.getenv("API_HASH")
@@ -70,45 +70,6 @@ API_HASH = os.getenv("API_HASH")
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s - %(message)s")
 log = logging.getLogger(__name__)
-
-MEDIA_POOL = [
-    # Автомобильные и страховые фото
-    {"url": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800",
-        "kind": "photo"},  # Автокатастрофа
-    {"url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800",
-        "kind": "photo"},  # Поврежденная машина
-    {"url": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
-        "kind": "photo"},  # Автострахование
-    {"url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800",
-        "kind": "photo"},  # Документы
-    {"url": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800",
-        "kind": "photo"},  # Подписание документов
-    {"url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800",
-        "kind": "photo"},  # Деньги/выплаты
-    {"url": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800",
-        "kind": "photo"},  # Бизнес консультация
-    {"url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800",
-        "kind": "photo"},  # Офис юристов
-    {"url": "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800",
-        "kind": "photo"},  # Юридические книги
-    {"url": "https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=800",
-        "kind": "photo"},  # Автомобили
-    {"url": "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800",
-        "kind": "photo"},  # Рукопожатие/сделка
-    {"url": "https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?w=800",
-        "kind": "photo"},  # Офисная работа
-    # Дополнительные уникальные изображения
-    {"url": "https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=800",
-        "kind": "photo"},  # Калькулятор
-    {"url": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800",
-        "kind": "photo"},  # Контракт
-    {"url": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800",
-        "kind": "photo"},  # Суд/правосудие
-]
-
-# Keep track of last 5 media URLs, module-level to avoid attribute errors
-# Увеличил до 8 для лучшего разнообразия
-RECENT_MEDIA: deque[str] = deque(maxlen=8)
 
 # Кэш последних постов для предотвращения повторов
 RECENT_POSTS: deque[str] = deque(maxlen=10)
@@ -132,6 +93,10 @@ FACTS_OSAGO_OSGOP: list[str] = [
     "ОСГОП: штраф за отсутствие полиса — до 1 млн ₽ и остановка маршрута",
     "ОСГОП: срок выплаты — 30 дней; аванс 100 000 ₽ при тяжком вреде здоровью",
 ]
+
+# Глобальные счетчики для пропорции 60/40
+POST_COUNTER = 0  # Общий счетчик постов
+EXTERNAL_POST_TARGET = 6  # Из 10 постов 6 должны быть внешними
 
 
 def _media_url(item):
@@ -438,7 +403,7 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
                                               url=f"https://t.me/{bot_username}?start=channel")]
                     ])
 
-                    ok = await send_media(ctx.bot, channel_id, text, markup)
+                    ok = await send_text_only(ctx.bot, channel_id, text, markup)
                     if ok:
                         log.info(
                             "[ai_post_job] External post sent to channel %s", channel_id)
@@ -468,7 +433,7 @@ async def ai_post_job(ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💬 Получить помощь онлайн",
                               url=f"https://t.me/{bot_username}?start=channel")]
     ])
-    ok = await send_media(ctx.bot, channel_id, text, markup)
+    ok = await send_text_only(ctx.bot, channel_id, text, markup)
     if ok:
         log.info("[ai_post_job] AI post sent to channel %s", channel_id)
     else:
@@ -502,7 +467,7 @@ async def cmd_post_ai(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💬 Получить помощь онлайн",
                               url=f"https://t.me/{bot_username}?start=channel")]
     ])
-    await send_media(ctx.bot, channel_id, text, markup)
+    await send_text_only(ctx.bot, channel_id, text, markup)
     await update.message.reply_text("✅ Пост опубликован")
 
 # ================== Set channel command =====================
@@ -562,43 +527,71 @@ async def fetch_bytes(url: str, timeout: int = 10) -> bytes | None:
     return None
 
 
-async def send_media(bot, chat_id: int, caption: str, reply_markup):
-    """Send photo or video with fallback to text-only."""
-    # Telegram limits: photo caption 1024 chars, video caption 1024 chars
-    if len(caption) > 1000:
-        caption = caption[:997] + "..."
-        log.warning("Caption truncated to %d chars", len(caption))
+async def send_text_only(bot, chat_id: int, text: str, reply_markup):
+    """Send text-only message - no media."""
+    # Telegram limits: message text 4096 chars
+    if len(text) > 4000:
+        text = text[:3997] + "..."
+        log.warning("Message truncated to %d chars", len(text))
 
-    tried_urls: set[str] = set(RECENT_MEDIA)
-    max_attempts = min(5, len(MEDIA_POOL))
-    for _ in range(max_attempts):
-        # pick media that hasn't been tried yet to avoid repeat attempts
-        media_candidates = [
-            m for m in MEDIA_POOL if m["url"] not in tried_urls]
-        if not media_candidates:
-            break
-        media = random.choice(media_candidates)
-        tried_urls.add(media["url"])
+    try:
+        await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+        return True
+    except Exception as e:
+        log.warning("send_text_only failed: %s", e)
+        return False
 
-        data = await fetch_bytes(_media_url(media))
-        if not data:
-            continue  # try another media file
+# ===================== Комментирование для активности =====================
 
-        file_name = "media.jpg" if media["kind"] == "photo" else "media.mp4"
-        input_file = InputFile(io.BytesIO(data), filename=file_name)
-        try:
-            if media["kind"] == "photo":
-                await bot.send_photo(chat_id=chat_id, photo=input_file, caption=caption, reply_markup=reply_markup)
-            else:
-                await bot.send_video(chat_id=chat_id, video=input_file, caption=caption, reply_markup=reply_markup)
-            # success — запоминаем url
-            RECENT_MEDIA.append(media["url"])
-            return True
-        except Exception as e:
-            log.warning("send_%s failed: %s", media["kind"], e)
-    # fallback
-    await bot.send_message(chat_id=chat_id, text=caption, reply_markup=reply_markup)
-    return False
+
+async def generate_comment(post_text: str) -> str:
+    """Генерирует релевантный комментарий к посту."""
+    comment_prompts = [
+        "Важная информация! 👆",
+        "Полезно знать каждому автомобилисту 🚗",
+        "Сохраните себе на случай ДТП 📌",
+        "Не позволяйте страховым занижать выплаты! ⚖️",
+        "Знание законов - ваша защита 📋",
+        "Бесплатная консультация поможет разобраться 💬",
+        "Каждый случай индивидуален, но законы едины 📝",
+        "Не отказывайтесь от своих прав! 💪"
+    ]
+    return random.choice(comment_prompts)
+
+
+async def comment_on_post_job(ctx: ContextTypes.DEFAULT_TYPE):
+    """Периодически добавляет мотивационные сообщения в канал для активности."""
+    channel_id = ctx.bot_data.get("TARGET_CHANNEL_ID")
+    if not channel_id:
+        return
+
+    try:
+        # Простая система - комментируем с определенной вероятностью
+        if random.random() < 0.7:  # 70% вероятность комментирования
+
+            # Генерируем общий полезный комментарий
+            motivational_comments = [
+                "💡 Помните: знание своих прав - половина успеха!",
+                "📋 Каждая ситуация уникальна. Консультируемся бесплатно!",
+                "⚖️ Не позволяйте страховым занижать выплаты!",
+                "🚗 Полезная информация для каждого автомобилиста",
+                "📞 Вопросы? Пишите в личные сообщения!",
+                "💪 Боремся за справедливые выплаты уже 5+ лет",
+                "📌 Сохраните себе на всякий случай",
+                "🔥 Актуальная информация от экспертов"
+            ]
+
+            comment_text = random.choice(motivational_comments)
+
+            # Отправляем как обычное сообщение в канал
+            await ctx.bot.send_message(
+                chat_id=channel_id,
+                text=comment_text
+            )
+            log.info("[comment_job] Posted motivational message to channel")
+
+    except Exception as e:
+        log.error("[comment_job] Comment job failed: %s", e)
 
 # ========================= Main ==============================
 
@@ -776,6 +769,25 @@ async def main_async():
         name="scan_rss_sources",
     )
     log.info("✓ scan_rss_sources_job scheduled (every 15 min)")
+
+    # === Комментирование для максимальной активности ===
+    if target_channel_id:
+        application.job_queue.run_repeating(
+            comment_on_post_job,
+            interval=timedelta(minutes=20),  # Комментируем каждые 20 минут
+            first=timedelta(minutes=3),     # Первый комментарий через 3 минуты
+            name="comment_posts",
+        )
+        log.info("✓ comment_on_post_job scheduled (every 20 min)")
+
+        # Дополнительный быстрый RSS парсинг для максимальной активности
+        application.job_queue.run_repeating(
+            scan_rss_sources_job,
+            interval=timedelta(minutes=8),  # Ускоренный парсинг
+            first=timedelta(minutes=1),
+            name="scan_rss_fast",
+        )
+        log.info("✓ Fast RSS scanning enabled (every 8 min)")
 
     runner = web.AppRunner(app)
     await runner.setup()
