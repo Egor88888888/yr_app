@@ -1,0 +1,457 @@
+/* Enhanced Styles for Improved UX */
+
+/* Анимации для валидации */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Улучшенные поля формы */
+.form-field {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Плавающие лейблы */
+.form-field.floating-label {
+    position: relative;
+}
+
+.form-field.floating-label label {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    background: white;
+    padding: 0 4px;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.form-field.floating-label input:focus + label,
+.form-field.floating-label input:not(:placeholder-shown) + label,
+.form-field.floating-label textarea:focus + label,
+.form-field.floating-label textarea:not(:placeholder-shown) + label {
+    top: -8px;
+    left: 8px;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+/* Индикаторы валидации */
+.field-error {
+    animation: fadeIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.field-error::before {
+    content: "⚠️";
+    font-size: 0.8rem;
+}
+
+.field-success {
+    animation: fadeIn 0.3s ease;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Улучшенные кнопки */
+.btn-enhanced {
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.btn-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+    z-index: 1;
+}
+
+.btn-enhanced:hover::before {
+    left: 100%;
+}
+
+.btn-enhanced:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.btn-enhanced:active {
+    transform: translateY(0);
+}
+
+/* Улучшенная загрузка файлов */
+.file-upload-zone {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: linear-gradient(145deg, #f9fafb, #f3f4f6);
+    position: relative;
+    overflow: hidden;
+}
+
+.file-upload-zone.dragover {
+    border-color: #3b82f6;
+    background: linear-gradient(145deg, #eff6ff, #dbeafe);
+    transform: scale(1.02);
+}
+
+.file-upload-zone::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%);
+    transform: scale(0);
+    transition: transform 0.3s ease;
+    z-index: 1;
+}
+
+.file-upload-zone.dragover::before {
+    transform: scale(1);
+}
+
+.file-upload-zone .upload-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* Превью файлов */
+.file-preview {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.3s ease;
+}
+
+.file-preview:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.file-preview .file-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+
+.file-preview .file-icon.pdf { background: #ef4444; }
+.file-preview .file-icon.doc { background: #3b82f6; }
+.file-preview .file-icon.docx { background: #3b82f6; }
+.file-preview .file-icon.jpg { background: #10b981; }
+.file-preview .file-icon.jpeg { background: #10b981; }
+.file-preview .file-icon.png { background: #10b981; }
+.file-preview .file-icon.default { background: #6b7280; }
+
+/* Прогресс загрузки */
+.upload-progress {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.upload-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Категории с улучшенными эффектами */
+.category-card-enhanced {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.category-card-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(145deg, rgba(59,130,246,0.1), rgba(16,185,129,0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.category-card-enhanced:hover::before {
+    opacity: 1;
+}
+
+.category-card-enhanced:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+.category-card-enhanced.selected {
+    background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(59,130,246,0.3);
+}
+
+.category-card-enhanced.selected .emoji {
+    transform: scale(1.2);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+/* Индикаторы прогресса */
+.progress-step {
+    position: relative;
+    z-index: 1;
+}
+
+.progress-step::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    width: 100%;
+    height: 2px;
+    background: #e5e7eb;
+    z-index: -1;
+}
+
+.progress-step.completed::after {
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    animation: progressFill 0.5s ease;
+}
+
+@keyframes progressFill {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+/* Улучшенные переходы между шагами */
+.step-transition-enter {
+    animation: slideInRight 0.5s ease;
+}
+
+.step-transition-exit {
+    animation: slideInLeft 0.5s ease reverse;
+}
+
+/* Микроинтеракции */
+.micro-interaction {
+    transition: all 0.2s ease;
+}
+
+.micro-interaction:active {
+    transform: scale(0.95);
+}
+
+/* Тултипы */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #1f2937;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.875rem;
+}
+
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1f2937 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Улучшенные уведомления */
+.notification {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, rgba(16,185,129,0.9), rgba(5,150,105,0.9));
+}
+
+.notification.error {
+    background: linear-gradient(135deg, rgba(239,68,68,0.9), rgba(220,38,38,0.9));
+}
+
+.notification.info {
+    background: linear-gradient(135deg, rgba(59,130,246,0.9), rgba(37,99,235,0.9));
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, rgba(245,158,11,0.9), rgba(217,119,6,0.9));
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .form-field {
+        margin-bottom: 1rem;
+    }
+    
+    .category-card-enhanced:hover {
+        transform: translateY(-4px) scale(1.02);
+    }
+    
+    .file-upload-zone {
+        padding: 1.5rem;
+    }
+}
+
+/* Темная тема (будущее развитие) */
+@media (prefers-color-scheme: dark) {
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+        background: #374151;
+        border-color: #4b5563;
+        color: white;
+    }
+    
+    .category-card-enhanced {
+        background: linear-gradient(145deg, #374151, #4b5563);
+        color: white;
+    }
+}
+
+/* Accessibility улучшения */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Высокий контраст */
+@media (prefers-contrast: high) {
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+        border-width: 2px;
+    }
+    
+    .field-error {
+        font-weight: bold;
+    }
+}
+
+/* Печать */
+@media print {
+    .btn-enhanced,
+    .file-upload-zone,
+    .notification {
+        display: none !important;
+    }
+} 

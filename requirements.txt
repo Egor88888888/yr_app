@@ -10,3 +10,4 @@ alembic>=1.13
 google-auth>=2.25
 gspread>=6.0
 google-api-python-client>=2.99
+numpy>=1.24.0

@@ -42,12 +42,16 @@ from bot.services.db import (
 from bot.services.sheets import append_lead
 from bot.services.pay import create_payment
 from bot.services.ai import generate_ai_response, generate_post_content
+from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
 
 # ================ CONFIG ================
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
+
+# Enhanced AI Manager
+ai_enhanced_manager = None
 # Get Railway public domain
 RAILWAY_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv(
     "MY_RAILWAY_PUBLIC_URL")
@@ -178,7 +182,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """AI консультант по всем юридическим вопросам"""
+    """AI консультант по всем юридическим вопросам с Enhanced AI"""
+    global ai_enhanced_manager
+
     if not OPENROUTER_API_KEY:
         await update.message.reply_text("AI консультант временно недоступен")
         return
@@ -186,26 +192,38 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     user = update.effective_user
 
-    # Определяем категорию вопроса
-    category = detect_category(user_text)
+    try:
+        # Используем Enhanced AI если доступен
+        if ai_enhanced_manager and ai_enhanced_manager._initialized:
+            response = await ai_enhanced_manager.generate_response(
+                user_id=user.id,
+                message=user_text
+            )
+        else:
+            # Fallback к старому AI
+            category = detect_category(user_text)
 
-    # Генерируем ответ через AI
-    system_prompt = f"""Ты - опытный юрист-консультант. 
+            system_prompt = f"""Ты - опытный юрист-консультант. 
 Отвечаешь на вопросы по теме: {category}.
 Даёшь практические советы, ссылаешься на законы РФ.
 В конце предлагаешь записаться на консультацию."""
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_text}
-    ]
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
+            ]
 
-    response = await generate_ai_response(messages)
+            response = await generate_ai_response(messages)
+            response += "\n\n💼 Для детальной консультации нажмите /start и заполните заявку."
 
-    # Добавляем CTA
-    response += "\n\n💼 Для детальной консультации нажмите /start и заполните заявку."
+        await update.message.reply_text(response)
 
-    await update.message.reply_text(response)
+    except Exception as e:
+        log.error(f"AI Chat error: {e}")
+        await update.message.reply_text(
+            "🤖 Извините, временные проблемы с AI консультантом. "
+            "Попробуйте позже или обратитесь к администратору."
+        )
 
 
 async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -220,8 +238,9 @@ async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton("📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton("💳 Платежи", callback_data="admin_payments"),
          InlineKeyboardButton("👥 Клиенты", callback_data="admin_users")],
-        [InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast"),
-         InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings")]
+        [InlineKeyboardButton("🤖 AI Статус", callback_data="admin_ai_status"),
+         InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings")]
     ]
 
     await update.message.reply_text(
@@ -248,6 +267,8 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_statistics(query, context)
     elif data == "admin_payments":
         await show_payments(query, context)
+    elif data == "admin_ai_status":
+        await show_ai_status(query, context)
     elif data.startswith("app_"):
         await handle_application_action(query, context)
     elif data == "back_admin":
@@ -545,6 +566,187 @@ async def handle_webapp(request: web.Request) -> web.Response:
         return web.Response(text="WebApp not found", status=404)
 
 
+async def handle_webapp_static(request: web.Request) -> web.Response:
+    """Serve enhanced webapp static files"""
+    filename = request.match_info['filename']
+
+    # Безопасность: проверяем расширение файла
+    allowed_extensions = {'.js', '.css',
+                          '.html', '.ico', '.png', '.jpg', '.svg'}
+    file_ext = Path(filename).suffix.lower()
+
+    if file_ext not in allowed_extensions:
+        return web.Response(status=404, text="File not found")
+
+    file_path = Path(__file__).parent.parent / "webapp" / filename
+
+    if not file_path.exists():
+        return web.Response(status=404, text="File not found")
+
+    # Определяем content-type
+    content_types = {
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.html': 'text/html',
+        '.ico': 'image/x-icon',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.svg': 'image/svg+xml'
+    }
+
+    content_type = content_types.get(file_ext, 'text/plain')
+
+    return web.FileResponse(
+        file_path,
+        headers={'Content-Type': content_type}
+    )
+
+
+async def handle_admin(request: web.Request) -> web.Response:
+    """Отдача Admin Dashboard HTML"""
+    html_path = Path(__file__).parent.parent / "webapp" / "admin.html"
+    if html_path.exists():
+        return web.FileResponse(html_path)
+    else:
+        return web.Response(text="Admin Dashboard not found", status=404)
+
+
+async def api_admin_applications(request: web.Request) -> web.Response:
+    """API: Получить заявки для админки"""
+
+    # CORS
+    if request.method == "OPTIONS":
+        return web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
+    async with async_sessionmaker() as session:
+        result = await session.execute(
+            select(AppModel, User, Category)
+            .join(User)
+            .join(Category)
+            .order_by(AppModel.created_at.desc())
+            .limit(50)
+        )
+        apps = result.all()
+
+        applications = []
+        for app, user, cat in apps:
+            applications.append({
+                'id': app.id,
+                'client': f"{user.first_name} {user.last_name or ''}".strip(),
+                'category': cat.name,
+                'status': app.status,
+                'date': app.created_at.isoformat(),
+                'description': app.description or '',
+                'phone': user.phone or '',
+                'email': user.email or ''
+            })
+
+    return web.json_response(applications, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+
+async def api_admin_clients(request: web.Request) -> web.Response:
+    """API: Получить клиентов для админки"""
+
+    # CORS
+    if request.method == "OPTIONS":
+        return web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
+    async with async_sessionmaker() as session:
+        result = await session.execute(
+            select(User, func.count(AppModel.id).label('app_count'))
+            .outerjoin(AppModel)
+            .group_by(User.id)
+            .order_by(User.created_at.desc())
+            .limit(50)
+        )
+        users = result.all()
+
+        clients = []
+        for user, app_count in users:
+            clients.append({
+                'id': user.id,
+                'name': f"{user.first_name} {user.last_name or ''}".strip(),
+                'phone': user.phone or '',
+                'email': user.email or '',
+                'applications': app_count,
+                'totalPaid': 0  # TODO: Calculate from payments
+            })
+
+    return web.json_response(clients, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+
+async def api_admin_payments(request: web.Request) -> web.Response:
+    """API: Получить платежи для админки"""
+
+    # CORS
+    if request.method == "OPTIONS":
+        return web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
+    payments = []  # Mock data for now
+
+    return web.json_response(payments, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+
+async def api_admin_stats(request: web.Request) -> web.Response:
+    """API: Получить статистику для админки"""
+
+    # CORS
+    if request.method == "OPTIONS":
+        return web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
+    async with async_sessionmaker() as session:
+        # Total applications
+        total_apps = await session.scalar(select(func.count(AppModel.id)))
+
+        # New applications (this week)
+        from datetime import datetime, timedelta
+        week_ago = datetime.now() - timedelta(days=7)
+        new_apps = await session.scalar(
+            select(func.count(AppModel.id))
+            .where(AppModel.created_at >= week_ago)
+        )
+
+        # Total clients
+        total_clients = await session.scalar(select(func.count(User.id)))
+
+        # Revenue (mock for now)
+        revenue = 147500
+        conversion = 23.4
+
+    stats = {
+        'newApplications': new_apps or 0,
+        'totalClients': total_clients or 0,
+        'monthlyRevenue': revenue,
+        'conversion': conversion
+    }
+
+    return web.json_response(stats, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+
 async def handle_telegram(request: web.Request) -> web.Response:
     """Webhook handler"""
     update_json = await request.json()
@@ -632,8 +834,9 @@ async def show_admin_panel(query):
          InlineKeyboardButton("📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton("💳 Платежи", callback_data="admin_payments"),
          InlineKeyboardButton("👥 Клиенты", callback_data="admin_users")],
-        [InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast"),
-         InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings")]
+        [InlineKeyboardButton("🤖 AI Статус", callback_data="admin_ai_status"),
+         InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings")]
     ]
 
     await query.edit_message_text(
@@ -670,6 +873,61 @@ async def show_payments(query, context):
             text += f"{status_emoji} #{pay.id} | {pay.amount} ₽\n"
             text += f"Заявка #{app.id} | {user.first_name}\n"
             text += f"📅 {pay.created_at.strftime('%d.%m %H:%M')}\n\n"
+
+    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def show_ai_status(query, context):
+    """Показать статус Enhanced AI"""
+    global ai_enhanced_manager
+
+    text = "🤖 **СТАТУС ENHANCED AI**\n\n"
+
+    if ai_enhanced_manager is None:
+        text += "❌ Enhanced AI не инициализирован\n"
+        text += "📋 Используется базовый AI"
+    elif not ai_enhanced_manager._initialized:
+        text += "⚠️ Enhanced AI частично инициализирован\n"
+        text += "📋 Используется fallback режим"
+    else:
+        try:
+            # Получаем статус системы
+            health = await ai_enhanced_manager.health_check()
+
+            if health.get("status") == "healthy":
+                text += "✅ Enhanced AI работает нормально\n\n"
+            else:
+                text += "⚠️ Enhanced AI работает с ограничениями\n\n"
+
+            # Статус компонентов
+            text += "**Компоненты:**\n"
+            components = health.get("components", {})
+
+            for name, status in components.items():
+                emoji = "✅" if status.get("status") == "ok" else "❌"
+                text += f"{emoji} {name.replace('_', ' ').title()}\n"
+
+            # Аналитика
+            try:
+                analytics = await ai_enhanced_manager.get_analytics_summary()
+                if analytics.get("status") != "no_data":
+                    text += f"\n**Статистика:**\n"
+                    text += f"📊 Запросов: {analytics.get('total_requests', 0)}\n"
+                    text += f"⚡ Успешность: {analytics.get('success_rate', 0):.1%}\n"
+                    text += f"⏱️ Время ответа: {analytics.get('avg_response_time', 0):.1f}ms\n"
+                    if analytics.get('estimated_cost'):
+                        text += f"💰 Расходы: ${analytics.get('estimated_cost', 0):.2f}\n"
+            except:
+                pass
+
+        except Exception as e:
+            text += f"❌ Ошибка получения статуса: {str(e)}"
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]]
 
@@ -731,6 +989,19 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application: Application):
     """Инициализация после запуска"""
+    global ai_enhanced_manager
+
+    # Инициализируем Enhanced AI
+    try:
+        ai_enhanced_manager = AIEnhancedManager()
+        await ai_enhanced_manager.initialize()
+        print("✅ Enhanced AI initialized successfully")
+        log.info("Enhanced AI system started")
+    except Exception as e:
+        print(f"❌ Failed to initialize Enhanced AI: {e}")
+        log.error(f"Enhanced AI initialization error: {e}")
+        log.info("Will use basic AI as fallback")
+
     try:
         # Устанавливаем кнопку меню
         await application.bot.set_chat_menu_button(
@@ -762,6 +1033,16 @@ async def main():
     app.router.add_post(f"/{TOKEN}", handle_telegram)
     app.router.add_route("*", "/submit", handle_submit)
     app.router.add_get("/webapp/", handle_webapp)
+    app.router.add_get("/webapp/{filename}", handle_webapp_static)
+    app.router.add_get("/admin/", handle_admin)
+
+    # API роуты для админки
+    app.router.add_route("*", "/api/admin/applications",
+                         api_admin_applications)
+    app.router.add_route("*", "/api/admin/clients", api_admin_clients)
+    app.router.add_route("*", "/api/admin/payments", api_admin_payments)
+    app.router.add_route("*", "/api/admin/stats", api_admin_stats)
+
     app.router.add_static(
         "/webapp/", path=Path(__file__).parent.parent / "webapp")
 

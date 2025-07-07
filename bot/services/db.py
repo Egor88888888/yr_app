@@ -48,6 +48,15 @@ __all__ = [
     "Log",
 ]
 
+# Import Enhanced AI models to ensure they're included in metadata
+try:
+    from .ai_enhanced_models import (
+        UserProfile, DialogueSession, DialogueMessage, MessageEmbedding,
+        CategoryEmbedding, AIMetrics, UserPreference, TrainingData
+    )
+except ImportError:
+    pass  # Models might not be available yet
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL env not set")

@@ -53,32 +53,49 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderCategories() {
     const container = document.getElementById('categories');
     container.innerHTML = categories.map(cat => `
-        <div class="category-card bg-white p-4 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all flex items-center"
-             data-id="${cat.id}" data-name="${cat.name}">
-            <div class="text-2xl mr-4">${cat.icon}</div>
-            <div class="font-medium text-left">${cat.name}</div>
-            <div class="ml-auto text-gray-400">›</div>
+        <div class="category-card" data-id="${cat.id}" data-name="${cat.name}">
+            <div class="emoji">${cat.icon}</div>
+            <div class="text">${cat.name}</div>
         </div>
     `).join('');
     
     // Add click handlers
     container.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
-            // Visual feedback
-            card.style.borderColor = '#3b82f6';
-            card.style.backgroundColor = '#eff6ff';
+            // Remove previous selection
+            container.querySelectorAll('.category-card').forEach(c => {
+                c.style.background = '';
+                c.style.transform = '';
+                c.style.borderColor = '';
+            });
+            
+            // Visual feedback for selected card
+            card.style.background = '#e0f2fe';
+            card.style.transform = 'scale(1.02)';
+            card.style.borderColor = '#0284c7';
             
             formData.category_id = parseInt(card.dataset.id);
             formData.category_name = card.dataset.name;
             
-            setTimeout(() => nextStep(), 200);
+            // Show selected category info
+            document.getElementById('selected-category').classList.remove('hidden');
+            document.getElementById('selected-category-name').textContent = card.dataset.name;
+            
+            // Auto-advance after short delay (optional)
+            // setTimeout(() => nextStep(), 1000);
         });
     });
 }
 
 // Navigation
 function nextStep() {
-    if (currentStep === 3 && !validateStep3()) return;
+    // Validate current step before proceeding
+    if (!validateCurrentStep()) {
+        return;
+    }
+    
+    // Collect data from current step
+    collectStepData();
     
     if (currentStep < 4) {
         currentStep++;
@@ -95,6 +112,84 @@ function prevStep() {
     }
 }
 
+// New validation function for each step
+function validateCurrentStep() {
+    switch (currentStep) {
+        case 1:
+            if (!formData.category_id) {
+                tg.showAlert ? tg.showAlert('Выберите категорию услуг') : alert('Выберите категорию услуг');
+                return false;
+            }
+            return true;
+            
+        case 2:
+            // Step 2 is optional, but collect data
+            return true;
+            
+        case 3:
+            return validateStep3();
+            
+        case 4:
+            return true;
+            
+        default:
+            return true;
+    }
+}
+
+// Collect data from current step
+function collectStepData() {
+    switch (currentStep) {
+        case 2:
+            formData.subcategory = document.getElementById('subcategory').value.trim();
+            formData.description = document.getElementById('description').value.trim();
+            break;
+            
+        case 3:
+            formData.name = document.getElementById('name').value.trim();
+            formData.phone = document.getElementById('phone').value.trim();
+            formData.email = document.getElementById('email').value.trim();
+            formData.contact_method = document.getElementById('contact-method').value;
+            formData.contact_time = document.getElementById('contact-time').value;
+            break;
+    }
+}
+
+// Enhanced validation for step 3
+function validateStep3() {
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const contactMethod = document.getElementById('contact-method').value;
+    
+    if (!name) {
+        tg.showAlert ? tg.showAlert('Введите ваше имя') : alert('Введите ваше имя');
+        document.getElementById('name').focus();
+        return false;
+    }
+    
+    if (!phone) {
+        tg.showAlert ? tg.showAlert('Введите номер телефона') : alert('Введите номер телефона');
+        document.getElementById('phone').focus();
+        return false;
+    }
+    
+    // Basic phone validation
+    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+    if (!phoneRegex.test(phone)) {
+        tg.showAlert ? tg.showAlert('Введите корректный номер телефона') : alert('Введите корректный номер телефона');
+        document.getElementById('phone').focus();
+        return false;
+    }
+    
+    if (!contactMethod) {
+        tg.showAlert ? tg.showAlert('Выберите способ связи') : alert('Выберите способ связи');
+        document.getElementById('contact-method').focus();
+        return false;
+    }
+    
+    return true;
+}
+
 // Update UI
 function updateUI() {
     // Hide all steps
@@ -107,7 +202,37 @@ function updateUI() {
     document.getElementById('step-indicator').textContent = `Шаг ${currentStep} из 4`;
     document.getElementById('progress-bar').style.width = `${currentStep * 25}%`;
     
-    // Update Telegram buttons
+    // Update web buttons visibility
+    updateWebButtons();
+    
+    // Update Telegram buttons (if available)
+    if (window.Telegram && tg.initData) {
+        updateTelegramButtons();
+    }
+}
+
+// Update web navigation buttons
+function updateWebButtons() {
+    // Update back buttons visibility
+    const backButtons = document.querySelectorAll('button[onclick="prevStep()"]');
+    backButtons.forEach(button => {
+        button.style.display = currentStep === 1 ? 'none' : 'block';
+    });
+    
+    // Update category selection visibility
+    const selectedCategory = document.getElementById('selected-category');
+    if (currentStep === 1 && !formData.category_id) {
+        selectedCategory.classList.add('hidden');
+    }
+    
+    // Special handling for step 4 (review)
+    if (currentStep === 4) {
+        showReview();
+    }
+}
+
+// Update Telegram buttons (separate function for clarity)
+function updateTelegramButtons() {
     if (currentStep === 1) {
         tg.BackButton.hide();
         tg.MainButton.hide();
@@ -190,29 +315,6 @@ function removeFile(index) {
         `;
         fileList.appendChild(preview);
     });
-}
-
-// Validation
-function validateStep3() {
-    formData.name = document.getElementById('name').value.trim();
-    formData.phone = document.getElementById('phone').value.trim();
-    formData.email = document.getElementById('email').value.trim();
-    formData.contact_method = document.getElementById('contact-method').value;
-    formData.contact_time = document.getElementById('contact-time').value;
-    
-    if (!formData.name || !formData.phone || !formData.contact_method) {
-        tg.showAlert('Пожалуйста, заполните все обязательные поля');
-        return false;
-    }
-    
-    // Simple phone validation
-    const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
-    if (!phoneRegex.test(formData.phone)) {
-        tg.showAlert('Пожалуйста, введите корректный номер телефона');
-        return false;
-    }
-    
-    return true;
 }
 
 // Show review

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель - Юридический центр</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons-sprite.svg" rel="stylesheet">
+    <style>
+        /* Glass Morphism Effects */
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.125);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px 0 rgba(31, 38, 135, 0.4);
+        }
+
+        .sidebar-active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .data-table {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="gradient-bg">
+
+<div id="app" class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <div class="w-64 glass flex-shrink-0">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold text-white mb-8">🏛️ Админ панель</h1>
+            
+            <nav class="space-y-2">
+                <a href="#" onclick="showModule('dashboard')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all sidebar-active" id="nav-dashboard">
+                    <span class="mr-3">📊</span>
+                    Дашборд
+                </a>
+                <a href="#" onclick="showModule('applications')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-applications">
+                    <span class="mr-3">📋</span>
+                    Заявки
+                </a>
+                <a href="#" onclick="showModule('clients')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-clients">
+                    <span class="mr-3">👥</span>
+                    Клиенты
+                </a>
+                <a href="#" onclick="showModule('payments')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-payments">
+                    <span class="mr-3">💳</span>
+                    Платежи
+                </a>
+                <a href="#" onclick="showModule('analytics')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-analytics">
+                    <span class="mr-3">📈</span>
+                    Аналитика
+                </a>
+                <a href="#" onclick="showModule('settings')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-settings">
+                    <span class="mr-3">⚙️</span>
+                    Настройки
+                </a>
+                <a href="#" onclick="showModule('admin-users')" class="nav-item flex items-center px-4 py-3 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all" id="nav-admin-users">
+                    <span class="mr-3">👑</span>
+                    Админы
+                </a>
+            </nav>
+        </div>
+
+        <!-- User info -->
+        <div class="absolute bottom-0 left-0 right-0 p-6">
+            <div class="glass-dark rounded-lg p-4 text-white text-center">
+                <div class="text-sm opacity-75">Вы вошли как</div>
+                <div class="font-semibold" id="current-user">Суперадмин</div>
+                <button onclick="logout()" class="mt-2 text-xs opacity-60 hover:opacity-100">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <div class="p-8">
+
+            <!-- Dashboard Module -->
+            <div id="module-dashboard" class="module slide-in">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Дашборд</h2>
+                    <p class="text-white opacity-75">Общая статистика и быстрый доступ</p>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stats-card rounded-xl p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white opacity-75 text-sm">Новые заявки</p>
+                                <p class="text-3xl font-bold text-white" id="stat-new-apps">12</p>
+                            </div>
+                            <div class="text-4xl opacity-60">🆕</div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-green-300 text-sm">+23% за неделю</span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card rounded-xl p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white opacity-75 text-sm">Всего клиентов</p>
+                                <p class="text-3xl font-bold text-white" id="stat-total-clients">347</p>
+                            </div>
+                            <div class="text-4xl opacity-60">👥</div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-blue-300 text-sm">+5 сегодня</span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card rounded-xl p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white opacity-75 text-sm">Доход за месяц</p>
+                                <p class="text-3xl font-bold text-white" id="stat-revenue">₽147,500</p>
+                            </div>
+                            <div class="text-4xl opacity-60">💰</div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-green-300 text-sm">+15% к прошлому месяцу</span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card rounded-xl p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white opacity-75 text-sm">Конверсия</p>
+                                <p class="text-3xl font-bold text-white" id="stat-conversion">23.4%</p>
+                            </div>
+                            <div class="text-4xl opacity-60">📈</div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-yellow-300 text-sm">↔️ без изменений</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Recent Applications -->
+                    <div class="glass rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-semibold text-white">Последние заявки</h3>
+                            <button onclick="showModule('applications')" class="btn-glass px-4 py-2 rounded-lg text-white text-sm">
+                                Все заявки
+                            </button>
+                        </div>
+                        <div class="space-y-4" id="recent-applications">
+                            <!-- Recent applications will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-xl font-semibold text-white mb-6">Быстрые действия</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="showModule('applications')" class="btn-glass p-4 rounded-lg text-white text-center card-hover">
+                                <div class="text-2xl mb-2">📋</div>
+                                <div class="text-sm">Новая заявка</div>
+                            </button>
+                            <button onclick="showModule('clients')" class="btn-glass p-4 rounded-lg text-white text-center card-hover">
+                                <div class="text-2xl mb-2">👤</div>
+                                <div class="text-sm">Добавить клиента</div>
+                            </button>
+                            <button onclick="showModule('payments')" class="btn-glass p-4 rounded-lg text-white text-center card-hover">
+                                <div class="text-2xl mb-2">💳</div>
+                                <div class="text-sm">Создать счет</div>
+                            </button>
+                            <button onclick="showModule('settings')" class="btn-glass p-4 rounded-lg text-white text-center card-hover">
+                                <div class="text-2xl mb-2">📊</div>
+                                <div class="text-sm">Отчеты</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applications Module -->
+            <div id="module-applications" class="module hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white mb-2">Заявки</h2>
+                            <p class="text-white opacity-75">Управление заявками клиентов</p>
+                        </div>
+                        <button onclick="createApplication()" class="btn-glass px-6 py-3 rounded-lg text-white font-medium">
+                            + Новая заявка
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="glass rounded-xl p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="filter-status" class="glass-dark rounded-lg px-4 py-2 text-white bg-transparent">
+                            <option value="">Все статусы</option>
+                            <option value="new">Новые</option>
+                            <option value="processing">В работе</option>
+                            <option value="completed">Завершены</option>
+                        </select>
+                        <select id="filter-category" class="glass-dark rounded-lg px-4 py-2 text-white bg-transparent">
+                            <option value="">Все категории</option>
+                        </select>
+                        <input type="date" id="filter-date" class="glass-dark rounded-lg px-4 py-2 text-white bg-transparent">
+                        <button onclick="applyFilters()" class="btn-glass px-4 py-2 rounded-lg text-white">
+                            Применить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Applications Table -->
+                <div class="data-table rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="glass-dark">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-white">#</th>
+                                    <th class="px-6 py-4 text-left text-white">Клиент</th>
+                                    <th class="px-6 py-4 text-left text-white">Категория</th>
+                                    <th class="px-6 py-4 text-left text-white">Статус</th>
+                                    <th class="px-6 py-4 text-left text-white">Дата</th>
+                                    <th class="px-6 py-4 text-left text-white">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applications-table" class="text-white">
+                                <!-- Applications will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clients Module -->
+            <div id="module-clients" class="module hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white mb-2">Клиенты</h2>
+                            <p class="text-white opacity-75">База клиентов и их данные</p>
+                        </div>
+                        <button onclick="createClient()" class="btn-glass px-6 py-3 rounded-lg text-white font-medium">
+                            + Новый клиент
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Clients Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="clients-grid">
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl mr-4">👤</div>
+                            <div>
+                                <h3 class="text-white font-semibold">Иван Петров</h3>
+                                <p class="text-white opacity-75 text-sm">+7 (999) 123-45-67</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-white opacity-75">Заявок:</span>
+                                <span class="text-white">2</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-white opacity-75">Оплачено:</span>
+                                <span class="text-white">₽15,000</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                            <button class="btn-glass w-full py-2 rounded text-white">Связаться</button>
+                        </div>
+                    </div>
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl mr-4">👤</div>
+                            <div>
+                                <h3 class="text-white font-semibold">Мария Сидорова</h3>
+                                <p class="text-white opacity-75 text-sm">+7 (999) 987-65-43</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-white opacity-75">Заявок:</span>
+                                <span class="text-white">1</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-white opacity-75">Оплачено:</span>
+                                <span class="text-white">₽8,000</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                            <button class="btn-glass w-full py-2 rounded text-white">Связаться</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Module -->
+            <div id="module-payments" class="module hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white mb-2">Платежи</h2>
+                            <p class="text-white opacity-75">Управление платежами и счетами</p>
+                        </div>
+                        <button onclick="createPayment()" class="btn-glass px-6 py-3 rounded-lg text-white font-medium">
+                            + Новый платеж
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payment Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="stats-card rounded-xl p-6">
+                        <h3 class="text-white opacity-75 text-sm mb-2">Ожидающие оплаты</h3>
+                        <p class="text-2xl font-bold text-yellow-300" id="pending-payments">₽25,000</p>
+                    </div>
+                    <div class="stats-card rounded-xl p-6">
+                        <h3 class="text-white opacity-75 text-sm mb-2">Оплачено сегодня</h3>
+                        <p class="text-2xl font-bold text-green-300" id="paid-today">₽12,500</p>
+                    </div>
+                    <div class="stats-card rounded-xl p-6">
+                        <h3 class="text-white opacity-75 text-sm mb-2">Всего за месяц</h3>
+                        <p class="text-2xl font-bold text-white" id="monthly-total">₽147,500</p>
+                    </div>
+                </div>
+
+                <!-- Payments Table -->
+                <div class="data-table rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="glass-dark">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-white">#</th>
+                                    <th class="px-6 py-4 text-left text-white">Клиент</th>
+                                    <th class="px-6 py-4 text-left text-white">Сумма</th>
+                                    <th class="px-6 py-4 text-left text-white">Статус</th>
+                                    <th class="px-6 py-4 text-left text-white">Дата</th>
+                                    <th class="px-6 py-4 text-left text-white">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-table" class="text-white">
+                                <!-- Payments will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Module -->
+            <div id="module-analytics" class="module hidden">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Аналитика</h2>
+                    <p class="text-white opacity-75">Детальная аналитика и отчеты</p>
+                </div>
+
+                <!-- Analytics Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-xl font-semibold text-white mb-4">Заявки по дням</h3>
+                        <div id="applications-chart" class="h-64 flex items-center justify-center text-white opacity-50">
+                            📊 График будет здесь
+                        </div>
+                    </div>
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-xl font-semibold text-white mb-4">Доходы по месяцам</h3>
+                        <div id="revenue-chart" class="h-64 flex items-center justify-center text-white opacity-50">
+                            💰 График будет здесь
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Module -->
+            <div id="module-settings" class="module hidden">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Настройки</h2>
+                    <p class="text-white opacity-75">Конфигурация системы</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- General Settings -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-xl font-semibold text-white mb-6">Общие настройки</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-white text-sm font-medium mb-2">Название компании</label>
+                                <input type="text" class="glass-dark w-full rounded-lg px-4 py-2 text-white bg-transparent" value="Юридический центр">
+                            </div>
+                            <div>
+                                <label class="block text-white text-sm font-medium mb-2">Email уведомлений</label>
+                                <input type="email" class="glass-dark w-full rounded-lg px-4 py-2 text-white bg-transparent" value="admin@lawcenter.ru">
+                            </div>
+                            <div>
+                                <label class="block text-white text-sm font-medium mb-2">Телефон</label>
+                                <input type="tel" class="glass-dark w-full rounded-lg px-4 py-2 text-white bg-transparent" value="+7 (495) 123-45-67">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Integration Settings -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-xl font-semibold text-white mb-6">Интеграции</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">Telegram Bot</span>
+                                <span class="text-green-300">✅ Подключен</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">CloudPayments</span>
+                                <span class="text-green-300">✅ Подключен</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">Google Sheets</span>
+                                <span class="text-yellow-300">⚠️ Настроить</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">OpenRouter AI</span>
+                                <span class="text-green-300">✅ Подключен</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Users Module -->
+            <div id="module-admin-users" class="module hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white mb-2">Администраторы</h2>
+                            <p class="text-white opacity-75">Управление правами доступа</p>
+                        </div>
+                        <button onclick="createAdmin()" class="btn-glass px-6 py-3 rounded-lg text-white font-medium">
+                            + Новый админ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Admin Users Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="admin-users-grid">
+                    <!-- Admin users will be loaded here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm hidden z-50">
+    <div class="flex items-center justify-center h-full p-4">
+        <div id="modal-content" class="glass rounded-2xl p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <!-- Modal content will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<script src="/webapp/admin.js"></script>
+
+</body>
+</html> 
