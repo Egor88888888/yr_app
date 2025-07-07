@@ -8,7 +8,7 @@ import logging
 import re
 from typing import Dict, Any, Optional
 
-from ..ai_enhanced_models import UserProfile
+from ...ai_enhanced_models import UserProfile
 from ..core.context_builder import AIContext
 
 logger = logging.getLogger(__name__)

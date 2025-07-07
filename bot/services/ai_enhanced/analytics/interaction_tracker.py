@@ -10,7 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 from ...db import async_sessionmaker
-from ..ai_enhanced_models import AIMetrics
+from ...ai_enhanced_models import AIMetrics
 from ..core.context_builder import AIContext
 
 logger = logging.getLogger(__name__)

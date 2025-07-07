@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import select, desc
 from ...db import async_sessionmaker
-from ..ai_enhanced_models import DialogueSession
+from ...ai_enhanced_models import DialogueSession
 
 logger = logging.getLogger(__name__)
 

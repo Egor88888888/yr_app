@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import async_sessionmaker, User
 from ...ai import generate_ai_response as basic_ai_response
-from ..ai_enhanced_models import (
+from ...ai_enhanced_models import (
     UserProfile, DialogueSession, DialogueMessage, AIMetrics
 )
 from .context_builder import ContextBuilder, AIContext

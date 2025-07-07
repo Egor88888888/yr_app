@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import async_sessionmaker
-from ..ai_enhanced_models import (
+from ...ai_enhanced_models import (
     UserProfile, DialogueSession, DialogueMessage, UserPreference
 )
 

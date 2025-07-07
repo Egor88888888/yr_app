@@ -11,7 +11,7 @@ import uuid
 
 from sqlalchemy import select, desc
 from ...db import async_sessionmaker
-from ..ai_enhanced_models import DialogueSession, DialogueMessage, UserProfile
+from ...ai_enhanced_models import DialogueSession, DialogueMessage, UserProfile
 
 logger = logging.getLogger(__name__)
 

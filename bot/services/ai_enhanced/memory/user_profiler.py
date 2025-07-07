@@ -10,7 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 from ...db import async_sessionmaker, User
-from ..ai_enhanced_models import UserProfile
+from ...ai_enhanced_models import UserProfile
 
 logger = logging.getLogger(__name__)
 
