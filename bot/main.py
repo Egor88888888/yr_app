@@ -1165,10 +1165,66 @@ async def post_init(application: Application):
         log.error(f"Menu button error: {e}")
 
 
+async def fix_database_schema():
+    """Исправляет схему БД если отсутствуют необходимые колонки"""
+    try:
+        async with async_sessionmaker() as session:
+            # Проверяем есть ли колонка category_id в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'category_id'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing category_id column, adding it...")
+
+                # Добавляем колонку category_id
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN category_id INTEGER
+                """))
+
+                # Обновляем существующие записи значением по умолчанию
+                await session.execute(text("""
+                    UPDATE applications 
+                    SET category_id = 1 
+                    WHERE category_id IS NULL
+                """))
+
+                # Добавляем NOT NULL constraint
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ALTER COLUMN category_id SET NOT NULL
+                """))
+
+                # Добавляем внешний ключ
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD CONSTRAINT fk_applications_category_id 
+                    FOREIGN KEY (category_id) REFERENCES categories (id)
+                """))
+
+                await session.commit()
+                log.info("✅ category_id column added successfully")
+                print("✅ Database schema fixed: category_id column added")
+            else:
+                log.info("✅ Database schema is up to date")
+
+    except Exception as e:
+        log.error(f"❌ Database schema fix failed: {e}")
+        print(f"⚠️ Database schema fix failed: {e}")
+        # Не прерываем запуск, продолжаем работу
+
+
 async def main():
     """Точка входа"""
     # Инициализируем БД
     await init_db()
+
+    # Проверяем и исправляем схему БД если нужно
+    await fix_database_schema()
 
     # Создаем приложение
     application = Application.builder().token(TOKEN).build()
