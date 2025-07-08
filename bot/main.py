@@ -1241,6 +1241,52 @@ async def fix_database_schema():
             else:
                 log.info("✅ subcategory column exists")
 
+            # Проверяем есть ли колонка contact_method в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'contact_method'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing contact_method column, adding it...")
+
+                # Добавляем колонку contact_method
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN contact_method VARCHAR(50) DEFAULT 'telegram'
+                """))
+
+                await session.commit()
+                log.info("✅ contact_method column added successfully")
+                print("✅ Database schema fixed: contact_method column added")
+            else:
+                log.info("✅ contact_method column exists")
+
+            # Проверяем есть ли колонка contact_time в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'contact_time'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing contact_time column, adding it...")
+
+                # Добавляем колонку contact_time
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN contact_time VARCHAR(50) DEFAULT 'any'
+                """))
+
+                await session.commit()
+                log.info("✅ contact_time column added successfully")
+                print("✅ Database schema fixed: contact_time column added")
+            else:
+                log.info("✅ contact_time column exists")
+
             print("✅ Database schema is up to date")
 
     except Exception as e:
