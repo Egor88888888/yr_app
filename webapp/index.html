@@ -12,9 +12,9 @@
 <body class="telegram-webapp">
 
 <div id="app">
-    <!-- Progress Bar - Mobile Optimized -->
+    <!-- Progress Bar -->
     <div class="mobile-progress">
-        <div class="flex items-center justify-between mb-2">
+        <div class="mobile-progress-header">
             <h1 class="mobile-progress-title">Юридический центр</h1>
             <span id="step-indicator" class="step-indicator">Шаг 1 из 4</span>
         </div>
@@ -23,7 +23,7 @@
         </div>
     </div>
 
-    <!-- Step 1: Category Selection - Mobile Optimized -->
+    <!-- Step 1: Category Selection -->
     <div id="step-1" class="step">
         <div class="mobile-form-container">
             <h2 class="mobile-title">Выберите категорию услуг</h2>
@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <!-- Step 2: Problem Details + Files - Mobile Optimized -->
+    <!-- Step 2: Problem Details + Files -->
     <div id="step-2" class="step mobile-hidden">
         <div class="mobile-form-container">
             <h2 class="mobile-title">Опишите проблему</h2>
@@ -65,7 +65,7 @@
                     <label>Документы (опционально)</label>
                     <div class="mobile-file-upload">
                         <input type="file" id="files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-                               class="hidden" onchange="handleFiles(this.files)">
+                               class="mobile-hidden" onchange="handleFiles(this.files)">
                         <button type="button" onclick="document.getElementById('files').click()" 
                                 class="mobile-btn mobile-btn-secondary">
                             📎 Прикрепить файлы
@@ -85,9 +85,6 @@
                 <button type="button" onclick="prevStep()" class="mobile-btn mobile-btn-secondary">
                     ← Назад
                 </button>
-                <button type="button" onclick="nextStep()" class="mobile-btn mobile-btn-secondary">
-                    Пропустить
-                </button>
                 <button type="button" onclick="nextStep()" class="mobile-btn mobile-btn-primary">
                     Далее →
                 </button>
@@ -95,7 +92,7 @@
         </div>
     </div>
 
-    <!-- Step 3: Contact Info + Preferences - Mobile Optimized -->
+    <!-- Step 3: Contact Info -->
     <div id="step-3" class="step mobile-hidden">
         <div class="mobile-form-container">
             <h2 class="mobile-title">Контактные данные</h2>
@@ -153,7 +150,7 @@
         </div>
     </div>
 
-    <!-- Step 4: Review - Mobile Optimized -->
+    <!-- Step 4: Review -->
     <div id="step-4" class="step mobile-hidden">
         <div class="mobile-form-container">
             <h2 class="mobile-title">Проверьте данные</h2>
@@ -177,7 +174,7 @@
         </div>
     </div>
 
-    <!-- Success - Mobile Optimized -->
+    <!-- Success -->
     <div id="success" class="step mobile-hidden">
         <div class="mobile-success">
             <div class="mobile-success-icon">
@@ -188,8 +185,8 @@
             <h2 class="mobile-title">Заявка отправлена!</h2>
             <p class="mobile-subtitle">Мы свяжемся с вами в ближайшее время</p>
             
-            <div id="payment-section" class="mobile-hidden mt-8">
-                <p class="mb-4 text-lg">Стоимость консультации: <strong id="price-display">5000 ₽</strong></p>
+            <div id="payment-section" class="mobile-hidden mobile-payment-section">
+                <p class="mobile-payment-text">Стоимость консультации: <strong id="price-display">5000 ₽</strong></p>
                 <a id="pay-button" href="#" class="mobile-btn mobile-btn-success">
                     💳 Оплатить онлайн
                 </a>
@@ -199,11 +196,6 @@
 </div>
 
 <script src="/webapp/main.js"></script>
-
-<!-- Enhanced UX Components -->
-<script src="/webapp/enhanced-form-manager.js"></script>
-<script src="/webapp/enhanced-file-uploader.js"></script>
-<script src="/webapp/enhanced-integration.js"></script>
 
 </body>
 </html> 
