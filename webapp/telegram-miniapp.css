@@ -642,6 +642,53 @@ html, body {
     position: relative;
 }
 
+/* ===============================
+   ВЫБРАННАЯ КАТЕГОРИЯ
+   =============================== */
+
+.mobile-selected-category {
+    margin-top: 32px;
+    padding: 20px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    border-radius: 16px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.mobile-selected-category p {
+    color: #1e40af;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* ===========================
+   FILE UPLOAD
+   =========================== */
+
+.mobile-file-upload {
+    border: 2px dashed rgba(156, 163, 175, 0.6);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(249, 250, 251, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.mobile-file-upload:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(239, 246, 255, 0.9);
+}
+
+.mobile-file-help {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
 /* =====================
    УТИЛИТЫ И ХЕЛПЕРЫ
    ===================== */

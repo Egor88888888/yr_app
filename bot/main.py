@@ -494,7 +494,11 @@ async def handle_submit(request: web.Request) -> web.Response:
             cat_result = await session.execute(
                 select(Category).where(Category.id == category_id)
             )
-            category = cat_result.scalar_one()
+            category = cat_result.scalar_one_or_none()
+            if not category:
+                log.error(f"❌ Category {category_id} not found in database")
+                # Создаем временную категорию
+                category = Category(name="Общие вопросы")
             log.info(f"📂 Found category: {category.name}")
 
     except Exception as e:
@@ -1024,13 +1028,12 @@ async def post_init(application: Application):
     """Инициализация после запуска"""
     global ai_enhanced_manager
 
-    # Инициализируем Enhanced AI
+    # 🚨 ВРЕМЕННО ОТКЛЮЧАЕМ Enhanced AI до создания таблиц
     try:
-        log.info("🚀 Starting Enhanced AI initialization...")
-        ai_enhanced_manager = AIEnhancedManager()
-        await ai_enhanced_manager.initialize()
-        print("✅ Enhanced AI initialized successfully")
-        log.info("Enhanced AI system started")
+        log.info("⚠️ Enhanced AI temporarily disabled - creating tables first")
+        ai_enhanced_manager = None
+        print("⚠️ Enhanced AI disabled until database tables are created")
+        log.info("Will use basic AI as fallback")
     except Exception as e:
         print(f"❌ Failed to initialize Enhanced AI: {e}")
         log.error(f"Enhanced AI initialization error: {e}")
