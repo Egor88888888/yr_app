@@ -1287,6 +1287,29 @@ async def fix_database_schema():
             else:
                 log.info("✅ contact_time column exists")
 
+            # Проверяем есть ли колонка files_data в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'files_data'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing files_data column, adding it...")
+
+                # Добавляем колонку files_data
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN files_data JSON
+                """))
+
+                await session.commit()
+                log.info("✅ files_data column added successfully")
+                print("✅ Database schema fixed: files_data column added")
+            else:
+                log.info("✅ files_data column exists")
+
             print("✅ Database schema is up to date")
 
     except Exception as e:
