@@ -1310,6 +1310,75 @@ async def fix_database_schema():
             else:
                 log.info("✅ files_data column exists")
 
+            # Проверяем есть ли колонка utm_source в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'utm_source'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing utm_source column, adding it...")
+
+                # Добавляем колонку utm_source
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN utm_source VARCHAR(64)
+                """))
+
+                await session.commit()
+                log.info("✅ utm_source column added successfully")
+                print("✅ Database schema fixed: utm_source column added")
+            else:
+                log.info("✅ utm_source column exists")
+
+            # Проверяем есть ли колонка status в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'status'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing status column, adding it...")
+
+                # Добавляем колонку status
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN status VARCHAR(32) DEFAULT 'new'
+                """))
+
+                await session.commit()
+                log.info("✅ status column added successfully")
+                print("✅ Database schema fixed: status column added")
+            else:
+                log.info("✅ status column exists")
+
+            # Проверяем есть ли колонка price в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'price'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing price column, adding it...")
+
+                # Добавляем колонку price
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN price NUMERIC(10, 2)
+                """))
+
+                await session.commit()
+                log.info("✅ price column added successfully")
+                print("✅ Database schema fixed: price column added")
+            else:
+                log.info("✅ price column exists")
+
             print("✅ Database schema is up to date")
 
     except Exception as e:
