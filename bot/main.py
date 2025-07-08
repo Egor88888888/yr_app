@@ -1318,6 +1318,17 @@ async def fix_database_schema():
         # Не прерываем запуск, продолжаем работу
 
 
+async def handle_debug_fix_schema(request: web.Request) -> web.Response:
+    """Debug endpoint для ручного исправления схемы БД"""
+    log.info("🔧 Debug endpoint hit for schema fix")
+    try:
+        await fix_database_schema()
+        return web.Response(text="Database schema fixed successfully!")
+    except Exception as e:
+        log.error(f"❌ Failed to fix database schema: {e}")
+        return web.Response(text=f"Failed to fix database schema: {e}", status=500)
+
+
 async def main():
     """Точка входа"""
     # Инициализируем БД
@@ -1347,6 +1358,9 @@ async def main():
     app.router.add_route("*", "/api/admin/clients", api_admin_clients)
     app.router.add_route("*", "/api/admin/payments", api_admin_payments)
     app.router.add_route("*", "/api/admin/stats", api_admin_stats)
+
+    # Debug endpoint for schema fix
+    app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
 
     app.router.add_static(
         "/webapp/", path=Path(__file__).parent.parent / "webapp")
