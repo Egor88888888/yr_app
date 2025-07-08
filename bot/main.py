@@ -1568,8 +1568,8 @@ async def main():
     app.router.add_route("*", "/api/admin/stats", api_admin_stats)
 
     # Debug endpoint for schema fix
-    app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
-    app.router.add_get("/debug/check-schema", handle_debug_check_schema)
+    # app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
+    # app.router.add_get("/debug/check-schema", handle_debug_check_schema)
 
     app.router.add_static(
         "/webapp/", path=Path(__file__).parent.parent / "webapp")
