@@ -1,6 +1,37 @@
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+// Telegram WebApp API with fallback for desktop
+const tg = window.Telegram?.WebApp || {
+    // Desktop fallback
+    ready: () => {},
+    expand: () => {},
+    close: () => window.close(),
+    showAlert: (message) => alert(message),
+    showConfirm: (message) => confirm(message),
+    MainButton: {
+        show: () => {},
+        hide: () => {},
+        setText: () => {},
+        onClick: () => {},
+        showProgress: () => {},
+        hideProgress: () => {}
+    },
+    BackButton: {
+        show: () => {},
+        hide: () => {},
+        onClick: () => {}
+    },
+    themeParams: null,
+    initDataUnsafe: null,
+    initData: ""
+};
+
+// Initialize only if real Telegram WebApp
+if (window.Telegram?.WebApp) {
+    tg.ready();
+    tg.expand();
+}
+
+// Detect if running in browser (not Telegram)
+const isBrowser = !window.Telegram?.WebApp;
 
 // 🎨 Apply Telegram theme
 if (tg.themeParams) {
@@ -221,7 +252,7 @@ function updateUI() {
     updateWebButtons();
     
     // Update Telegram buttons (if available)
-    if (window.Telegram && tg.initData) {
+    if (!isBrowser && window.Telegram?.WebApp) {
         updateTelegramButtons();
     }
 }

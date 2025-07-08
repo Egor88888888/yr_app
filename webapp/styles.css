@@ -3,6 +3,110 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+/* Desktop compatibility improvements */
+@media (min-width: 769px) {
+    /* Desktop specific styles */
+    .mobile-form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .mobile-category-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    
+    .mobile-navigation {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem 2rem;
+    }
+    
+    /* Better input focus for desktop */
+    input, textarea, select {
+        padding: 12px 16px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Desktop buttons */
+    .mobile-btn {
+        padding: 12px 24px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    
+    .mobile-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* Navigation buttons styling */
+.mobile-navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    z-index: 1000;
+}
+
+.mobile-nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    max-width: 100%;
+}
+
+.mobile-nav-buttons .mobile-btn {
+    flex: 1;
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure form inputs work on desktop */
+input, textarea, select {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ffffff;
+    color: #1f2937;
+}
+
+/* File upload improvements */
+.mobile-file-upload {
+    position: relative;
+}
+
+.mobile-file-upload input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Add bottom padding to content to account for fixed navigation */
+#app {
+    padding-bottom: 120px;
+}
+
 /* Smooth transitions */
 .step {
     animation: fadeIn 0.3s ease-in;

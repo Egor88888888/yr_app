@@ -582,7 +582,7 @@ async def handle_submit(request: web.Request) -> web.Response:
 
             app = AppModel(
                 user_id=user.id,
-                # category_id=category_id,  # ВРЕМЕННО ОТКЛЮЧЕНО - колонки нет в БД
+                category_id=category_id,  # ИСПРАВЛЕНО: включаем category_id
                 subcategory=f"{category_name}: {subcategory}" if subcategory else category_name,
                 description=description,
                 contact_method=contact_method,
