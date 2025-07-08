@@ -1216,7 +1216,32 @@ async def fix_database_schema():
                 log.info("✅ category_id column added successfully")
                 print("✅ Database schema fixed: category_id column added")
             else:
-                log.info("✅ Database schema is up to date")
+                log.info("✅ category_id column exists")
+
+            # Проверяем есть ли колонка subcategory в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'subcategory'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing subcategory column, adding it...")
+
+                # Добавляем колонку subcategory
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN subcategory VARCHAR(120)
+                """))
+
+                await session.commit()
+                log.info("✅ subcategory column added successfully")
+                print("✅ Database schema fixed: subcategory column added")
+            else:
+                log.info("✅ subcategory column exists")
+
+            print("✅ Database schema is up to date")
 
     except Exception as e:
         log.error(f"❌ Database schema fix failed: {e}")
