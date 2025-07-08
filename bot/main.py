@@ -467,12 +467,23 @@ async def handle_submit(request: web.Request) -> web.Response:
             await session.refresh(user)
             log.info(f"✅ User saved with ID: {user.id}")
 
-            # Создаем заявку
-            log.info(f"📝 Creating application for category_id: {category_id}")
+            # Создаем заявку БЕЗ category_id (его нет в production БД)
+            log.info(f"📝 Creating application for category: {category_id}")
+
+            # Получаем название категории для сохранения в subcategory
+            try:
+                cat_result = await session.execute(
+                    select(Category).where(Category.id == category_id)
+                )
+                category_obj = cat_result.scalar_one_or_none()
+                category_name = category_obj.name if category_obj else f"Категория #{category_id}"
+            except:
+                category_name = f"Категория #{category_id}"
+
             app = AppModel(
                 user_id=user.id,
-                category_id=category_id,
-                subcategory=subcategory,
+                # category_id=category_id,  # ВРЕМЕННО ОТКЛЮЧЕНО - колонки нет в БД
+                subcategory=f"{category_name}: {subcategory}" if subcategory else category_name,
                 description=description,
                 contact_method=contact_method,
                 contact_time=contact_time,
@@ -489,17 +500,10 @@ async def handle_submit(request: web.Request) -> web.Response:
             app.price = Decimal("5000")  # базовая консультация
             await session.commit()
 
-            # Получаем категорию для Sheets
-            log.info(f"📂 Getting category {category_id}")
-            cat_result = await session.execute(
-                select(Category).where(Category.id == category_id)
-            )
-            category = cat_result.scalar_one_or_none()
-            if not category:
-                log.error(f"❌ Category {category_id} not found in database")
-                # Создаем временную категорию
-                category = Category(name="Общие вопросы")
-            log.info(f"📂 Found category: {category.name}")
+            # Получаем категорию для Sheets (используем уже загруженную)
+            log.info(f"📂 Using category: {category_name}")
+            # Создаем объект категории для Google Sheets
+            category = type('Category', (), {'name': category_name})()
 
     except Exception as e:
         log.error(f"❌ Database error: {e}")

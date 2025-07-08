@@ -164,4 +164,57 @@
 
 .step.mobile-hidden {
     display: none !important;
+}
+
+/* ===========================
+   🚨 ЭКСТРЕННЫЕ ИСПРАВЛЕНИЯ ДУБЛИРОВАНИЯ КНОПОК
+   =========================== */
+
+/* СКРЫВАЕМ все шаги кроме первого по умолчанию */
+#step-2, #step-3, #step-4, #success {
+    display: none !important;
+}
+
+/* ПОКАЗЫВАЕМ только нужные шаги через JavaScript */
+#step-1:not(.mobile-hidden) {
+    display: block !important;
+}
+
+#step-2:not(.mobile-hidden) {
+    display: block !important;
+}
+
+#step-3:not(.mobile-hidden) {
+    display: block !important;
+}
+
+#step-4:not(.mobile-hidden) {
+    display: block !important;
+}
+
+#success:not(.mobile-hidden) {
+    display: block !important;
+}
+
+/* СКРЫВАЕМ кнопку выбора категории пока не выбрана */
+#selected-category {
+    display: none !important;
+}
+
+#selected-category:not(.mobile-hidden) {
+    display: block !important;
+}
+
+/* ПРИНУДИТЕЛЬНО убираем дублирование навигации */
+.mobile-navigation {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    z-index: 9999 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
 } 
