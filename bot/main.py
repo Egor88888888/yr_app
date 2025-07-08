@@ -1379,6 +1379,52 @@ async def fix_database_schema():
             else:
                 log.info("✅ price column exists")
 
+            # Проверяем есть ли колонка created_at в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'created_at'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing created_at column, adding it...")
+
+                # Добавляем колонку created_at
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                """))
+
+                await session.commit()
+                log.info("✅ created_at column added successfully")
+                print("✅ Database schema fixed: created_at column added")
+            else:
+                log.info("✅ created_at column exists")
+
+            # Проверяем есть ли колонка updated_at в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'updated_at'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing updated_at column, adding it...")
+
+                # Добавляем колонку updated_at
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                """))
+
+                await session.commit()
+                log.info("✅ updated_at column added successfully")
+                print("✅ Database schema fixed: updated_at column added")
+            else:
+                log.info("✅ updated_at column exists")
+
             print("✅ Database schema is up to date")
 
     except Exception as e:
