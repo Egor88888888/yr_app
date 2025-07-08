@@ -1026,6 +1026,7 @@ async def post_init(application: Application):
 
     # Инициализируем Enhanced AI
     try:
+        log.info("🚀 Starting Enhanced AI initialization...")
         ai_enhanced_manager = AIEnhancedManager()
         await ai_enhanced_manager.initialize()
         print("✅ Enhanced AI initialized successfully")
@@ -1033,6 +1034,8 @@ async def post_init(application: Application):
     except Exception as e:
         print(f"❌ Failed to initialize Enhanced AI: {e}")
         log.error(f"Enhanced AI initialization error: {e}")
+        import traceback
+        log.error(f"Enhanced AI traceback: {traceback.format_exc()}")
         log.info("Will use basic AI as fallback")
 
     try:
