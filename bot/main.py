@@ -544,29 +544,20 @@ async def handle_submit(request: web.Request) -> web.Response:
                     log.info(f"👤 Found existing user: {user.id}")
             else:
                 log.info("👤 Creating temporary user (no Telegram ID)")
-                # Ищем существующего временного пользователя с такими же данными
-                result = await session.execute(
-                    select(User).where(
-                        User.tg_id == 0,
-                        User.phone == phone
-                    )
+                # Создаем нового временного пользователя с уникальным отрицательным tg_id
+                import time
+                import random
+                # Генерируем уникальный отрицательный ID: время + случайное число
+                temp_tg_id = -int(time.time() * 1000) - \
+                    random.randint(1000, 9999)
+                user = User(
+                    tg_id=temp_tg_id,
+                    first_name=name.split()[0] if name else "Гость",
+                    phone=phone,
+                    email=email
                 )
-                user = result.scalar_one_or_none()
-
-                if not user:
-                    # Создаем временного пользователя с уникальным отрицательным tg_id
-                    import time
-                    # Отрицательный уникальный ID
-                    temp_tg_id = -int(time.time() * 1000000) % 2147483647
-                    user = User(
-                        tg_id=temp_tg_id,
-                        first_name=name.split()[0] if name else "Гость",
-                        phone=phone,
-                        email=email
-                    )
-                    session.add(user)
-                else:
-                    log.info(f"👤 Found existing temp user: {user.id}")
+                session.add(user)
+                log.info(f"👤 Created temp user with tg_id: {temp_tg_id}")
 
             # Обновляем данные пользователя
             if phone:
