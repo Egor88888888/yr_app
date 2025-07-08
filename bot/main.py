@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Юридический Супер-сервис бот
-Полный спектр юридических услуг с онлайн оплатой
+🏛️ ЮРИДИЧЕСКИЙ ЦЕНТР - PRODUCTION-READY BOT
 
-Features:
-- Web App для заявок (12 категорий услуг)
-- Интеграция с Google Sheets для CRM
-- Онлайн оплата через CloudPayments
-- AI консультант на базе OpenRouter
-- Админ панель с управлением заявками
-- Автопостинг контента в канал
+🚀 ПОЛНОФУНКЦИОНАЛЬНЫЙ ПРОДУКТ ДЛЯ ПРОДАКШЕНА:
+- 12 категорий юридических услуг  
+- Enhanced AI с ML классификацией
+- Telegram Mini App с современным UI
+- Админ панель с полным функционалом
+- Интеграции: Google Sheets, CloudPayments, OpenRouter
+- Мониторинг, логирование, безопасность
+- Rate limiting и защита от спама
+- Автоматические backup и восстановление
 """
 
 import asyncio
@@ -18,10 +19,12 @@ import logging
 import os
 import random
 import uuid
+import time
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Set
+from collections import defaultdict
 
 from aiohttp import web
 from sqlalchemy import select, text, func
@@ -45,25 +48,42 @@ from bot.services.ai import generate_ai_response, generate_post_content
 from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
 
-# ================ CONFIG ================
+# ================ PRODUCTION CONFIG ================
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
 
+# Production готовность
+PRODUCTION_MODE = os.getenv("RAILWAY_ENVIRONMENT") == "production"
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
+
 # Enhanced AI Manager
 ai_enhanced_manager = None
+
+# Rate Limiting
+user_request_counts = defaultdict(list)  # user_id -> [timestamps]
+RATE_LIMIT_REQUESTS = 10  # запросов
+RATE_LIMIT_WINDOW = 60   # секунд
+blocked_users: Set[int] = set()
+
+# Мониторинг
+system_metrics = {
+    "total_requests": 0,
+    "successful_requests": 0,
+    "failed_requests": 0,
+    "ai_requests": 0,
+    "start_time": datetime.now()
+}
+
 # Get Railway public domain
 RAILWAY_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv(
     "MY_RAILWAY_PUBLIC_URL")
 
-# Use known Railway domain if env var contains placeholder
 if RAILWAY_DOMAIN and "MY_RAILWAY_PUBLIC_URL" in RAILWAY_DOMAIN:
-    # Your actual Railway domain
     PUBLIC_HOST = "poetic-simplicity-production-60e7.up.railway.app"
 else:
     PUBLIC_HOST = RAILWAY_DOMAIN if RAILWAY_DOMAIN else "localhost"
 
-# If Railway domain contains full URL, extract domain
 if PUBLIC_HOST.startswith("http"):
     from urllib.parse import urlparse
     PUBLIC_HOST = urlparse(PUBLIC_HOST).netloc
@@ -72,13 +92,22 @@ WEB_APP_URL = f"https://{PUBLIC_HOST}/webapp/"
 
 print(f"🌐 WebApp URL: {WEB_APP_URL}")
 print(f"🔗 Webhook URL: https://{PUBLIC_HOST}/{TOKEN}")
+print(f"🚀 Production Mode: {PRODUCTION_MODE}")
+
 PORT = int(os.getenv("PORT", 8080))
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 
+# Настройка логирования для продакшена
+log_level = logging.WARNING if PRODUCTION_MODE else logging.INFO
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=log_level,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(
+            'bot.log') if not PRODUCTION_MODE else logging.NullHandler()
+    ]
 )
 log = logging.getLogger(__name__)
 
@@ -92,24 +121,87 @@ ROLE_PERMISSIONS = {
     "superadmin": ["view_applications", "update_status", "assign_lawyer", "add_notes", "bill_client", "manage_admins", "view_all_stats"]
 }
 
+# ================ PRODUCTION HELPERS ================
 
-async def check_admin_permission(user_id: int, permission: str) -> bool:
-    """Check if user has specific permission"""
-    if user_id == ADMIN_CHAT_ID:  # Superadmin by default
+
+def is_rate_limited(user_id: int) -> bool:
+    """Проверка rate limiting"""
+    if user_id in ADMIN_USERS:
+        return False
+
+    if user_id in blocked_users:
         return True
 
-    async with async_sessionmaker() as session:
-        result = await session.execute(
-            select(Admin).where(
-                Admin.tg_id == user_id,
-                Admin.is_active == True
-            )
-        )
-        admin = result.scalar_one_or_none()
-        if not admin:
+    now = time.time()
+    user_requests = user_request_counts[user_id]
+
+    # Убираем старые запросы
+    user_requests[:] = [
+        req_time for req_time in user_requests if now - req_time < RATE_LIMIT_WINDOW]
+
+    if len(user_requests) >= RATE_LIMIT_REQUESTS:
+        log.warning(f"Rate limit exceeded for user {user_id}")
+        return True
+
+    user_requests.append(now)
+    return False
+
+
+async def log_request(user_id: int, request_type: str, success: bool, error: str = None):
+    """Логирование запросов для мониторинга"""
+    system_metrics["total_requests"] += 1
+
+    if success:
+        system_metrics["successful_requests"] += 1
+    else:
+        system_metrics["failed_requests"] += 1
+        if error:
+            log.error(
+                f"Request failed - User: {user_id}, Type: {request_type}, Error: {error}")
+
+    if request_type == "ai":
+        system_metrics["ai_requests"] += 1
+
+
+def sanitize_input(text: str) -> str:
+    """Санитизация пользовательского ввода"""
+    if not text:
+        return ""
+
+    # Убираем потенциально опасные символы
+    sanitized = text.replace('<', '&lt;').replace('>', '&gt;')
+
+    # Ограничиваем длину
+    if len(sanitized) > 4000:
+        sanitized = sanitized[:4000] + "..."
+
+    return sanitized
+
+
+async def validate_telegram_data(data: dict) -> bool:
+    """Валидация данных от Telegram WebApp"""
+    try:
+        # Проверяем обязательные поля
+        required_fields = ["category_id", "name", "phone", "contact_method"]
+        for field in required_fields:
+            if not data.get(field):
+                return False
+
+        # Проверяем типы данных
+        if not isinstance(data.get("category_id"), int):
             return False
 
-        return permission in ROLE_PERMISSIONS.get(admin.role, [])
+        # Проверяем длины полей
+        if len(data.get("name", "")) > 100:
+            return False
+
+        if len(data.get("description", "")) > 2000:
+            return False
+
+        return True
+    except Exception as e:
+        log.error(f"Validation error: {e}")
+        return False
 
 
 # ================ HANDLERS ================

@@ -2,14 +2,62 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Юридический центр - Подать заявку</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Юридический центр - профессиональные юридические услуги онлайн. 12 категорий услуг, AI консультант, онлайн оплата.">
+    <meta name="keywords" content="юридические услуги, юрист онлайн, правовая помощь, консультация юриста">
+    <meta name="author" content="Юридический Центр">
+    <meta name="robots" content="index, follow">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Юридический Центр">
+    
+    <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- 🚀 ТОЛЬКО TELEGRAM MINI APP СТИЛИ -->
-    <link rel="stylesheet" href="/webapp/telegram-miniapp.css">
-    <!-- 🔧 ЭКСТРЕННЫЕ ИСПРАВЛЕНИЯ -->
-    <link rel="stylesheet" href="/webapp/mobile-fixes.css">
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <title>Юридический Центр - Подача заявки</title>
+    
+    <!-- Optimized CSS Loading -->
+    <link rel="stylesheet" href="/webapp/styles.css" media="all">
+    <link rel="stylesheet" href="/webapp/mobile-optimized.css" media="screen and (max-width: 768px)">
+    <link rel="stylesheet" href="/webapp/telegram-miniapp.css" media="all">
+    <link rel="stylesheet" href="/webapp/enhanced-styles.css" media="all">
+    <link rel="stylesheet" href="/webapp/mobile-fixes.css" media="all">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/webapp/main.js" as="script">
+    <link rel="preload" href="/webapp/enhanced-form-manager.js" as="script">
+    
+    <!-- Performance Monitoring -->
+    <script>
+        // Simple performance monitoring
+        window.perfData = {
+            startTime: performance.now(),
+            loadTime: null,
+            errors: []
+        };
+        
+        window.addEventListener('load', () => {
+            window.perfData.loadTime = performance.now() - window.perfData.startTime;
+            console.log(`Page loaded in ${window.perfData.loadTime.toFixed(2)}ms`);
+        });
+        
+        window.addEventListener('error', (e) => {
+            window.perfData.errors.push({
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                timestamp: Date.now()
+            });
+        });
+    </script>
 </head>
 <body class="telegram-webapp">
 
