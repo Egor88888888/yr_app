@@ -35,13 +35,10 @@
                 <!-- Categories will be inserted here -->
             </div>
             
-            <!-- Selected category display -->
+            <!-- Selected category display - БЕЗ КНОПКИ -->
             <div id="selected-category" class="mobile-hidden mobile-selected-category">
                 <p>Выбрано: <span id="selected-category-name"></span></p>
-                <button type="button" onclick="nextStep()" 
-                        class="mobile-btn mobile-btn-primary">
-                    Продолжить →
-                </button>
+                <!-- Убрал кнопку "Продолжить" - будет общая навигация -->
             </div>
         </div>
     </div>
@@ -78,18 +75,6 @@
                         <!-- File previews will appear here -->
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Mobile Navigation -->
-        <div class="mobile-navigation">
-            <div class="mobile-nav-buttons">
-                <button type="button" onclick="prevStep()" class="mobile-btn mobile-btn-secondary">
-                    ← Назад
-                </button>
-                <button type="button" onclick="nextStep()" class="mobile-btn mobile-btn-primary">
-                    Далее →
-                </button>
             </div>
         </div>
     </div>
@@ -138,18 +123,6 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Mobile Navigation -->
-        <div class="mobile-navigation">
-            <div class="mobile-nav-buttons">
-                <button type="button" onclick="prevStep()" class="mobile-btn mobile-btn-secondary">
-                    ← Назад
-                </button>
-                <button type="button" onclick="nextStep()" class="mobile-btn mobile-btn-primary">
-                    Далее →
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Step 4: Review -->
@@ -161,18 +134,6 @@
         
         <div id="review-content" class="mobile-review-card">
             <!-- Review content will be inserted here -->
-        </div>
-        
-        <!-- Mobile Navigation -->
-        <div class="mobile-navigation">
-            <div class="mobile-nav-buttons">
-                <button type="button" onclick="prevStep()" class="mobile-btn mobile-btn-secondary">
-                    ← Назад
-                </button>
-                <button type="button" onclick="submitForm()" class="mobile-btn mobile-btn-success">
-                    📤 Отправить заявку
-                </button>
-            </div>
         </div>
     </div>
 
@@ -194,6 +155,18 @@
                 </a>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- 🚀 ЕДИНАЯ НАВИГАЦИЯ ДЛЯ ВСЕХ ШАГОВ -->
+<div class="mobile-navigation">
+    <div class="mobile-nav-buttons">
+        <button type="button" onclick="prevStep()" class="mobile-btn mobile-btn-secondary" style="display: none;">
+            ← Назад
+        </button>
+        <button type="button" onclick="nextStep()" class="mobile-btn mobile-btn-primary">
+            Далее →
+        </button>
     </div>
 </div>
 

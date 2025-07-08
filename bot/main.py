@@ -148,11 +148,11 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = f"""
 👋 Здравствуйте, {user.first_name}!
 
-🏛️ **ЮРИДИЧЕСКИЙ ЦЕНТР** 
+🏛️ **ЮРИДИЧЕСКИЙ ЦЕНТР**
 Полный спектр юридических услуг:
 
 • Семейное право и развод
-• Наследственные споры  
+• Наследственные споры
 • Трудовые конфликты
 • Жилищные вопросы
 • Банкротство физлиц
@@ -203,7 +203,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Fallback к старому AI
             category = detect_category(user_text)
 
-            system_prompt = f"""Ты - опытный юрист-консультант. 
+            system_prompt = f"""Ты - опытный юрист-консультант.
 Отвечаешь на вопросы по теме: {category}.
 Даёшь практические советы, ссылаешься на законы РФ.
 В конце предлагаешь записаться на консультацию."""
@@ -279,9 +279,8 @@ async def show_applications(query, context):
     """Показать список заявок"""
     async with async_sessionmaker() as session:
         result = await session.execute(
-            select(AppModel, User, Category)
+            select(AppModel, User)
             .join(User)
-            .join(Category)
             .order_by(AppModel.created_at.desc())
             .limit(10)
         )
@@ -293,14 +292,18 @@ async def show_applications(query, context):
         text = "📋 **ПОСЛЕДНИЕ ЗАЯВКИ**\n\n"
         keyboard = []
 
-        for app, user, cat in apps:
+        for app, user in apps:
             status_emoji = {
                 "new": "🆕",
                 "processing": "⏳",
                 "completed": "✅"
             }.get(app.status, "❓")
 
-            text += f"{status_emoji} #{app.id} | {cat.name}\n"
+            # Используем subcategory вместо Category.name
+            category_name = app.subcategory.split(
+                ':')[0] if app.subcategory and ':' in app.subcategory else (app.subcategory or "Общие вопросы")
+
+            text += f"{status_emoji} #{app.id} | {category_name}\n"
             text += f"👤 {user.first_name} {user.phone or ''}\n"
             text += f"📅 {app.created_at.strftime('%d.%m %H:%M')}\n\n"
 
@@ -330,9 +333,8 @@ async def handle_application_action(query, context):
 
         async with async_sessionmaker() as session:
             result = await session.execute(
-                select(AppModel, User, Category)
+                select(AppModel, User)
                 .join(User)
-                .join(Category)
                 .where(AppModel.id == app_id)
             )
             row = result.one_or_none()
@@ -341,7 +343,7 @@ async def handle_application_action(query, context):
             await query.answer("Заявка не найдена", show_alert=True)
             return
 
-        app, user, cat = row
+        app, user = row
 
         contact_methods = {
             'phone': '📞 Телефонный звонок',
@@ -350,11 +352,17 @@ async def handle_application_action(query, context):
             'whatsapp': '💚 WhatsApp'
         }
 
+        # Используем subcategory вместо Category.name
+        category_name = app.subcategory.split(
+            ':')[0] if app.subcategory and ':' in app.subcategory else (app.subcategory or "Общие вопросы")
+        subcategory_detail = app.subcategory.split(':', 1)[1].strip(
+        ) if app.subcategory and ':' in app.subcategory else '-'
+
         text = f"""
 📋 **ЗАЯВКА #{app.id}**
 
-📂 Категория: {cat.name}
-📝 Подкатегория: {app.subcategory or '-'}
+📂 Категория: {category_name}
+📝 Подкатегория: {subcategory_detail}
 
 👤 **Клиент:**
 Имя: {user.first_name} {user.last_name or ''}
@@ -665,20 +673,23 @@ async def api_admin_applications(request: web.Request) -> web.Response:
 
     async with async_sessionmaker() as session:
         result = await session.execute(
-            select(AppModel, User, Category)
+            select(AppModel, User)
             .join(User)
-            .join(Category)
             .order_by(AppModel.created_at.desc())
             .limit(50)
         )
         apps = result.all()
 
         applications = []
-        for app, user, cat in apps:
+        for app, user in apps:
+            # Извлекаем название категории из subcategory
+            category_name = app.subcategory.split(
+                ':')[0] if app.subcategory and ':' in app.subcategory else (app.subcategory or "Общие вопросы")
+
             applications.append({
                 'id': app.id,
                 'client': f"{user.first_name} {user.last_name or ''}".strip(),
-                'category': cat.name,
+                'category': category_name,
                 'status': app.status,
                 'date': app.created_at.isoformat(),
                 'description': app.description or '',
@@ -836,11 +847,11 @@ async def show_statistics(query, context):
             .group_by(AppModel.status)
         )
 
-        # По категориям
+        # По категориям - парсим из subcategory
         cat_stats = await session.execute(
-            select(Category.name, func.count(AppModel.id))
-            .join(AppModel)
-            .group_by(Category.name)
+            select(AppModel.subcategory, func.count(AppModel.id))
+            .where(AppModel.subcategory.is_not(None))
+            .group_by(AppModel.subcategory)
             .order_by(func.count(AppModel.id).desc())
             .limit(5)
         )
@@ -856,7 +867,10 @@ async def show_statistics(query, context):
         text += f"• {status}: {count}\n"
 
     text += "\n**Топ категорий:**\n"
-    for cat_name, count in cat_stats:
+    for subcategory, count in cat_stats:
+        # Извлекаем название категории до двоеточия
+        cat_name = subcategory.split(':')[0] if subcategory and ':' in subcategory else (
+            subcategory or "Общие вопросы")
         text += f"• {cat_name}: {count}\n"
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]]

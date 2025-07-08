@@ -234,6 +234,22 @@ function updateWebButtons() {
         button.style.display = currentStep === 1 ? 'none' : 'block';
     });
     
+    // Update next button text and function for step 4
+    const nextButtons = document.querySelectorAll('button[onclick="nextStep()"]');
+    nextButtons.forEach(button => {
+        if (currentStep === 4) {
+            button.textContent = '📤 Отправить заявку';
+            button.onclick = submitForm;
+            button.classList.remove('mobile-btn-primary');
+            button.classList.add('mobile-btn-success');
+        } else {
+            button.textContent = 'Далее →';
+            button.onclick = nextStep;
+            button.classList.remove('mobile-btn-success');
+            button.classList.add('mobile-btn-primary');
+        }
+    });
+    
     // Update category selection visibility
     const selectedCategory = document.getElementById('selected-category');
     if (currentStep === 1 && !formData.category_id) {
@@ -433,15 +449,15 @@ async function submitForm() {
         console.log('Result:', result);
         
         if (result.status === 'ok') {
-            // Show success with mobile classes
+            // Show success - используем только mobile-hidden
             document.querySelectorAll('.step').forEach(step => {
-                step.classList.add('hidden', 'mobile-hidden');
+                step.classList.add('mobile-hidden');
             });
-            document.getElementById('success').classList.remove('hidden', 'mobile-hidden');
+            document.getElementById('success').classList.remove('mobile-hidden');
             
             // Show payment if needed
             if (result.pay_url && result.pay_url !== '# Платежная система не настроена') {
-                document.getElementById('payment-section').classList.remove('hidden', 'mobile-hidden');
+                document.getElementById('payment-section').classList.remove('mobile-hidden');
                 document.getElementById('pay-button').href = result.pay_url;
             }
             
