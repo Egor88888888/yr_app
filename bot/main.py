@@ -111,8 +111,18 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Global admin set
-ADMIN_USERS = {ADMIN_CHAT_ID}
+# 🔧 FIXED: Улучшенная система администраторов
+HARDCODED_ADMIN_IDS = {
+    6373924442,  # Основной администратор (замените на ваш реальный ID)
+    ADMIN_CHAT_ID if ADMIN_CHAT_ID != 0 else None
+}
+HARDCODED_ADMIN_IDS.discard(None)  # Убираем None если ADMIN_CHAT_ID=0
+
+# Global admin set - теперь правильный
+ADMIN_USERS = HARDCODED_ADMIN_IDS.copy()
+
+print(f"🔧 Admin users initialized: {ADMIN_USERS}")
+log.info(f"Admin users configured: {list(ADMIN_USERS)}")
 
 # Role permissions
 ROLE_PERMISSIONS = {
@@ -124,8 +134,37 @@ ROLE_PERMISSIONS = {
 # ================ PRODUCTION HELPERS ================
 
 
+async def is_admin(user_id: int) -> bool:
+    """
+    🔧 FIXED: Улучшенная проверка администраторов
+    Проверяет в нескольких источниках:
+    1. Хардкодированные ID
+    2. Таблица admins в БД
+    """
+    # Быстрая проверка хардкодированных админов
+    if user_id in HARDCODED_ADMIN_IDS:
+        return True
+
+    # Проверка в базе данных
+    try:
+        async with async_sessionmaker() as session:
+            result = await session.execute(
+                select(Admin).where(
+                    Admin.tg_id == user_id,
+                    Admin.is_active == True
+                )
+            )
+            db_admin = result.scalar_one_or_none()
+            return db_admin is not None
+    except Exception as e:
+        log.error(f"Error checking admin status in DB: {e}")
+        # В случае ошибки БД, проверяем только хардкодированных
+        return user_id in HARDCODED_ADMIN_IDS
+
+
 def is_rate_limited(user_id: int) -> bool:
     """Проверка rate limiting"""
+    # Админы не подвержены rate limiting
     if user_id in ADMIN_USERS:
         return False
 
@@ -321,7 +360,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Админ панель"""
     user_id = update.effective_user.id
-    if user_id not in ADMIN_USERS:
+    if not await is_admin(user_id):
         await update.message.reply_text("⛔ Нет доступа")
         return
 
@@ -342,12 +381,149 @@ async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """🔧 FIXED: Команда для добавления нового администратора"""
+    user_id = update.effective_user.id
+
+    # Проверяем права текущего пользователя
+    if not await is_admin(user_id):
+        await update.message.reply_text("⛔ Нет доступа")
+        return
+
+    # Проверяем аргументы
+    if not context.args:
+        await update.message.reply_text(
+            "📋 **Добавление администратора**\n\n"
+            "Использование: `/add_admin <ID> [роль]`\n\n"
+            "Роли:\n"
+            "• `operator` - просмотр заявок\n"
+            "• `lawyer` - работа с заявками\n"
+            "• `superadmin` - полный доступ\n\n"
+            "Пример: `/add_admin 123456789 lawyer`",
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        new_admin_id = int(context.args[0])
+        role = context.args[1] if len(context.args) > 1 else "operator"
+
+        if role not in ROLE_PERMISSIONS:
+            await update.message.reply_text(
+                f"❌ Неверная роль: `{role}`\n\n"
+                f"Доступные роли: {', '.join(ROLE_PERMISSIONS.keys())}",
+                parse_mode='Markdown'
+            )
+            return
+
+    except ValueError:
+        await update.message.reply_text("❌ ID должен быть числом")
+        return
+
+    # Проверяем, не является ли уже администратором
+    if await is_admin(new_admin_id):
+        await update.message.reply_text(f"⚠️ Пользователь {new_admin_id} уже администратор")
+        return
+
+    # Добавляем в базу данных
+    try:
+        async with async_sessionmaker() as session:
+            new_admin = Admin(
+                tg_id=new_admin_id,
+                role=role,
+                is_active=True
+            )
+            session.add(new_admin)
+            await session.commit()
+
+        # Перезагружаем список администраторов
+        await load_db_admins()
+
+        # Уведомляем об успехе
+        await update.message.reply_text(
+            f"✅ **Администратор добавлен**\n\n"
+            f"👤 ID: `{new_admin_id}`\n"
+            f"🎯 Роль: `{role}`\n"
+            f"📊 Всего админов: {len(ADMIN_USERS)}",
+            parse_mode='Markdown'
+        )
+
+        # Уведомляем нового администратора
+        try:
+            await context.bot.send_message(
+                new_admin_id,
+                f"🎉 **Вы назначены администратором!**\n\n"
+                f"🎯 Роль: {role}\n"
+                f"📋 Команды: /admin, /start\n\n"
+                f"Добро пожаловать в команду! 👋",
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            log.warning(f"Could not notify new admin {new_admin_id}: {e}")
+            await update.message.reply_text(
+                "⚠️ Администратор добавлен, но не смогли отправить уведомление "
+                "(возможно, пользователь не запускал бота)"
+            )
+
+        log.info(
+            f"🔧 New admin added: {new_admin_id} with role {role} by {user_id}")
+
+    except Exception as e:
+        log.error(f"Failed to add admin {new_admin_id}: {e}")
+        await update.message.reply_text(f"❌ Ошибка добавления администратора: {e}")
+
+
+async def cmd_list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """🔧 FIXED: Команда для просмотра списка администраторов"""
+    user_id = update.effective_user.id
+
+    # Проверяем права текущего пользователя
+    if not await is_admin(user_id):
+        await update.message.reply_text("⛔ Нет доступа")
+        return
+
+    try:
+        text = "👥 **СПИСОК АДМИНИСТРАТОРОВ**\n\n"
+
+        # Хардкодированные администраторы
+        if HARDCODED_ADMIN_IDS:
+            text += "🔧 **Хардкодированные:**\n"
+            for admin_id in sorted(HARDCODED_ADMIN_IDS):
+                text += f"• `{admin_id}` (системный)\n"
+            text += "\n"
+
+        # Администраторы из БД
+        async with async_sessionmaker() as session:
+            result = await session.execute(
+                select(Admin).where(Admin.is_active == True)
+                .order_by(Admin.created_at.desc())
+            )
+            db_admins = result.scalars().all()
+
+        if db_admins:
+            text += "💾 **Из базы данных:**\n"
+            for admin in db_admins:
+                status = "✅" if admin.is_active else "❌"
+                text += f"{status} `{admin.tg_id}` ({admin.role})\n"
+        else:
+            text += "💾 **Из базы данных:** нет\n"
+
+        text += f"\n📊 **Всего активных:** {len(ADMIN_USERS)}"
+
+        await update.message.reply_text(text, parse_mode='Markdown')
+
+    except Exception as e:
+        log.error(f"Failed to list admins: {e}")
+        await update.message.reply_text(f"❌ Ошибка получения списка: {e}")
+
+
 async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик админских кнопок"""
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id not in ADMIN_USERS:
+    user_id = query.from_user.id
+    if not await is_admin(user_id):
         await query.answer("Нет доступа", show_alert=True)
         return
 
@@ -1140,9 +1316,35 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
 
 # ================ MAIN ================
 
+async def load_db_admins():
+    """Загружает администраторов из базы данных в ADMIN_USERS"""
+    global ADMIN_USERS
+    try:
+        async with async_sessionmaker() as session:
+            result = await session.execute(
+                select(Admin.tg_id).where(Admin.is_active == True)
+            )
+            db_admin_ids = {row[0] for row in result.fetchall()}
+
+        # Объединяем хардкодированных и из БД
+        old_count = len(ADMIN_USERS)
+        ADMIN_USERS = HARDCODED_ADMIN_IDS.union(db_admin_ids)
+        log.info(
+            f"🔧 Admins reloaded: hardcoded={len(HARDCODED_ADMIN_IDS)}, from_db={len(db_admin_ids)}, total={len(ADMIN_USERS)} (was {old_count})")
+        print(f"🔧 Admin users updated: {len(ADMIN_USERS)} total")
+
+    except Exception as e:
+        log.error(f"Failed to load DB admins: {e}")
+        # Если БД недоступна, используем только хардкодированных
+        ADMIN_USERS = HARDCODED_ADMIN_IDS.copy()
+
+
 async def post_init(application: Application):
     """Инициализация после запуска"""
     global ai_enhanced_manager
+
+    # Загружаем администраторов из БД
+    await load_db_admins()
 
     # 🚨 ВРЕМЕННО ОТКЛЮЧАЕМ Enhanced AI до создания таблиц
     try:
@@ -1577,6 +1779,8 @@ async def main():
     # Регистрируем хендлеры
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("admin", cmd_admin))
+    application.add_handler(CommandHandler("add_admin", cmd_add_admin))
+    application.add_handler(CommandHandler("list_admins", cmd_list_admins))
     application.add_handler(CallbackQueryHandler(admin_callback))
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
