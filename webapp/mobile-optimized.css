@@ -1,0 +1,553 @@
+/*
+=======================================================
+🚀 MOBILE-FIRST OPTIMIZATION FOR TELEGRAM MINI APP
+=======================================================
+Специально оптимизированные стили для iPhone и Android
+*/
+
+/* =================
+   ОСНОВНЫЕ ПРИНЦИПЫ
+   ================= */
+
+/* Reset и базовые настройки для мобильных */
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+}
+
+/* ======================
+   МОБИЛЬНЫЕ КОНТЕЙНЕРЫ  
+   ====================== */
+
+/* Основной контейнер приложения */
+#app {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+}
+
+/* Прогресс бар - мобильная версия */
+.mobile-progress {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.mobile-progress h1,
+.mobile-progress-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.mobile-progress .step-indicator,
+.step-indicator {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.mobile-progress-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.mobile-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+
+/* ==================
+   АДАПТИВНЫЕ ШАГИ
+   ================== */
+
+.step {
+    padding: 20px 16px 100px 16px; /* Больше padding снизу для кнопок */
+    animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* =========================
+   КАТЕГОРИИ - МОБИЛЬНАЯ СЕТКА
+   ========================= */
+
+.mobile-category-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Только 2 колонки на мобильном */
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.mobile-category-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 20px 12px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-category-card:active {
+    transform: scale(0.95);
+}
+
+.mobile-category-card .emoji {
+    font-size: 32px; /* Увеличенный размер эмодзи */
+    margin-bottom: 8px;
+    display: block;
+}
+
+.mobile-category-card .text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.3;
+    text-align: center;
+}
+
+.mobile-category-card:hover,
+.mobile-category-card.selected {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+}
+
+.mobile-category-card.selected {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #1d4ed8;
+}
+
+/* ====================
+   ЗАГОЛОВКИ МОБИЛЬНЫЕ
+   ==================== */
+
+.mobile-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: center;
+    margin-bottom: 12px;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+.mobile-subtitle {
+    font-size: 16px;
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.4;
+}
+
+/* ===================
+   ФОРМЫ МОБИЛЬНЫЕ
+   =================== */
+
+.mobile-form-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin: 16px 0;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-form-field {
+    margin-bottom: 20px;
+}
+
+.mobile-form-field label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.mobile-form-field input,
+.mobile-form-field textarea,
+.mobile-form-field select {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px; /* Важно! Предотвращает zoom на iOS */
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    transition: all 0.3s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.mobile-form-field input:focus,
+.mobile-form-field textarea:focus,
+.mobile-form-field select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.mobile-form-field textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ==================
+   КНОПКИ МОБИЛЬНЫЕ
+   ================== */
+
+.mobile-btn {
+    display: inline-block;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+    min-height: 48px; /* Apple рекомендует минимум 44px */
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+}
+
+.mobile-btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.mobile-btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.mobile-btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+}
+
+.mobile-btn-secondary:active {
+    background: #e5e7eb;
+    transform: translateY(1px);
+}
+
+.mobile-btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ========================
+   НАВИГАЦИЯ МОБИЛЬНАЯ
+   ======================== */
+
+.mobile-navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    z-index: 200;
+}
+
+.mobile-nav-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mobile-nav-buttons .mobile-btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.mobile-nav-buttons .mobile-btn:not(:last-child) {
+    margin-right: 8px;
+}
+
+/* ======================
+   КАРТОЧКА ПРОСМОТРА
+   ====================== */
+
+.mobile-review-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 16px 0;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-review-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.mobile-review-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-review-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.mobile-review-value {
+    font-size: 16px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+/* ====================
+   SUCCESS МОБИЛЬНАЯ
+   ==================== */
+
+.mobile-success {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.mobile-success-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: successPulse 2s infinite;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.mobile-success-icon svg {
+    width: 40px;
+    height: 40px;
+    color: white;
+}
+
+/* ===================
+   СПЕЦИФИКА iOS
+   =================== */
+
+/* Убираем стандартные стили iOS */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+textarea,
+select {
+    -webkit-appearance: none;
+    -webkit-border-radius: 0;
+    border-radius: 12px;
+}
+
+/* Предотвращаем zoom при фокусе на input */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* ====================
+   АДАПТИВНЫЕ РАЗМЕРЫ
+   ==================== */
+
+/* iPhone SE и маленькие экраны */
+@media screen and (max-width: 375px) {
+    .mobile-category-grid {
+        gap: 8px;
+    }
+    
+    .mobile-category-card {
+        min-height: 100px;
+        padding: 16px 8px;
+    }
+    
+    .mobile-category-card .emoji {
+        font-size: 28px;
+    }
+    
+    .mobile-category-card .text {
+        font-size: 13px;
+    }
+    
+    .mobile-form-container {
+        padding: 20px 16px;
+        margin: 12px 0;
+    }
+    
+    .mobile-title {
+        font-size: 22px;
+    }
+}
+
+/* iPhone Plus и большие экраны */
+@media screen and (min-width: 414px) {
+    .mobile-category-card .emoji {
+        font-size: 36px;
+    }
+    
+    .mobile-category-card {
+        min-height: 130px;
+        padding: 24px 12px;
+    }
+}
+
+/* =====================
+   УТИЛИТЫ И ХЕЛПЕРЫ
+   ===================== */
+
+.mobile-hidden {
+    display: none !important;
+}
+
+.mobile-text-center {
+    text-align: center;
+}
+
+.mobile-space-y-4 > * + * {
+    margin-top: 16px;
+}
+
+.mobile-space-y-6 > * + * {
+    margin-top: 24px;
+}
+
+/* ===================
+   АНИМАЦИИ
+   =================== */
+
+.mobile-fade-in {
+    animation: mobileServiceIn 0.3s ease forwards;
+}
+
+@keyframes mobileServiceIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mobile-slide-up {
+    animation: mobileSlideUp 0.4s ease forwards;
+}
+
+@keyframes mobileSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ====================
+   ТЕЛЕГРАМ СПЕЦИФИКА
+   ==================== */
+
+/* Убираем отступы для Telegram WebApp */
+html.telegram-webapp body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Адаптация под высоту Telegram */
+.telegram-webapp #app {
+    min-height: var(--tg-viewport-height, 100vh);
+}
+
+/* ===================
+   ТЕМНАЯ ТЕМА
+   =================== */
+
+@media (prefers-color-scheme: dark) {
+    .mobile-form-container,
+    .mobile-category-card,
+    .mobile-review-card {
+        background: rgba(31, 41, 55, 0.95);
+        border-color: rgba(75, 85, 99, 0.3);
+    }
+    
+    .mobile-title,
+    .mobile-review-value {
+        color: #f9fafb;
+    }
+    
+    .mobile-subtitle,
+    .mobile-review-label {
+        color: #d1d5db;
+    }
+    
+    .mobile-form-field input,
+    .mobile-form-field textarea,
+    .mobile-form-field select {
+        background: rgba(55, 65, 81, 0.8);
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+} 

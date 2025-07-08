@@ -394,8 +394,11 @@ async def handle_application_action(query, context):
 async def handle_submit(request: web.Request) -> web.Response:
     """Обработка заявки из WebApp"""
 
+    log.info("📥 Received submit request")
+
     # CORS
     if request.method == "OPTIONS":
+        log.info("🔄 CORS preflight request")
         return web.Response(headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -404,7 +407,9 @@ async def handle_submit(request: web.Request) -> web.Response:
 
     try:
         data = await request.json()
-    except:
+        log.info(f"📋 Form data received: {data.keys()}")
+    except Exception as e:
+        log.error(f"❌ JSON parse error: {e}")
         return web.json_response({"error": "Invalid JSON"}, status=400)
 
     # Извлекаем данные
@@ -420,63 +425,88 @@ async def handle_submit(request: web.Request) -> web.Response:
     utm_source = data.get("utm_source")
     tg_user_id = data.get("tg_user_id")
 
-    async with async_sessionmaker() as session:
-        # Получаем или создаем пользователя
-        if tg_user_id:
-            result = await session.execute(
-                select(User).where(User.tg_id == tg_user_id)
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                user = User(tg_id=tg_user_id)
+    try:
+        async with async_sessionmaker() as session:
+            log.info("💾 Starting database operations")
+
+            # Получаем или создаем пользователя
+            if tg_user_id:
+                log.info(f"👤 Looking for user with tg_id: {tg_user_id}")
+                result = await session.execute(
+                    select(User).where(User.tg_id == tg_user_id)
+                )
+                user = result.scalar_one_or_none()
+                if not user:
+                    log.info("👤 Creating new user from Telegram")
+                    user = User(tg_id=tg_user_id)
+                    session.add(user)
+                else:
+                    log.info(f"👤 Found existing user: {user.id}")
+            else:
+                log.info("👤 Creating temporary user (no Telegram ID)")
+                # Создаем временного пользователя
+                user = User(
+                    tg_id=0,  # временный
+                    first_name=name.split()[0] if name else "Гость",
+                    phone=phone,
+                    email=email
+                )
                 session.add(user)
-        else:
-            # Создаем временного пользователя
-            user = User(
-                tg_id=0,  # временный
-                first_name=name.split()[0] if name else "Гость",
-                phone=phone,
-                email=email
+
+            # Обновляем данные пользователя
+            if phone:
+                user.phone = phone
+            if email:
+                user.email = email
+            if name and not user.first_name:
+                user.first_name = name.split()[0]
+
+            # Коммитим пользователя сначала
+            log.info("💾 Committing user data")
+            await session.commit()
+            await session.refresh(user)
+            log.info(f"✅ User saved with ID: {user.id}")
+
+            # Создаем заявку
+            log.info(f"📝 Creating application for category_id: {category_id}")
+            app = AppModel(
+                user_id=user.id,
+                category_id=category_id,
+                subcategory=subcategory,
+                description=description,
+                contact_method=contact_method,
+                contact_time=contact_time,
+                files_data=files if files else None,
+                utm_source=utm_source,
+                status="new"
             )
-            session.add(user)
+            session.add(app)
+            await session.commit()
+            await session.refresh(app)
+            log.info(f"✅ Application created with ID: {app.id}")
 
-        # Обновляем данные пользователя
-        if phone:
-            user.phone = phone
-        if email:
-            user.email = email
-        if name and not user.first_name:
-            user.first_name = name.split()[0]
+            # Определяем цену (можно сделать динамически)
+            app.price = Decimal("5000")  # базовая консультация
+            await session.commit()
 
-        # Коммитим пользователя сначала
-        await session.commit()
-        await session.refresh(user)
+            # Получаем категорию для Sheets
+            log.info(f"📂 Getting category {category_id}")
+            cat_result = await session.execute(
+                select(Category).where(Category.id == category_id)
+            )
+            category = cat_result.scalar_one()
+            log.info(f"📂 Found category: {category.name}")
 
-        # Создаем заявку
-        app = AppModel(
-            user_id=user.id,
-            category_id=category_id,
-            subcategory=subcategory,
-            description=description,
-            contact_method=contact_method,
-            contact_time=contact_time,
-            files_data=files if files else None,
-            utm_source=utm_source,
-            status="new"
+    except Exception as e:
+        log.error(f"❌ Database error: {e}")
+        log.error(f"❌ Exception type: {type(e)}")
+        import traceback
+        log.error(f"❌ Traceback: {traceback.format_exc()}")
+        return web.json_response(
+            {"error": f"Database error: {str(e)}"},
+            status=500,
+            headers={"Access-Control-Allow-Origin": "*"}
         )
-        session.add(app)
-        await session.commit()
-        await session.refresh(app)
-
-        # Определяем цену (можно сделать динамически)
-        app.price = Decimal("5000")  # базовая консультация
-        await session.commit()
-
-        # Получаем категорию для Sheets
-        cat_result = await session.execute(
-            select(Category).where(Category.id == category_id)
-        )
-        category = cat_result.scalar_one()
 
     # Записываем в Google Sheets
     try:
@@ -550,11 +580,14 @@ async def handle_submit(request: web.Request) -> web.Response:
         log.error(f"Client notification error: {e}")
 
     # Отвечаем клиенту
-    return web.json_response({
+    log.info(f"✅ Application {app.id} processed successfully")
+    response_data = {
         "status": "ok",
         "app_id": app.id,
         "pay_url": pay_url
-    }, headers={"Access-Control-Allow-Origin": "*"})
+    }
+    log.info(f"📤 Sending response: {response_data}")
+    return web.json_response(response_data, headers={"Access-Control-Allow-Origin": "*"})
 
 
 async def handle_webapp(request: web.Request) -> web.Response:

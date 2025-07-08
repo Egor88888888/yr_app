@@ -53,32 +53,29 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderCategories() {
     const container = document.getElementById('categories');
     container.innerHTML = categories.map(cat => `
-        <div class="category-card" data-id="${cat.id}" data-name="${cat.name}">
+        <div class="mobile-category-card" data-id="${cat.id}" data-name="${cat.name}">
             <div class="emoji">${cat.icon}</div>
             <div class="text">${cat.name}</div>
         </div>
     `).join('');
     
     // Add click handlers
-    container.querySelectorAll('.category-card').forEach(card => {
+    container.querySelectorAll('.mobile-category-card').forEach(card => {
         card.addEventListener('click', () => {
             // Remove previous selection
-            container.querySelectorAll('.category-card').forEach(c => {
-                c.style.background = '';
-                c.style.transform = '';
-                c.style.borderColor = '';
+            container.querySelectorAll('.mobile-category-card').forEach(c => {
+                c.classList.remove('selected');
             });
             
-            // Visual feedback for selected card
-            card.style.background = '#e0f2fe';
-            card.style.transform = 'scale(1.02)';
-            card.style.borderColor = '#0284c7';
+            // Add selected class for mobile styling
+            card.classList.add('selected');
             
             formData.category_id = parseInt(card.dataset.id);
             formData.category_name = card.dataset.name;
             
-            // Show selected category info
-            document.getElementById('selected-category').classList.remove('hidden');
+            // Show selected category info with mobile classes
+            const selectedCategoryDiv = document.getElementById('selected-category');
+            selectedCategoryDiv.classList.remove('hidden', 'mobile-hidden');
             document.getElementById('selected-category-name').textContent = card.dataset.name;
             
             // Auto-advance after short delay (optional)
@@ -193,10 +190,15 @@ function validateStep3() {
 // Update UI
 function updateUI() {
     // Hide all steps
-    document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
+    document.querySelectorAll('.step').forEach(step => {
+        step.classList.add('hidden', 'mobile-hidden');
+    });
     
     // Show current step
-    document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+    const currentStepElement = document.getElementById(`step-${currentStep}`);
+    if (currentStepElement) {
+        currentStepElement.classList.remove('hidden', 'mobile-hidden');
+    }
     
     // Update progress
     document.getElementById('step-indicator').textContent = `Шаг ${currentStep} из 4`;
@@ -222,7 +224,7 @@ function updateWebButtons() {
     // Update category selection visibility
     const selectedCategory = document.getElementById('selected-category');
     if (currentStep === 1 && !formData.category_id) {
-        selectedCategory.classList.add('hidden');
+        selectedCategory.classList.add('hidden', 'mobile-hidden');
     }
     
     // Special handling for step 4 (review)
@@ -337,49 +339,49 @@ function showReview() {
     };
     
     const reviewHtml = `
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Категория</div>
-            <div class="font-medium">${formData.category_name}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Категория</div>
+            <div class="mobile-review-value">${formData.category_name}</div>
         </div>
         ${formData.subcategory ? `
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Уточнение</div>
-            <div class="font-medium">${formData.subcategory}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Уточнение</div>
+            <div class="mobile-review-value">${formData.subcategory}</div>
         </div>
         ` : ''}
         ${formData.description ? `
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Описание</div>
-            <div class="font-medium">${formData.description}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Описание</div>
+            <div class="mobile-review-value">${formData.description}</div>
         </div>
         ` : ''}
         ${formData.files.length > 0 ? `
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Документы</div>
-            <div class="font-medium">${formData.files.length} файл(ов)</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Документы</div>
+            <div class="mobile-review-value">${formData.files.length} файл(ов)</div>
         </div>
         ` : ''}
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Имя</div>
-            <div class="font-medium">${formData.name}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Имя</div>
+            <div class="mobile-review-value">${formData.name}</div>
         </div>
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Телефон</div>
-            <div class="font-medium">${formData.phone}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Телефон</div>
+            <div class="mobile-review-value">${formData.phone}</div>
         </div>
         ${formData.email ? `
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Email</div>
-            <div class="font-medium">${formData.email}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Email</div>
+            <div class="mobile-review-value">${formData.email}</div>
         </div>
         ` : ''}
-        <div class="border-b pb-3">
-            <div class="text-sm text-gray-600">Способ связи</div>
-            <div class="font-medium">${contactMethods[formData.contact_method]}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Способ связи</div>
+            <div class="mobile-review-value">${contactMethods[formData.contact_method]}</div>
         </div>
-        <div>
-            <div class="text-sm text-gray-600">Время связи</div>
-            <div class="font-medium">${contactTimes[formData.contact_time]}</div>
+        <div class="mobile-review-item">
+            <div class="mobile-review-label">Время связи</div>
+            <div class="mobile-review-value">${contactTimes[formData.contact_time]}</div>
         </div>
     `;
     
@@ -418,13 +420,15 @@ async function submitForm() {
         console.log('Result:', result);
         
         if (result.status === 'ok') {
-            // Show success
-            document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
-            document.getElementById('success').classList.remove('hidden');
+            // Show success with mobile classes
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.add('hidden', 'mobile-hidden');
+            });
+            document.getElementById('success').classList.remove('hidden', 'mobile-hidden');
             
             // Show payment if needed
             if (result.pay_url && result.pay_url !== '# Платежная система не настроена') {
-                document.getElementById('payment-section').classList.remove('hidden');
+                document.getElementById('payment-section').classList.remove('hidden', 'mobile-hidden');
                 document.getElementById('pay-button').href = result.pay_url;
             }
             
