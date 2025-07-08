@@ -39,4 +39,129 @@
     display: revert !important;
     margin: revert !important;
     font-size: revert !important;
+}
+
+/* ===========================
+   ФАЙЛЫ - ИСПРАВЛЕНИЯ
+   =========================== */
+
+.mobile-file-preview {
+    display: flex;
+    align-items: center;
+    background: rgba(248, 250, 252, 0.9);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    transition: all 0.3s ease;
+}
+
+.mobile-file-preview:hover {
+    background: rgba(241, 245, 249, 0.95);
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+}
+
+.mobile-file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    flex: 1;
+}
+
+.mobile-file-size {
+    font-size: 12px;
+    color: #64748b;
+    margin-left: 12px;
+    font-weight: 400;
+}
+
+.mobile-file-remove {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 16px;
+    margin-left: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mobile-file-remove:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+/* ===========================
+   DESKTOP ИСПРАВЛЕНИЯ
+   =========================== */
+
+/* Обеспечиваем работу полей ввода на Desktop */
+@media screen and (min-width: 768px) {
+    
+    /* Поля ввода должны работать на Desktop */
+    .mobile-form-field input,
+    .mobile-form-field textarea,
+    .mobile-form-field select {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid rgba(203, 213, 225, 0.8) !important;
+        color: #1e293b !important;
+        font-size: 16px !important;
+        padding: 12px 16px !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease !important;
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
+    
+    .mobile-form-field input:focus,
+    .mobile-form-field textarea:focus,
+    .mobile-form-field select:focus {
+        outline: none !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        background: #ffffff !important;
+    }
+    
+    /* Убираем ограничения мобильного дизайна на Desktop */
+    .mobile-category-card {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+    
+    .mobile-btn {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+    
+    /* Улучшаем видимость на больших экранах */
+    .mobile-form-container {
+        max-width: 600px;
+        margin: 20px auto;
+    }
+    
+    .mobile-category-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+}
+
+/* ===========================
+   КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ
+   =========================== */
+
+/* Убеждаемся что mobile-hidden работает везде */
+.mobile-hidden {
+    display: none !important;
+}
+
+/* Убираем любые конфликты с display */
+.step {
+    display: block;
+}
+
+.step.mobile-hidden {
+    display: none !important;
 } 

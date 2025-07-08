@@ -202,15 +202,15 @@ function validateStep3() {
 
 // Update UI
 function updateUI() {
-    // Hide all steps
+    // Hide all steps - используем только mobile-hidden класс
     document.querySelectorAll('.step').forEach(step => {
-        step.classList.add('hidden', 'mobile-hidden');
+        step.classList.add('mobile-hidden');
     });
     
     // Show current step
     const currentStepElement = document.getElementById(`step-${currentStep}`);
     if (currentStepElement) {
-        currentStepElement.classList.remove('hidden', 'mobile-hidden');
+        currentStepElement.classList.remove('mobile-hidden');
     }
     
     // Update progress
@@ -237,7 +237,7 @@ function updateWebButtons() {
     // Update category selection visibility
     const selectedCategory = document.getElementById('selected-category');
     if (currentStep === 1 && !formData.category_id) {
-        selectedCategory.classList.add('hidden', 'mobile-hidden');
+        selectedCategory.classList.add('mobile-hidden');
     }
     
     // Special handling for step 4 (review)
@@ -299,12 +299,12 @@ function handleFiles(files) {
             
             // Add preview
             const preview = document.createElement('div');
-            preview.className = 'flex items-center bg-gray-50 p-2 rounded';
+            preview.className = 'mobile-file-preview';
             preview.innerHTML = `
-                <span class="text-sm">${file.name}</span>
-                <span class="text-xs text-gray-500 ml-2">${(file.size/1024).toFixed(1)}KB</span>
+                <span class="mobile-file-name">${file.name}</span>
+                <span class="mobile-file-size">${(file.size/1024).toFixed(1)}KB</span>
                 <button type="button" onclick="removeFile(${uploadedFiles.length-1})" 
-                        class="ml-auto text-red-500 text-sm">✕</button>
+                        class="mobile-file-remove">✕</button>
             `;
             fileList.appendChild(preview);
         };
@@ -321,12 +321,12 @@ function removeFile(index) {
     fileList.innerHTML = '';
     uploadedFiles.forEach((file, i) => {
         const preview = document.createElement('div');
-        preview.className = 'flex items-center bg-gray-50 p-2 rounded';
+        preview.className = 'mobile-file-preview';
         preview.innerHTML = `
-            <span class="text-sm">${file.name}</span>
-            <span class="text-xs text-gray-500 ml-2">${(file.size/1024).toFixed(1)}KB</span>
+            <span class="mobile-file-name">${file.name}</span>
+            <span class="mobile-file-size">${(file.size/1024).toFixed(1)}KB</span>
             <button type="button" onclick="removeFile(${i})" 
-                    class="ml-auto text-red-500 text-sm">✕</button>
+                    class="mobile-file-remove">✕</button>
         `;
         fileList.appendChild(preview);
     });

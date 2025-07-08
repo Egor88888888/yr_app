@@ -27,7 +27,7 @@ async def _db_upgrade():
     from alembic.config import Config
 
     alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", "migrations")
+    alembic_cfg.set_main_option("script_location", "alembic")
     alembic_cfg.set_main_option(
         "sqlalchemy.url", async_engine.url.render_as_string(hide_password=False))
     command.upgrade(alembic_cfg, "head")
