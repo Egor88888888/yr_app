@@ -1205,11 +1205,17 @@ async def main():
     ))
 
     # Джобы
-    application.job_queue.run_repeating(
-        autopost_job,
-        interval=timedelta(hours=2),
-        first=timedelta(minutes=10)
-    )
+    if application.job_queue is not None:
+        application.job_queue.run_repeating(
+            autopost_job,
+            interval=timedelta(hours=2),
+            first=timedelta(minutes=10)
+        )
+        print("✅ Job queue initialized - autopost enabled")
+        log.info("Job queue initialized successfully")
+    else:
+        print("⚠️ Job queue not available - autopost disabled")
+        log.warning("Job queue not available, autopost functionality disabled")
 
     # Инициализация после запуска
     application.post_init = post_init
