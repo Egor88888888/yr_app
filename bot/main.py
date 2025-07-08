@@ -547,9 +547,9 @@ async def handle_submit(request: web.Request) -> web.Response:
                 # Создаем нового временного пользователя с уникальным отрицательным tg_id
                 import time
                 import random
-                # Генерируем уникальный отрицательный ID: время + случайное число
-                temp_tg_id = -int(time.time() * 1000) - \
-                    random.randint(1000, 9999)
+                # Генерируем уникальный отрицательный ID: в пределах int32
+                max_int32 = 2_000_000_000
+                temp_tg_id = -random.randint(1, max_int32)
                 user = User(
                     tg_id=temp_tg_id,
                     first_name=name.split()[0] if name else "Гость",
