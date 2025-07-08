@@ -1425,6 +1425,74 @@ async def fix_database_schema():
             else:
                 log.info("✅ updated_at column exists")
 
+            # Проверяем есть ли колонка user_id в таблице applications
+            result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'user_id'
+            """))
+
+            if not result.scalar_one_or_none():
+                log.info("🔧 Missing user_id column, adding it...")
+
+                # Добавляем колонку user_id
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN user_id INTEGER
+                """))
+
+                # Обновляем существующие записи значением по умолчанию
+                await session.execute(text("""
+                    UPDATE applications 
+                    SET user_id = 1 
+                    WHERE user_id IS NULL
+                """))
+
+                # Добавляем NOT NULL constraint
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ALTER COLUMN user_id SET NOT NULL
+                """))
+
+                # Добавляем внешний ключ
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD CONSTRAINT fk_applications_user_id 
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                """))
+
+                await session.commit()
+                log.info("✅ user_id column added successfully")
+                print("✅ Database schema fixed: user_id column added")
+            else:
+                log.info("✅ user_id column exists")
+
+            # Проверяем тип колонки user_id - должен быть INTEGER
+            result = await session.execute(text("""
+                SELECT data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' 
+                AND column_name = 'user_id'
+            """))
+
+            user_id_type = result.scalar_one_or_none()
+            if user_id_type and 'character' in user_id_type:
+                log.info(
+                    "🔧 user_id column has wrong type (VARCHAR), converting to INTEGER...")
+
+                # Преобразуем тип колонки user_id
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ALTER COLUMN user_id TYPE INTEGER USING user_id::INTEGER
+                """))
+
+                await session.commit()
+                log.info("✅ user_id column type converted to INTEGER")
+                print("✅ Database schema fixed: user_id converted to INTEGER")
+            else:
+                log.info("✅ user_id column has correct type")
+
             print("✅ Database schema is up to date")
 
     except Exception as e:
