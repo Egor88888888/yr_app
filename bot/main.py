@@ -605,11 +605,25 @@ async def show_applications(query, context):
     keyboard.append([InlineKeyboardButton(
         "🔙 Назад", callback_data="back_admin")])
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_application_action(query, context):
@@ -646,21 +660,45 @@ async def handle_application_action(query, context):
         subcategory_detail = app.subcategory.split(':', 1)[1].strip(
         ) if app.subcategory and ':' in app.subcategory else '-'
 
+        # Безопасное формирование текста с ограничением длины и экранированием
+        description = (app.description or '-')
+        if len(description) > 500:
+            description = description[:500] + '...'
+
+        # Экранируем специальные символы Markdown
+        def escape_markdown(text):
+            if not text or text == '-':
+                return text
+            # Экранируем основные символы Markdown для безопасности
+            text = str(text)
+            chars = ['*', '_', '[', ']', '`', '\\']
+            for char in chars:
+                text = text.replace(char, f'\\{char}')
+            return text
+
+        safe_description = escape_markdown(description)
+        safe_first_name = escape_markdown(user.first_name or 'Без имени')
+        safe_last_name = escape_markdown(user.last_name or '')
+        safe_phone = escape_markdown(user.phone or '-')
+        safe_email = escape_markdown(user.email or '-')
+        safe_category = escape_markdown(category_name)
+        safe_subcategory = escape_markdown(subcategory_detail)
+
         text = f"""
 📋 **ЗАЯВКА #{app.id}**
 
-📂 Категория: {category_name}
-📝 Подкатегория: {subcategory_detail}
+📂 Категория: {safe_category}
+📝 Подкатегория: {safe_subcategory}
 
 👤 **Клиент:**
-Имя: {user.first_name} {user.last_name or ''}
-📞 {user.phone or '-'}
-📧 {user.email or '-'}
+Имя: {safe_first_name} {safe_last_name}
+📞 {safe_phone}
+📧 {safe_email}
 💬 Связь: {contact_methods.get(app.contact_method, app.contact_method or '-')}
 🕐 Время: {app.contact_time or 'любое'}
 
 📄 **Описание:**
-{app.description or '-'}
+{safe_description}
 
 {f'📎 Файлов: {len(app.files_data or [])}' if app.files_data else ''}
 {f'🏷️ UTM: {app.utm_source}' if app.utm_source else ''}
@@ -669,6 +707,10 @@ async def handle_application_action(query, context):
 📊 Статус: {app.status}
 📅 Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
 """
+
+        # Ограничиваем общую длину сообщения для Telegram
+        if len(text) > 4000:
+            text = text[:4000] + '\n\\.\\.\\.'
 
         # Динамические кнопки в зависимости от статуса
         keyboard = []
@@ -697,11 +739,25 @@ async def handle_application_action(query, context):
         keyboard.append([InlineKeyboardButton(
             "🔙 К списку", callback_data="admin_apps")])
 
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
-        )
+        try:
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            log.error(f"Failed to edit message: {e}")
+            # Fallback: отправляем новое сообщение если редактирование не удалось
+            try:
+                await query.message.reply_text(
+                    text,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+                await query.answer("Сообщение обновлено")
+            except Exception as fallback_error:
+                log.error(f"Fallback message also failed: {fallback_error}")
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     elif data.startswith("app_take_"):
         # ✅ Взять заявку в работу
@@ -909,11 +965,26 @@ async def handle_application_action(query, context):
                         "🔙 К списку", callback_data="admin_apps")]
                 ]
 
-            await query.edit_message_text(
-                text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
-            )
+            try:
+                await query.edit_message_text(
+                    text,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                log.error(f"Failed to edit message: {e}")
+                # Fallback: отправляем новое сообщение если редактирование не удалось
+                try:
+                    await query.message.reply_text(
+                        text,
+                        reply_markup=InlineKeyboardMarkup(keyboard),
+                        parse_mode='Markdown'
+                    )
+                    await query.answer("Сообщение обновлено")
+                except Exception as fallback_error:
+                    log.error(
+                        f"Fallback message also failed: {fallback_error}")
+                    await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
         except Exception as e:
             log.error(f"Error billing application {app_id}: {e}")
@@ -1526,11 +1597,25 @@ async def show_statistics(query, context):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_admin_panel(query):
@@ -1545,11 +1630,25 @@ async def show_admin_panel(query):
         [InlineKeyboardButton("⚙️ Настройки", callback_data="admin_settings")]
     ]
 
-    await query.edit_message_text(
-        "🔧 **АДМИН ПАНЕЛЬ**\n\nВыберите раздел:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            "🔧 **АДМИН ПАНЕЛЬ**\n\nВыберите раздел:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                "🔧 **АДМИН ПАНЕЛЬ**\n\nВыберите раздел:",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_payments(query, context):
@@ -1617,11 +1716,25 @@ async def show_payments(query, context):
     keyboard.append([InlineKeyboardButton(
         "🔙 Назад", callback_data="back_admin")])
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_clients(query, context):
@@ -1676,11 +1789,25 @@ async def show_clients(query, context):
     keyboard.append([InlineKeyboardButton(
         "🔙 Назад", callback_data="back_admin")])
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_broadcast_options(query, context):
@@ -1709,11 +1836,25 @@ async def show_broadcast_options(query, context):
         [InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]
     ]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_admin_settings(query, context):
@@ -1755,11 +1896,25 @@ async def show_admin_settings(query, context):
         [InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]
     ]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_client_action(query, context):
@@ -1827,11 +1982,25 @@ async def handle_client_action(query, context):
         keyboard.append([InlineKeyboardButton(
             "🔙 К списку", callback_data="admin_users")])
 
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
-        )
+        try:
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            log.error(f"Failed to edit message: {e}")
+            # Fallback: отправляем новое сообщение если редактирование не удалось
+            try:
+                await query.message.reply_text(
+                    text,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+                await query.answer("Сообщение обновлено")
+            except Exception as fallback_error:
+                log.error(f"Fallback message also failed: {fallback_error}")
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_broadcast_action(query, context):
@@ -1894,11 +2063,26 @@ async def handle_broadcast_action(query, context):
                     "❌ Отменить", callback_data="admin_broadcast")]
             ]
 
-            await query.edit_message_text(
-                text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
-            )
+            try:
+                await query.edit_message_text(
+                    text,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                log.error(f"Failed to edit message: {e}")
+                # Fallback: отправляем новое сообщение если редактирование не удалось
+                try:
+                    await query.message.reply_text(
+                        text,
+                        reply_markup=InlineKeyboardMarkup(keyboard),
+                        parse_mode='Markdown'
+                    )
+                    await query.answer("Сообщение обновлено")
+                except Exception as fallback_error:
+                    log.error(
+                        f"Fallback message also failed: {fallback_error}")
+                    await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
             # Сохраняем данные рассылки в контексте
             context.user_data['pending_broadcast'] = {
@@ -1961,11 +2145,25 @@ async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TY
         'title': title
     }
 
-    await update.message.reply_text(
-        confirm_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await update.message.reply_text(
+            confirm_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to send confirmation message: {e}")
+        # Fallback: отправляем новое сообщение если отправка не удалась
+        try:
+            await update.message.reply_text(
+                confirm_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await update.answer("Сообщение отправлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await update.answer("❌ Ошибка отправки сообщения", show_alert=True)
 
 
 async def execute_broadcast(query, context):
@@ -1999,10 +2197,23 @@ async def execute_broadcast(query, context):
 ⏳ Отправляется... 0/{len(user_ids)}
 """
 
-    await query.edit_message_text(
-        progress_text,
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            progress_text,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to send progress message: {e}")
+        # Fallback: отправляем новое сообщение если отправка не удалась
+        try:
+            await query.message.reply_text(
+                progress_text,
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение отправлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отправки сообщения", show_alert=True)
 
     # Выполняем рассылку
     bot = query.bot
@@ -2064,11 +2275,25 @@ async def execute_broadcast(query, context):
         [InlineKeyboardButton("🏠 Главное меню", callback_data="back_admin")]
     ]
 
-    await query.edit_message_text(
-        final_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            final_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                final_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     log.info(
         f"Broadcast completed: {sent_count}/{len(user_ids)} sent successfully")
@@ -2126,11 +2351,25 @@ async def show_admin_management(query, context):
         [InlineKeyboardButton("🔙 Назад", callback_data="admin_settings")]
     ]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def export_data(query, context):
@@ -2177,11 +2416,25 @@ async def export_data(query, context):
             [InlineKeyboardButton("🔙 Назад", callback_data="admin_settings")]
         ]
 
-        await query.edit_message_text(
-            report,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
-        )
+        try:
+            await query.edit_message_text(
+                report,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            log.error(f"Failed to edit message: {e}")
+            # Fallback: отправляем новое сообщение если редактирование не удалось
+            try:
+                await query.message.reply_text(
+                    report,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+                await query.answer("Сообщение обновлено")
+            except Exception as fallback_error:
+                log.error(f"Fallback message also failed: {fallback_error}")
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     except Exception as e:
         await query.answer(f"Ошибка экспорта: {e}", show_alert=True)
@@ -2286,11 +2539,25 @@ async def show_detailed_stats(query, context):
         [InlineKeyboardButton("🔙 Назад", callback_data="admin_settings")]
     ]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def show_ai_status(query, context):
@@ -2341,11 +2608,25 @@ async def show_ai_status(query, context):
 
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_admin")]]
 
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    try:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        log.error(f"Failed to edit message: {e}")
+        # Fallback: отправляем новое сообщение если редактирование не удалось
+        try:
+            await query.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            await query.answer("Сообщение обновлено")
+        except Exception as fallback_error:
+            log.error(f"Fallback message also failed: {fallback_error}")
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 # ================ JOBS ================
