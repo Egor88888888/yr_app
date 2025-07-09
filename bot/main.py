@@ -845,10 +845,12 @@ async def handle_application_action(query, context):
                 # Создаем ссылку на оплату
                 try:
                     pay_url = create_payment(app, user, app.price)
+                    if pay_url is None:
+                        # Платежная система отключена
+                        pay_url = None
                 except Exception as e:
                     log.error(f"Payment creation error: {e}")
-                    # Fallback URL
-                    pay_url = f"https://example.com/pay/{app.id}"
+                    pay_url = None
 
                 # Добавляем заметку
                 if not app.notes:
@@ -864,8 +866,9 @@ async def handle_application_action(query, context):
             except Exception as e:
                 log.error(f"Payment notification error: {e}")
 
-            # Отправляем ссылку на оплату администратору
-            text = f"""
+            # Отправляем информацию о счете администратору
+            if pay_url:
+                text = f"""
 💳 **СЧЕТ ВЫСТАВЛЕН**
 
 📋 Заявка: #{app.id}
@@ -878,13 +881,33 @@ async def handle_application_action(query, context):
 ✅ Клиент уведомлен о необходимости оплаты
 """
 
-            keyboard = [
-                [InlineKeyboardButton("🔗 Открыть ссылку", url=pay_url)],
-                [InlineKeyboardButton(
-                    "📋 Вернуться к заявке", callback_data=f"app_view_{app_id}")],
-                [InlineKeyboardButton(
-                    "🔙 К списку", callback_data="admin_apps")]
-            ]
+                keyboard = [
+                    [InlineKeyboardButton("🔗 Открыть ссылку", url=pay_url)],
+                    [InlineKeyboardButton(
+                        "📋 Вернуться к заявке", callback_data=f"app_view_{app_id}")],
+                    [InlineKeyboardButton(
+                        "🔙 К списку", callback_data="admin_apps")]
+                ]
+            else:
+                text = f"""
+💳 **СЧЕТ ВЫСТАВЛЕН**
+
+📋 Заявка: #{app.id}
+👤 Клиент: {user.first_name} {user.last_name or ''}
+💰 Сумма: {app.price} ₽
+
+⚠️ **Платежная система не настроена**
+Клиент должен оплатить другим способом
+
+✅ Клиент уведомлен о необходимости оплаты
+"""
+
+                keyboard = [
+                    [InlineKeyboardButton(
+                        "📋 Вернуться к заявке", callback_data=f"app_view_{app_id}")],
+                    [InlineKeyboardButton(
+                        "🔙 К списку", callback_data="admin_apps")]
+                ]
 
             await query.edit_message_text(
                 text,

@@ -48,7 +48,7 @@ def _encode(data: dict) -> str:
 def create_payment(app: "Application", user: "User", amount: Decimal) -> str:
     """Return redirect link to CloudPayments payment form."""
     if not PAYMENTS_ENABLED:
-        return "# Платежная система не настроена"
+        return None  # Возвращаем None вместо невалидного URL
 
     data = {
         "publicId": CP_PUBLIC_ID,
