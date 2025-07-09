@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from sqlalchemy import select, desc
-from ...db import async_sessionmaker
+from ...db import async_sessionmaker, User
 from ...ai_enhanced_models import DialogueSession
 
 logger = logging.getLogger(__name__)
@@ -49,12 +49,31 @@ class SessionManager:
                     del self.active_sessions[user_id]
 
             async with async_sessionmaker() as db_session:
-                # Ищем активную сессию в БД
+                # ИСПРАВЛЕНО: Сначала проверяем/создаем пользователя
+                user_result = await db_session.execute(
+                    select(User).where(User.tg_id == user_id)
+                )
+                user = user_result.scalar_one_or_none()
+
+                if not user:
+                    # Создаем базового пользователя если его нет
+                    user = User(
+                        tg_id=user_id,
+                        first_name="Пользователь",
+                        preferred_contact="telegram"
+                    )
+                    db_session.add(user)
+                    await db_session.commit()
+                    await db_session.refresh(user)
+                    logger.info(
+                        f"✅ Created missing user with tg_id: {user_id}")
+
+                # Ищем активную сессию в БД по правильному user.id
                 cutoff_time = datetime.now() - timedelta(hours=self.session_timeout_hours)
                 result = await db_session.execute(
                     select(DialogueSession)
                     .where(
-                        DialogueSession.user_id == user_id,
+                        DialogueSession.user_id == user.id,  # ИСПРАВЛЕНО: используем user.id
                         DialogueSession.resolution_status == "ongoing",
                         DialogueSession.last_activity >= cutoff_time
                     )
@@ -73,9 +92,9 @@ class SessionManager:
                     self.active_sessions[user_id] = existing_session
                     return existing_session
 
-                # Создаем новую сессию
+                # Создаем новую сессию с правильным user.id
                 new_session = DialogueSession(
-                    user_id=user_id,
+                    user_id=user.id,  # ИСПРАВЛЕНО: используем user.id, не tg_id
                     session_uuid=str(uuid.uuid4()),
                     context_summary="",
                     message_count=0,

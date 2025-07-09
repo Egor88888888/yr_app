@@ -40,16 +40,35 @@ class UserProfiler:
                 return self.profiles_cache[user_id]
 
             async with async_sessionmaker() as session:
-                # Ищем существующий профиль
+                # ИСПРАВЛЕНО: Сначала проверяем/создаем пользователя
+                user_result = await session.execute(
+                    select(User).where(User.tg_id == user_id)
+                )
+                user = user_result.scalar_one_or_none()
+
+                if not user:
+                    # Создаем базового пользователя если его нет
+                    user = User(
+                        tg_id=user_id,
+                        first_name="Пользователь",
+                        preferred_contact="telegram"
+                    )
+                    session.add(user)
+                    await session.commit()
+                    await session.refresh(user)
+                    logger.info(
+                        f"✅ Created missing user with tg_id: {user_id}")
+
+                # Теперь ищем профиль по database user.id (не tg_id!)
                 result = await session.execute(
-                    select(UserProfile).where(UserProfile.user_id == user_id)
+                    select(UserProfile).where(UserProfile.user_id == user.id)
                 )
                 profile = result.scalar_one_or_none()
 
                 if not profile:
-                    # Создаем новый профиль
+                    # Создаем новый профиль с правильным user.id
                     profile = UserProfile(
-                        user_id=user_id,
+                        user_id=user.id,  # ИСПРАВЛЕНО: используем user.id, не tg_id
                         experience_level="beginner",
                         preferred_style="friendly",
                         communication_speed="normal",
