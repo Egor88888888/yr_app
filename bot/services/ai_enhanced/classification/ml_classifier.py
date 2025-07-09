@@ -25,6 +25,10 @@ AZURE_OPENAI_ENDPOINT = os.getenv(
 AZURE_OPENAI_API_VERSION = os.getenv(
     "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
+# Azure OpenAI embeddings deployment name (configurable)
+AZURE_EMBEDDINGS_DEPLOYMENT = os.getenv(
+    "AZURE_EMBEDDINGS_DEPLOYMENT", "text-embedding-ada-002")
+
 # Fallback to OpenRouter if Azure not configured
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
@@ -202,12 +206,20 @@ class MLClassifier:
     async def _get_embedding(self, text: str) -> Optional[List[float]]:
         """Получение эмбеддинга текста через Azure OpenAI или OpenRouter"""
         try:
-            # Пробуем Azure OpenAI сначала
-            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
-                return await self._get_azure_embedding(text)
-            elif OPENROUTER_API_KEY:
+            # Пробуем Azure OpenAI сначала (но только если есть конкретный deployment)
+            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT and AZURE_EMBEDDINGS_DEPLOYMENT != "text-embedding-ada-002":
+                azure_result = await self._get_azure_embedding(text)
+                if azure_result is not None:
+                    return azure_result
+                else:
+                    logger.warning(
+                        "Azure embeddings failed, falling back to OpenRouter")
+
+            # Fallback на OpenRouter
+            if OPENROUTER_API_KEY:
                 return await self._get_openrouter_embedding(text)
             else:
+                logger.warning("No embedding service available")
                 return None
 
         except Exception as e:
@@ -223,7 +235,7 @@ class MLClassifier:
             }
 
             # Azure OpenAI embeddings endpoint
-            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/text-embedding-ada-002/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
+            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{AZURE_EMBEDDINGS_DEPLOYMENT}/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
 
             data = {
                 "input": text,
