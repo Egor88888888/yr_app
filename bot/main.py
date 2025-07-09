@@ -313,15 +313,21 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """AI консультант по всем юридическим вопросам с Enhanced AI"""
+    """AI консультант по всем юридическим вопросам с Enhanced AI + обработка рассылок"""
     global ai_enhanced_manager
+
+    user_id = update.effective_user.id
+    user_text = update.message.text
+    user = update.effective_user
+
+    # 🔧 ФИКС: Проверяем, ждет ли админ ввод текста для рассылки
+    if await is_admin(user_id) and context.user_data.get('pending_broadcast', {}).get('waiting_for_text'):
+        await handle_broadcast_text(update, context)
+        return
 
     if not OPENROUTER_API_KEY:
         await update.message.reply_text("AI консультант временно недоступен")
         return
-
-    user_text = update.message.text
-    user = update.effective_user
 
     try:
         # Используем Enhanced AI если доступен
@@ -549,6 +555,8 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_client_action(query, context)
     elif data.startswith("broadcast_"):
         await handle_broadcast_action(query, context)
+    elif data.startswith("confirm_broadcast_"):
+        await execute_broadcast(query, context)
     elif data.startswith("setting_"):
         await handle_settings_action(query, context)
     elif data == "back_admin":
@@ -1743,43 +1751,238 @@ async def handle_broadcast_action(query, context):
 
     # Определяем тип рассылки
     broadcast_types = {
-        "broadcast_all": ("👥 Всем клиентам", "Всем пользователям бота"),
-        "broadcast_active": ("📝 С активными заявками", "Клиентам с заявками в работе"),
-        "broadcast_inactive": ("💤 Без заявок", "Пользователям без заявок"),
-        "broadcast_vip": ("⭐ VIP клиентам", "VIP клиентам (3+ заявки)")
+        "broadcast_all": ("👥 Всем клиентам", "SELECT DISTINCT tg_id FROM users WHERE tg_id IS NOT NULL"),
+        "broadcast_active": ("📝 С активными заявками", """
+            SELECT DISTINCT u.tg_id FROM users u 
+            JOIN applications a ON u.id = a.user_id 
+            WHERE a.status IN ('new', 'processing') AND u.tg_id IS NOT NULL
+        """),
+        "broadcast_inactive": ("💤 Без заявок", """
+            SELECT DISTINCT tg_id FROM users 
+            WHERE id NOT IN (SELECT DISTINCT user_id FROM applications) 
+            AND tg_id IS NOT NULL
+        """),
+        "broadcast_vip": ("⭐ VIP клиентам", """
+            SELECT DISTINCT u.tg_id FROM users u 
+            JOIN applications a ON u.id = a.user_id 
+            WHERE u.tg_id IS NOT NULL 
+            GROUP BY u.tg_id 
+            HAVING COUNT(a.id) >= 3
+        """)
     }
 
     if data in broadcast_types:
-        title, description = broadcast_types[data]
+        title, sql_query = broadcast_types[data]
 
-        text = f"""
+        # Получаем список пользователей для рассылки
+        try:
+            async with async_sessionmaker() as session:
+                result = await session.execute(text(sql_query))
+                user_ids = [row[0] for row in result.fetchall()]
+
+            if not user_ids:
+                await query.answer(f"❌ Нет пользователей для рассылки в группе '{title}'", show_alert=True)
+                return
+
+            # Просим админа ввести текст рассылки
+            text = f"""
 📢 **РАССЫЛКА: {title}**
 
-{description}
+👥 **Найдено пользователей:** {len(user_ids)}
 
 📝 **Отправьте сообщение для рассылки:**
 
 Ответьте на это сообщение текстом, который нужно разослать.
 
 ⚠️ **Внимание:** 
-• Рассылка будет отправлена сразу
+• Рассылка будет отправлена сразу {len(user_ids)} пользователям
 • Отменить после отправки нельзя
 • Максимум 4000 символов
 """
 
-        keyboard = [
-            [InlineKeyboardButton(
-                "❌ Отменить", callback_data="admin_broadcast")]
-        ]
+            keyboard = [
+                [InlineKeyboardButton(
+                    "❌ Отменить", callback_data="admin_broadcast")]
+            ]
 
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
-        )
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
 
-        # Сохраняем тип рассылки в контексте (можно использовать user_data)
-        context.user_data['pending_broadcast'] = data
+            # Сохраняем данные рассылки в контексте
+            context.user_data['pending_broadcast'] = {
+                'type': data,
+                'title': title,
+                'user_ids': user_ids,
+                'waiting_for_text': True
+            }
+
+        except Exception as e:
+            log.error(f"Broadcast preparation error: {e}")
+            await query.answer(f"❌ Ошибка подготовки рассылки: {e}", show_alert=True)
+
+
+async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """📢 ПРОДАКШН-ГОТОВО: Обработка текста для массовой рассылки"""
+    broadcast_data = context.user_data.get('pending_broadcast', {})
+
+    if not broadcast_data.get('waiting_for_text'):
+        return
+
+    message_text = update.message.text
+    user_ids = broadcast_data.get('user_ids', [])
+    title = broadcast_data.get('title', 'Неизвестная группа')
+
+    # Очищаем состояние ожидания
+    context.user_data['pending_broadcast'] = {}
+
+    if len(message_text) > 4000:
+        await update.message.reply_text("❌ Текст слишком длинный (максимум 4000 символов)")
+        return
+
+    if not user_ids:
+        await update.message.reply_text("❌ Список пользователей пуст")
+        return
+
+    # Подтверждение перед отправкой
+    confirm_text = f"""
+📢 **ПОДТВЕРЖДЕНИЕ РАССЫЛКИ**
+
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
+
+📝 **Текст сообщения:**
+{message_text[:500]}{'...' if len(message_text) > 500 else ''}
+
+⚠️ **Внимание:** после подтверждения рассылка будет отправлена немедленно!
+"""
+
+    keyboard = [
+        [InlineKeyboardButton(
+            "✅ ОТПРАВИТЬ", callback_data=f"confirm_broadcast_{len(user_ids)}")],
+        [InlineKeyboardButton("❌ Отменить", callback_data="admin_broadcast")]
+    ]
+
+    # Сохраняем финальные данные для отправки
+    context.user_data['broadcast_ready'] = {
+        'message_text': message_text,
+        'user_ids': user_ids,
+        'title': title
+    }
+
+    await update.message.reply_text(
+        confirm_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def execute_broadcast(query, context):
+    """🚀 ПРОДАКШН-ГОТОВО: Выполнение массовой рассылки"""
+    await query.answer()
+
+    broadcast_data = context.user_data.get('broadcast_ready', {})
+
+    if not broadcast_data:
+        await query.answer("❌ Данные рассылки не найдены", show_alert=True)
+        return
+
+    message_text = broadcast_data.get('message_text')
+    user_ids = broadcast_data.get('user_ids', [])
+    title = broadcast_data.get('title', 'Неизвестная группа')
+
+    # Очищаем данные рассылки
+    context.user_data['broadcast_ready'] = {}
+
+    if not message_text or not user_ids:
+        await query.answer("❌ Недостаточно данных для рассылки", show_alert=True)
+        return
+
+    # Показываем прогресс
+    progress_text = f"""
+🚀 **РАССЫЛКА ЗАПУЩЕНА**
+
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
+
+⏳ Отправляется... 0/{len(user_ids)}
+"""
+
+    await query.edit_message_text(
+        progress_text,
+        parse_mode='Markdown'
+    )
+
+    # Выполняем рассылку
+    bot = query.bot
+    sent_count = 0
+    failed_count = 0
+
+    for i, user_id in enumerate(user_ids):
+        try:
+            await bot.send_message(
+                chat_id=user_id,
+                text=message_text,
+                parse_mode='Markdown'
+            )
+            sent_count += 1
+
+            # Обновляем прогресс каждые 10 сообщений
+            if (i + 1) % 10 == 0:
+                progress_text = f"""
+🚀 **РАССЫЛКА В ПРОЦЕССЕ**
+
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
+
+⏳ Отправлено: {sent_count}/{len(user_ids)}
+❌ Ошибок: {failed_count}
+"""
+                try:
+                    await query.edit_message_text(
+                        progress_text,
+                        parse_mode='Markdown'
+                    )
+                except:
+                    pass  # Игнорируем ошибки обновления прогресса
+
+            # Небольшая задержка для избежания rate limiting
+            await asyncio.sleep(0.05)
+
+        except Exception as e:
+            failed_count += 1
+            log.warning(f"Failed to send broadcast to user {user_id}: {e}")
+
+    # Финальный отчет
+    final_text = f"""
+✅ **РАССЫЛКА ЗАВЕРШЕНА**
+
+🎯 **Группа:** {title}
+📨 **Отправлено:** {sent_count}/{len(user_ids)}
+❌ **Неудачных:** {failed_count}
+
+📊 **Успешность:** {(sent_count/len(user_ids)*100):.1f}%
+
+📝 **Текст сообщения:**
+{message_text[:200]}{'...' if len(message_text) > 200 else ''}
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("🔙 Назад к рассылке",
+                              callback_data="admin_broadcast")],
+        [InlineKeyboardButton("🏠 Главное меню", callback_data="back_admin")]
+    ]
+
+    await query.edit_message_text(
+        final_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+    log.info(
+        f"Broadcast completed: {sent_count}/{len(user_ids)} sent successfully")
 
 
 async def handle_settings_action(query, context):
