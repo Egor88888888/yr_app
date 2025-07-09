@@ -1361,6 +1361,72 @@ async def api_admin_stats(request: web.Request) -> web.Response:
     })
 
 
+async def handle_health(request: web.Request) -> web.Response:
+    """Health endpoint для мониторинга Enhanced AI"""
+    global ai_enhanced_manager
+
+    health_data = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "bot_status": "running",
+        "database": "connected",
+        "enhanced_ai": {
+            "initialized": False,
+            "health_status": "unknown",
+            "components": {},
+            "error": None
+        }
+    }
+
+    try:
+        # Проверка БД
+        async with async_sessionmaker() as session:
+            await session.execute("SELECT 1")
+        health_data["database"] = "connected"
+    except Exception as e:
+        health_data["database"] = f"error: {str(e)}"
+        health_data["status"] = "degraded"
+
+    # Проверка Enhanced AI
+    try:
+        if ai_enhanced_manager is None:
+            health_data["enhanced_ai"]["error"] = "Not initialized"
+        elif not ai_enhanced_manager._initialized:
+            health_data["enhanced_ai"]["error"] = "Partially initialized"
+        else:
+            health_data["enhanced_ai"]["initialized"] = True
+
+            # Получаем детальный статус
+            ai_health = await ai_enhanced_manager.health_check()
+            health_data["enhanced_ai"]["health_status"] = ai_health.get(
+                "status", "unknown")
+            health_data["enhanced_ai"]["components"] = ai_health.get(
+                "components", {})
+
+            # Если Enhanced AI не здоров, понижаем общий статус
+            if ai_health.get("status") != "healthy":
+                health_data["status"] = "degraded"
+
+    except Exception as e:
+        health_data["enhanced_ai"]["error"] = str(e)
+        health_data["status"] = "degraded"
+
+    # Добавляем системные метрики
+    health_data["system_metrics"] = {
+        "uptime_seconds": int((datetime.now() - system_metrics["start_time"]).total_seconds()),
+        "total_requests": system_metrics["total_requests"],
+        "successful_requests": system_metrics["successful_requests"],
+        "ai_requests": system_metrics["ai_requests"]
+    }
+
+    # Определяем HTTP статус
+    status_code = 200 if health_data["status"] == "healthy" else 503
+
+    return web.json_response(health_data, status=status_code, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+
 async def handle_telegram(request: web.Request) -> web.Response:
     """Webhook handler"""
     update_json = await request.json()
@@ -2575,6 +2641,9 @@ async def main():
     app.router.add_route("*", "/api/admin/clients", api_admin_clients)
     app.router.add_route("*", "/api/admin/payments", api_admin_payments)
     app.router.add_route("*", "/api/admin/stats", api_admin_stats)
+
+    # Health endpoint для мониторинга
+    app.router.add_get("/health", handle_health)
 
     # Debug endpoint for schema fix (DISABLED in production for security)
     # app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
