@@ -25,12 +25,18 @@ AZURE_OPENAI_ENDPOINT = os.getenv(
 AZURE_OPENAI_API_VERSION = os.getenv(
     "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
-# Azure OpenAI embeddings deployment name (configurable)
+# Azure OpenAI embeddings deployment name - используем то же имя что и в основном AI сервисе
 AZURE_EMBEDDINGS_DEPLOYMENT = os.getenv(
     "AZURE_EMBEDDINGS_DEPLOYMENT", "text-embedding-ada-002")
 
-# Fallback to OpenRouter if Azure not configured
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Возможные варианты deployment имен для эмбеддингов
+EMBEDDING_DEPLOYMENT_VARIANTS = [
+    "text-embedding-ada-002",
+    "text-embedding-3-small",
+    "text-embedding-3-large",
+    "embedding-ada-002",
+    "ada-002"
+]
 
 
 class MLClassifier:
@@ -55,28 +61,34 @@ class MLClassifier:
     async def initialize(self):
         """Инициализация классификатора"""
         try:
-            logger.info("🔧 Initializing ML Classifier...")
+            logger.info("🔧 Initializing ML Classifier with Azure OpenAI...")
 
             # Загружаем категории из БД
             await self._load_categories()
 
-            # Создаем базовые эмбеддинги для категорий
+            # Создаем базовые эмбеддинги для категорий через Azure OpenAI
+            embeddings_available = False
             if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
-                logger.info("Using Azure OpenAI for embeddings")
+                logger.info("Using Azure OpenAI for embeddings...")
                 await self._initialize_category_embeddings()
-            elif OPENROUTER_API_KEY:
-                logger.info("Using OpenRouter for embeddings")
-                await self._initialize_category_embeddings()
-            else:
-                logger.warning(
-                    "No API key available - using keyword fallback only")
+                embeddings_available = bool(self.embeddings_cache)
 
+            if not embeddings_available:
+                logger.warning(
+                    "Azure embeddings not available - using keyword classification only")
+            else:
+                logger.info(
+                    f"✅ Azure embeddings ready for {len(self.embeddings_cache)} categories")
+
+            # Всегда помечаем как инициализированный, даже если эмбеддинги недоступны
             self.initialized = True
-            logger.info("✅ ML Classifier initialized")
+            logger.info("✅ ML Classifier initialized with Azure OpenAI")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize ML Classifier: {e}")
-            self.initialized = False
+            # Даже при ошибке помечаем как инициализированный для keyword fallback
+            self.initialized = True
+            logger.info("✅ ML Classifier initialized in keyword fallback mode")
 
     async def classify_message(self, message: str) -> Dict[str, Any]:
         """
@@ -94,7 +106,7 @@ class MLClassifier:
                 await self.initialize()
 
             # Сначала пробуем ML подход
-            if (AZURE_OPENAI_API_KEY or OPENROUTER_API_KEY) and self.embeddings_cache:
+            if AZURE_OPENAI_API_KEY and self.embeddings_cache:
                 ml_result = await self._ml_classify(message)
                 if ml_result['confidence'] > 0.6:  # высокая уверенность
                     return ml_result
@@ -204,29 +216,30 @@ class MLClassifier:
             logger.error(f"Failed to create category embeddings: {e}")
 
     async def _get_embedding(self, text: str) -> Optional[List[float]]:
-        """Получение эмбеддинга текста через Azure OpenAI или OpenRouter"""
-        try:
-            # Пробуем Azure OpenAI сначала (но только если есть конкретный deployment)
-            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT and AZURE_EMBEDDINGS_DEPLOYMENT != "text-embedding-ada-002":
-                azure_result = await self._get_azure_embedding(text)
-                if azure_result is not None:
-                    return azure_result
-                else:
-                    logger.warning(
-                        "Azure embeddings failed, falling back to OpenRouter")
-
-            # Fallback на OpenRouter
-            if OPENROUTER_API_KEY:
-                return await self._get_openrouter_embedding(text)
-            else:
-                logger.warning("No embedding service available")
-                return None
-
-        except Exception as e:
-            logger.error(f"Failed to get embedding: {e}")
+        """Получение эмбеддинга текста через Azure OpenAI"""
+        if not AZURE_OPENAI_API_KEY or not AZURE_OPENAI_ENDPOINT:
+            logger.error("Azure OpenAI credentials not configured")
             return None
 
-    async def _get_azure_embedding(self, text: str) -> Optional[List[float]]:
+        # Пробуем разные варианты deployment имен
+        for deployment_name in EMBEDDING_DEPLOYMENT_VARIANTS:
+            try:
+                result = await self._get_azure_embedding(text, deployment_name)
+                if result is not None:
+                    logger.info(
+                        f"✅ Azure embeddings working with deployment: {deployment_name}")
+                    # Обновляем глобальную переменную для последующих запросов
+                    global AZURE_EMBEDDINGS_DEPLOYMENT
+                    AZURE_EMBEDDINGS_DEPLOYMENT = deployment_name
+                    return result
+            except Exception as e:
+                logger.warning(f"Failed deployment {deployment_name}: {e}")
+                continue
+
+        logger.error("All Azure embedding deployment variants failed")
+        return None
+
+    async def _get_azure_embedding(self, text: str, deployment_name: str) -> Optional[List[float]]:
         """Получение эмбеддинга через Azure OpenAI"""
         async with aiohttp.ClientSession() as session:
             headers = {
@@ -235,7 +248,7 @@ class MLClassifier:
             }
 
             # Azure OpenAI embeddings endpoint
-            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{AZURE_EMBEDDINGS_DEPLOYMENT}/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
+            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{deployment_name}/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
 
             data = {
                 "input": text,
@@ -250,33 +263,6 @@ class MLClassifier:
                     error_text = await response.text()
                     logger.error(
                         f"Azure OpenAI embedding error {response.status}: {error_text}")
-                    return None
-
-    async def _get_openrouter_embedding(self, text: str) -> Optional[List[float]]:
-        """Fallback получение эмбеддинга через OpenRouter"""
-        async with aiohttp.ClientSession() as session:
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            }
-
-            data = {
-                "model": "text-embedding-ada-002",
-                "input": text
-            }
-
-            async with session.post(
-                "https://openrouter.ai/api/v1/embeddings",
-                headers=headers,
-                json=data
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return result["data"][0]["embedding"]
-                else:
-                    error_text = await response.text()
-                    logger.error(
-                        f"OpenRouter embedding error {response.status}: {error_text}")
                     return None
 
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
@@ -301,5 +287,5 @@ class MLClassifier:
             "status": "ok" if self.initialized else "not_initialized",
             "categories_loaded": len(self.categories_cache),
             "embeddings_ready": len(self.embeddings_cache),
-            "ml_available": bool(AZURE_OPENAI_API_KEY or OPENROUTER_API_KEY)
+            "ml_available": bool(AZURE_OPENAI_API_KEY)
         }
