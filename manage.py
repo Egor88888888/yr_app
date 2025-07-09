@@ -248,5 +248,84 @@ def force_migration():
         click.echo(f"STDERR: {e.stderr}")
 
 
+@cli.command()
+def test_content_intelligence():
+    """🧠 Test Content Intelligence System"""
+    click.echo("🧠 Testing Content Intelligence System...")
+
+    asyncio.run(_test_content_intelligence())
+
+
+async def _test_content_intelligence():
+    """Test Content Intelligence System implementation"""
+
+    try:
+        # Import and initialize
+        from bot.services.content_intelligence import ContentIntelligenceSystem
+
+        click.echo("📦 Importing Content Intelligence...")
+        content_system = ContentIntelligenceSystem()
+
+        click.echo("🚀 Initializing system...")
+        await content_system.initialize()
+
+        click.echo("🔍 Testing news collection...")
+        posts = await content_system.collect_and_process_news()
+
+        click.echo(f"📝 Generated {len(posts)} posts:")
+        for i, post in enumerate(posts[:3], 1):
+            click.echo(f"\n📄 Post {i}:")
+            click.echo(f"Length: {len(post)} chars")
+            click.echo(f"Preview: {post[:100]}...")
+
+        click.echo("\n✅ Content Intelligence test completed!")
+
+    except Exception as e:
+        click.echo(f"❌ Content Intelligence test failed: {e}")
+        import traceback
+        click.echo(f"Error details: {traceback.format_exc()}")
+
+
+@cli.command()
+def test_news_parser():
+    """📰 Test News Parser only"""
+    click.echo("📰 Testing News Parser...")
+
+    asyncio.run(_test_news_parser())
+
+
+async def _test_news_parser():
+    """Test news parser implementation"""
+
+    try:
+        from bot.services.content_intelligence import NewsParser
+
+        click.echo("📡 Testing news sources...")
+
+        async with NewsParser() as parser:
+            news_items = await parser.parse_all_sources()
+
+        click.echo(f"📰 Collected {len(news_items)} news items:")
+
+        # Group by source
+        by_source = {}
+        for item in news_items:
+            by_source.setdefault(item.source, []).append(item)
+
+        for source, items in by_source.items():
+            click.echo(f"\n📍 {source}: {len(items)} items")
+            for item in items[:2]:  # Show first 2 from each source
+                click.echo(f"  • {item.title[:60]}...")
+                click.echo(f"    Category: {item.category}")
+                click.echo(f"    Score: {item.relevance_score}")
+
+        click.echo("\n✅ News parser test completed!")
+
+    except Exception as e:
+        click.echo(f"❌ News parser test failed: {e}")
+        import traceback
+        click.echo(f"Error details: {traceback.format_exc()}")
+
+
 if __name__ == "__main__":
     cli()
