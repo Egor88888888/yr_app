@@ -1,12 +1,11 @@
 """
-AIEnhancedManager - главный менеджер Enhanced AI системы.
+Enhanced AI Manager - главный компонент системы улучшенного ИИ.
 
-Координирует все компоненты:
-- ML классификацию категорий и намерений
-- Память диалогов и сессий
-- Персонализацию ответов
-- Аналитику и метрики
-- Оптимизацию качества ответов
+Объединяет все подсистемы Enhanced AI:
+- ML классификация и детекция намерений
+- Память диалогов и профилирование пользователей  
+- Персонализация и адаптация стиля
+- Аналитика и оптимизация ответов
 
 Обеспечивает обратную совместимость с существующим AI API.
 """
@@ -14,6 +13,7 @@ AIEnhancedManager - главный менеджер Enhanced AI системы.
 import asyncio
 import logging
 import time
+import traceback
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -178,6 +178,18 @@ class AIEnhancedManager:
 
         except Exception as e:
             logger.error(f"❌ Enhanced AI error for user {user_id}: {e}")
+            logger.error(
+                f"❌ Enhanced AI error traceback: {traceback.format_exc()}")
+
+            # Подробная диагностика ошибки
+            error_context = {
+                "initialized": self._initialized,
+                "user_id": user_id,
+                "message_length": len(message),
+                "error_type": type(e).__name__,
+                "error_message": str(e)
+            }
+            logger.error(f"❌ Enhanced AI error context: {error_context}")
 
             # Fallback к базовому AI при ошибке
             return await self._fallback_response(message, str(e))
@@ -304,9 +316,29 @@ class AIEnhancedManager:
         try:
             # Используем старый простой метод
             from ...ai import generate_ai_response
-            from ..main import detect_category
 
-            category = detect_category(message)
+            # Простая категоризация без import dependency
+            message_lower = message.lower()
+            if any(word in message_lower for word in ["развод", "алимент", "брак", "семья"]):
+                category = "Семейное право"
+            elif any(word in message_lower for word in ["наследств", "завещан"]):
+                category = "Наследство"
+            elif any(word in message_lower for word in ["работ", "труд", "увольнен"]):
+                category = "Трудовые споры"
+            elif any(word in message_lower for word in ["жкх", "квартир", "дом"]):
+                category = "Жилищные вопросы"
+            elif any(word in message_lower for word in ["долг", "кредит", "банкрот"]):
+                category = "Банкротство физлиц"
+            elif any(word in message_lower for word in ["налог", "ндфл"]):
+                category = "Налоговые консультации"
+            elif any(word in message_lower for word in ["штраф", "гибдд"]):
+                category = "Административные штрафы"
+            elif any(word in message_lower for word in ["потребител", "товар", "услуг"]):
+                category = "Защита прав потребителей"
+            elif any(word in message_lower for word in ["мигра", "гражданств", "виза"]):
+                category = "Миграционное право"
+            else:
+                category = "Общие юридические вопросы"
 
             system_prompt = f"""Ты - опытный юрист-консультант. 
 Отвечаешь на вопросы по теме: {category}.

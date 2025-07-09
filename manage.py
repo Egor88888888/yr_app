@@ -1,114 +1,91 @@
 #!/usr/bin/env python3
-"""Management commands for the bot"""
+"""
+🛠️ MANAGEMENT COMMANDS
+
+Набор команд для управления приложением:
+- database operations
+- Enhanced AI management
+- health checks
+- diagnostics
+"""
 
 import asyncio
 import os
+import sys
 import click
-from sqlalchemy import text
-from bot.services.db import async_sessionmaker
-from bot.services.ai_enhanced.core.ai_manager import AIEnhancedManager
+import subprocess
+from datetime import datetime
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 @click.group()
 def cli():
-    """Legal Bot Management Commands"""
+    """🛠️ Management commands for Enhanced AI system"""
     pass
 
 
 @cli.command()
-async def init_db():
-    """🚀 Initialize database tables"""
-    click.echo("Creating database tables...")
-    from bot.services.db import init_db
-    await init_db()
-    click.echo("✅ Database initialized")
+@click.option('--detailed', is_flag=True, help='Show detailed information')
+def health_check(detailed):
+    """🏥 Check system health"""
+    click.echo("🏥 System Health Check")
+    click.echo("=" * 30)
+
+    asyncio.run(_health_check_async(detailed))
 
 
-@cli.command()
-async def health_check():
-    """🏥 Проверка здоровья всех компонентов"""
-    click.echo("🔍 Running health check...")
-
-    health_status = {
-        "database": "🔄 checking...",
-        "ai_enhanced": "🔄 checking...",
-        "external_apis": "🔄 checking...",
-        "file_system": "🔄 checking..."
-    }
-
-    # Проверка БД
+async def _health_check_async(detailed):
+    """Async health check implementation"""
     try:
+        # Database check
+        from bot.services.db import async_sessionmaker
         async with async_sessionmaker() as session:
-            result = await session.execute(text("SELECT 1"))
-            if result.scalar():
-                health_status["database"] = "✅ healthy"
+            await session.execute("SELECT 1")
+        click.echo("✅ Database: Connected")
+
+        # Enhanced AI check
+        try:
+            from bot.services.ai_enhanced.core.ai_manager import AIEnhancedManager
+            ai_manager = AIEnhancedManager()
+            await ai_manager.initialize()
+
+            if ai_manager._initialized:
+                click.echo("✅ Enhanced AI: Initialized")
+
+                if detailed:
+                    health = await ai_manager.health_check()
+                    components = health.get('components', {})
+                    for name, status in components.items():
+                        emoji = "✅" if status.get('status') == 'ok' else "⚠️"
+                        click.echo(
+                            f"  {emoji} {name}: {status.get('status', 'unknown')}")
             else:
-                health_status["database"] = "❌ unhealthy"
+                click.echo("❌ Enhanced AI: Not initialized")
+
+        except Exception as e:
+            click.echo(f"❌ Enhanced AI: Error - {e}")
+
+        # Environment check
+        if detailed:
+            click.echo("\n🌍 Environment:")
+            env_vars = ["DATABASE_URL", "BOT_TOKEN", "OPENROUTER_API_KEY"]
+            for var in env_vars:
+                status = "✅" if os.getenv(var) else "❌"
+                click.echo(
+                    f"  {status} {var}: {'SET' if os.getenv(var) else 'NOT SET'}")
+
     except Exception as e:
-        health_status["database"] = f"❌ error: {e}"
-
-    # Проверка Enhanced AI
-    try:
-        ai_manager = AIEnhancedManager()
-        await ai_manager.initialize()
-        health = await ai_manager.health_check()
-        if health.get("status") == "healthy":
-            health_status["ai_enhanced"] = "✅ healthy"
-        else:
-            health_status["ai_enhanced"] = f"⚠️ degraded: {health.get('status')}"
-    except Exception as e:
-        health_status["ai_enhanced"] = f"❌ error: {e}"
-
-    # Проверка внешних API
-    external_checks = []
-    if os.getenv("OPENROUTER_API_KEY"):
-        external_checks.append("OpenRouter")
-    if os.getenv("GOOGLE_SHEETS_CREDS_JSON"):
-        external_checks.append("Google Sheets")
-    if os.getenv("CLOUDPAYMENTS_PUBLIC_ID"):
-        external_checks.append("CloudPayments")
-
-    if external_checks:
-        health_status["external_apis"] = f"✅ configured: {', '.join(external_checks)}"
-    else:
-        health_status["external_apis"] = "⚠️ no external APIs configured"
-
-    # Проверка файловой системы
-    try:
-        import tempfile
-        import os
-        with tempfile.NamedTemporaryFile(delete=True) as f:
-            f.write(b"test")
-            health_status["file_system"] = "✅ healthy"
-    except Exception as e:
-        health_status["file_system"] = f"❌ error: {e}"
-
-    # Вывод результатов
-    click.echo("\n📊 HEALTH CHECK RESULTS:")
-    for component, status in health_status.items():
-        click.echo(f"  {component}: {status}")
+        click.echo(f"❌ Health check failed: {e}")
 
 
 @cli.command()
-@click.option('--force', is_flag=True, help='Force deployment without confirmation')
-async def deploy_enhanced_ai(force):
-    """🚀 Deploy Enhanced AI system to production"""
+def enhanced_ai_deploy():
+    """🚀 Deploy Enhanced AI system"""
+    click.echo("🚀 Deploying Enhanced AI system...")
 
-    if not force:
-        click.echo("⚠️  This will deploy Enhanced AI system to production")
-        if not click.confirm("Do you want to continue?"):
-            click.echo("❌ Deployment cancelled")
-            return
-
-    try:
-        # Import deployment script
-        from deploy_enhanced_ai import deploy_enhanced_ai
-        await deploy_enhanced_ai()
-
-    except ImportError:
-        # If deployment script not available, do basic deployment
-        click.echo("🔧 Running basic Enhanced AI deployment...")
-        await basic_enhanced_ai_deployment()
+    asyncio.run(basic_enhanced_ai_deployment())
 
 
 async def basic_enhanced_ai_deployment():
@@ -128,6 +105,7 @@ async def basic_enhanced_ai_deployment():
 
         # Test Enhanced AI
         click.echo("🧪 Testing Enhanced AI initialization...")
+        from bot.services.ai_enhanced.core.ai_manager import AIEnhancedManager
         ai_manager = AIEnhancedManager()
         await ai_manager.initialize()
 
@@ -146,121 +124,129 @@ async def basic_enhanced_ai_deployment():
 
 
 @cli.command()
-async def test_enhanced_ai():
-    """🧪 Test Enhanced AI system functionality"""
-    click.echo("🔧 Testing Enhanced AI system...")
-
+def migration_status():
+    """📋 Check migration status"""
     try:
-        ai_manager = AIEnhancedManager()
-        await ai_manager.initialize()
-
-        # Health check
-        health = await ai_manager.health_check()
-        click.echo(f"📊 Health status: {health.get('status', 'unknown')}")
-
-        # Test components
-        components = health.get('components', {})
-        for name, status in components.items():
-            emoji = "✅" if status.get('status') == 'ok' else "⚠️"
-            click.echo(f"  {emoji} {name}: {status.get('status', 'unknown')}")
-
-        # Test response generation
-        click.echo("\n🧪 Testing response generation...")
-        test_message = "Вопрос о семейном праве: как подать на развод?"
-
-        response = await ai_manager.generate_response(
-            user_id=999999,  # Test user ID
-            message=test_message
+        result = subprocess.run(
+            ["alembic", "current"],
+            capture_output=True, text=True, check=True
         )
+        current = result.stdout.strip()
+        click.echo(f"📋 Current migration: {current}")
 
-        click.echo(f"✅ Generated response ({len(response)} chars)")
-        click.echo(f"📝 Sample: {response[:100]}...")
+        result = subprocess.run(
+            ["alembic", "heads"],
+            capture_output=True, text=True, check=True
+        )
+        heads = result.stdout.strip()
+        click.echo(f"🎯 Latest migration: {heads}")
 
-        click.echo("\n🎉 Enhanced AI test completed successfully!")
-
-    except Exception as e:
-        click.echo(f"❌ Enhanced AI test failed: {e}")
-        import traceback
-        traceback.print_exc()
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Migration check failed: {e}")
 
 
 @cli.command()
-async def migrate():
-    """🔄 Apply database migrations"""
-    import subprocess
+def diagnostics():
+    """🔍 Run production diagnostics"""
+    click.echo("🔍 Running production diagnostics...")
+
+    asyncio.run(_run_diagnostics())
+
+
+async def _run_diagnostics():
+    """Production diagnostics implementation"""
+
+    click.echo(f"⏰ Diagnostics started: {datetime.now()}")
+
+    # Environment check
+    click.echo("\n🌍 Environment Check:")
+    env_vars = ["DATABASE_URL", "BOT_TOKEN", "RAILWAY_ENVIRONMENT"]
+    for var in env_vars:
+        value = os.getenv(var)
+        if value:
+            if var == "DATABASE_URL":
+                display = f"{value[:15]}...{value[-10:]}" if len(
+                    value) > 25 else "***"
+            elif var == "BOT_TOKEN":
+                display = f"{value[:10]}...{value[-10:]}" if len(
+                    value) > 20 else "***"
+            else:
+                display = value
+            click.echo(f"  ✅ {var}: {display}")
+        else:
+            click.echo(f"  ❌ {var}: NOT SET")
+
+    # Database connection
+    click.echo("\n🗄️ Database Check:")
+    try:
+        from bot.services.db import async_sessionmaker
+        async with async_sessionmaker() as session:
+            await session.execute("SELECT 1")
+        click.echo("  ✅ Connection: OK")
+    except Exception as e:
+        click.echo(f"  ❌ Connection failed: {e}")
+
+    # Enhanced AI tables
+    click.echo("\n🗃️ Enhanced AI Tables:")
+    tables = ["user_profiles", "dialogue_sessions", "ai_metrics"]
+    try:
+        from bot.services.db import async_sessionmaker
+        async with async_sessionmaker() as session:
+            for table in tables:
+                try:
+                    result = await session.execute(f"SELECT COUNT(*) FROM {table}")
+                    count = result.scalar()
+                    click.echo(f"  ✅ {table}: {count} rows")
+                except:
+                    click.echo(f"  ❌ {table}: NOT EXISTS")
+    except Exception as e:
+        click.echo(f"  ❌ Table check failed: {e}")
+
+    # Enhanced AI test
+    click.echo("\n🤖 Enhanced AI Test:")
+    try:
+        from bot.services.ai_enhanced.core.ai_manager import AIEnhancedManager
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
+
+        if ai_manager._initialized:
+            click.echo("  ✅ Initialization: SUCCESS")
+            health = await ai_manager.health_check()
+            click.echo(f"  ✅ Health: {health.get('status', 'unknown')}")
+        else:
+            click.echo("  ❌ Initialization: FAILED")
+    except Exception as e:
+        click.echo(f"  ❌ Enhanced AI error: {e}")
+
+    click.echo(f"\n⏰ Diagnostics completed: {datetime.now()}")
+
+
+@cli.command()
+def force_migration():
+    """🔧 Force apply Enhanced AI migration"""
+    click.echo("🔧 Force applying Enhanced AI migration...")
 
     try:
-        click.echo("🔄 Applying database migrations...")
+        # Reset to base
+        result = subprocess.run(
+            ["alembic", "stamp", "base"],
+            capture_output=True, text=True, check=True
+        )
+        click.echo("✅ Reset to base")
+
+        # Apply all migrations
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
             capture_output=True, text=True, check=True
         )
-        click.echo("✅ Migrations applied successfully")
-        click.echo(result.stdout)
+        click.echo("✅ Applied all migrations")
+
+        click.echo("🎉 Force migration completed!")
 
     except subprocess.CalledProcessError as e:
-        click.echo(f"❌ Migration failed: {e}")
+        click.echo(f"❌ Force migration failed: {e}")
         click.echo(f"STDERR: {e.stderr}")
 
 
-@cli.command()
-async def check_tables():
-    """📊 Check database tables"""
-    click.echo("📊 Checking database tables...")
-
-    async with async_sessionmaker() as session:
-        # Get all tables
-        result = await session.execute(text("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public'
-            ORDER BY table_name
-        """))
-
-        tables = [row[0] for row in result.fetchall()]
-
-        click.echo(f"\n📋 Found {len(tables)} tables:")
-
-        # Basic tables
-        basic_tables = ['users', 'categories',
-                        'applications', 'admins', 'payments', 'logs']
-        enhanced_ai_tables = [
-            'user_profiles', 'dialogue_sessions', 'dialogue_messages',
-            'message_embeddings', 'category_embeddings', 'ai_metrics',
-            'user_preferences', 'training_data'
-        ]
-
-        click.echo("\n🏗️  Basic tables:")
-        for table in basic_tables:
-            emoji = "✅" if table in tables else "❌"
-            click.echo(f"  {emoji} {table}")
-
-        click.echo("\n🤖 Enhanced AI tables:")
-        for table in enhanced_ai_tables:
-            emoji = "✅" if table in tables else "❌"
-            click.echo(f"  {emoji} {table}")
-
-        # Check for any missing Enhanced AI tables
-        missing_enhanced = [t for t in enhanced_ai_tables if t not in tables]
-        if missing_enhanced:
-            click.echo(f"\n⚠️  Missing Enhanced AI tables: {missing_enhanced}")
-            click.echo("💡 Run: python manage.py deploy-enhanced-ai")
-
-
 if __name__ == "__main__":
-    # Run async commands
-    import inspect
-
-    def run_async_command(cmd):
-        def wrapper(*args, **kwargs):
-            if inspect.iscoroutinefunction(cmd):
-                return asyncio.run(cmd(*args, **kwargs))
-            return cmd(*args, **kwargs)
-        return wrapper
-
-    # Wrap async commands
-    for command in cli.commands.values():
-        if hasattr(command, 'callback') and inspect.iscoroutinefunction(command.callback):
-            command.callback = run_async_command(command.callback)
-
     cli()
