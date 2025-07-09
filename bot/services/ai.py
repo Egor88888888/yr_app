@@ -36,9 +36,19 @@ async def generate_ai_response(messages: list[dict], model: str = "openai/gpt-4o
                 if response.status == 200:
                     result = await response.json()
                     return result["choices"][0]["message"]["content"].strip()
+                elif response.status == 402:
+                    # Payment Required - специальная обработка
+                    print(f"⚠️ OpenRouter Payment Required (402) - баланс исчерпан")
+                    return "🏠 🤖 AI временно недоступен (код 402) 💼 Для детальной консультации нажмите /start и заполните заявку."
+                elif response.status == 429:
+                    # Rate limit exceeded
+                    print(f"⚠️ OpenRouter Rate Limit (429)")
+                    return "🤖 AI временно перегружен. Попробуйте через несколько минут."
                 else:
                     error_text = await response.text()
-                    return f"🤖 AI временно недоступен (код {response.status})"
+                    print(
+                        f"⚠️ OpenRouter API error {response.status}: {error_text}")
+                    return f"🤖 AI временно недоступен (код {response.status}) 💼 Для детальной консультации нажмите /start и заполните заявку."
 
     except Exception as e:
         print(f"AI Error: {e}")
