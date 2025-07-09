@@ -2338,17 +2338,19 @@ async def post_init(application: Application):
     # Загружаем администраторов из БД
     await load_db_admins()
 
-    # 🚨 ВРЕМЕННО ОТКЛЮЧАЕМ Enhanced AI до создания таблиц
+    # 🚀 ИНИЦИАЛИЗИРУЕМ Enhanced AI
     try:
-        log.info("⚠️ Enhanced AI temporarily disabled - creating tables first")
-        ai_enhanced_manager = None
-        print("⚠️ Enhanced AI disabled until database tables are created")
-        log.info("Will use basic AI as fallback")
+        log.info("🚀 Initializing Enhanced AI system...")
+        ai_enhanced_manager = AIEnhancedManager()
+        await ai_enhanced_manager.initialize()
+        print("✅ Enhanced AI initialized successfully")
+        log.info("Enhanced AI system is ready")
     except Exception as e:
         print(f"❌ Failed to initialize Enhanced AI: {e}")
         log.error(f"Enhanced AI initialization error: {e}")
         import traceback
         log.error(f"Enhanced AI traceback: {traceback.format_exc()}")
+        ai_enhanced_manager = None
         log.info("Will use basic AI as fallback")
 
     try:

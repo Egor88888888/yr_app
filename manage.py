@@ -1,51 +1,27 @@
 #!/usr/bin/env python3
-"""
-🛠️ PRODUCTION MANAGEMENT SCRIPT
-Утилиты для управления продакшен сервисом
-
-Commands:
-- init_db: Инициализация базы данных
-- health_check: Проверка здоровья системы
-- backup: Создание backup базы данных  
-- restore: Восстановление из backup
-- stats: Статистика системы
-- clean_logs: Очистка старых логов
-- monitor: Мониторинг в реальном времени
-"""
+"""Management commands for the bot"""
 
 import asyncio
 import os
-import sys
-import json
-import subprocess
-from datetime import datetime, timedelta
-from pathlib import Path
-
 import click
-from sqlalchemy import text, func, select
-from bot.services.db import async_sessionmaker, init_db, User, Application as AppModel, Payment
-from bot.services.ai_enhanced import AIEnhancedManager
-
-# Ensure project is importable
-sys.path.append(str(Path(__file__).parent))
+from sqlalchemy import text
+from bot.services.db import async_sessionmaker
+from bot.services.ai_enhanced.core.ai_manager import AIEnhancedManager
 
 
 @click.group()
 def cli():
-    """��️ Юридический Центр - Management CLI"""
+    """Legal Bot Management Commands"""
     pass
 
 
 @cli.command()
-async def init_database():
-    """🗃️ Инициализация базы данных"""
-    click.echo("🚀 Initializing database...")
-    try:
-        await init_db()
-        click.echo("✅ Database initialized successfully!")
-    except Exception as e:
-        click.echo(f"❌ Database initialization failed: {e}")
-        sys.exit(1)
+async def init_db():
+    """🚀 Initialize database tables"""
+    click.echo("Creating database tables...")
+    from bot.services.db import init_db
+    await init_db()
+    click.echo("✅ Database initialized")
 
 
 @cli.command()
@@ -99,222 +75,192 @@ async def health_check():
 
     # Проверка файловой системы
     try:
-        webapp_path = Path("webapp")
-        if webapp_path.exists() and (webapp_path / "index.html").exists():
-            health_status["file_system"] = "✅ webapp files present"
-        else:
-            health_status["file_system"] = "❌ webapp files missing"
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=True) as f:
+            f.write(b"test")
+            health_status["file_system"] = "✅ healthy"
     except Exception as e:
         health_status["file_system"] = f"❌ error: {e}"
 
     # Вывод результатов
-    click.echo("\n🏥 HEALTH CHECK RESULTS:")
-    click.echo("=" * 40)
+    click.echo("\n📊 HEALTH CHECK RESULTS:")
     for component, status in health_status.items():
-        click.echo(f"{component.replace('_', ' ').title()}: {status}")
-
-    # Общий статус
-    if all("✅" in status for status in health_status.values()):
-        click.echo("\n🎉 ALL SYSTEMS HEALTHY!")
-        return True
-    else:
-        click.echo("\n⚠️ SOME ISSUES DETECTED")
-        return False
+        click.echo(f"  {component}: {status}")
 
 
 @cli.command()
-async def backup_database():
-    """💾 Создание backup базы данных"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f"backup_{timestamp}.json"
+@click.option('--force', is_flag=True, help='Force deployment without confirmation')
+async def deploy_enhanced_ai(force):
+    """🚀 Deploy Enhanced AI system to production"""
 
-    click.echo(f"💾 Creating backup: {backup_file}")
-
-    try:
-        backup_data = {
-            "timestamp": timestamp,
-            "users": [],
-            "applications": [],
-            "payments": []
-        }
-
-        async with async_sessionmaker() as session:
-            # Backup users
-            users = await session.execute(select(User))
-            for user in users.scalars():
-                backup_data["users"].append({
-                    "id": user.id,
-                    "tg_id": user.tg_id,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "phone": user.phone,
-                    "email": user.email,
-                    "created_at": user.created_at.isoformat() if user.created_at else None
-                })
-
-            # Backup applications
-            apps = await session.execute(select(AppModel))
-            for app in apps.scalars():
-                backup_data["applications"].append({
-                    "id": app.id,
-                    "user_id": app.user_id,
-                    "subcategory": app.subcategory,
-                    "description": app.description,
-                    "status": app.status,
-                    "price": float(app.price) if app.price else None,
-                    "created_at": app.created_at.isoformat() if app.created_at else None
-                })
-
-            # Backup payments
-            payments = await session.execute(select(Payment))
-            for payment in payments.scalars():
-                backup_data["payments"].append({
-                    "id": payment.id,
-                    "app_id": payment.app_id,
-                    "amount": float(payment.amount) if payment.amount else None,
-                    "status": payment.status,
-                    "created_at": payment.created_at.isoformat() if payment.created_at else None
-                })
-
-        # Сохраняем backup
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            json.dump(backup_data, f, ensure_ascii=False, indent=2)
-
-        click.echo(f"✅ Backup created successfully: {backup_file}")
-        click.echo(f"📊 Users: {len(backup_data['users'])}")
-        click.echo(f"📋 Applications: {len(backup_data['applications'])}")
-        click.echo(f"💳 Payments: {len(backup_data['payments'])}")
-
-    except Exception as e:
-        click.echo(f"❌ Backup failed: {e}")
-        sys.exit(1)
-
-
-@cli.command()
-@click.argument('backup_file')
-async def restore_database(backup_file):
-    """♻️ Восстановление из backup"""
-    click.echo(f"♻️ Restoring from backup: {backup_file}")
-
-    if not Path(backup_file).exists():
-        click.echo(f"❌ Backup file not found: {backup_file}")
-        sys.exit(1)
-
-    try:
-        with open(backup_file, 'r', encoding='utf-8') as f:
-            backup_data = json.load(f)
-
-        click.echo(f"📅 Backup timestamp: {backup_data['timestamp']}")
-        click.echo(f"📊 Users: {len(backup_data['users'])}")
-        click.echo(f"📋 Applications: {len(backup_data['applications'])}")
-        click.echo(f"💳 Payments: {len(backup_data['payments'])}")
-
-        if not click.confirm("Continue with restore?"):
-            click.echo("Restore cancelled.")
+    if not force:
+        click.echo("⚠️  This will deploy Enhanced AI system to production")
+        if not click.confirm("Do you want to continue?"):
+            click.echo("❌ Deployment cancelled")
             return
 
-        # Здесь был бы код восстановления
-        # В production нужна более сложная логика
-        click.echo(
-            "⚠️ Restore functionality requires custom implementation for your specific DB schema")
+    try:
+        # Import deployment script
+        from deploy_enhanced_ai import deploy_enhanced_ai
+        await deploy_enhanced_ai()
 
-    except Exception as e:
-        click.echo(f"❌ Restore failed: {e}")
-        sys.exit(1)
+    except ImportError:
+        # If deployment script not available, do basic deployment
+        click.echo("🔧 Running basic Enhanced AI deployment...")
+        await basic_enhanced_ai_deployment()
 
 
-@cli.command()
-async def system_stats():
-    """📊 Статистика системы"""
-    click.echo("📊 SYSTEM STATISTICS")
-    click.echo("=" * 40)
+async def basic_enhanced_ai_deployment():
+    """Basic Enhanced AI deployment without full script"""
+    import subprocess
+
+    click.echo("📋 Checking current migration state...")
 
     try:
-        async with async_sessionmaker() as session:
-            # Общая статистика
-            total_users = await session.scalar(select(func.count(User.id)))
-            total_apps = await session.scalar(select(func.count(AppModel.id)))
+        # Apply Enhanced AI migration
+        click.echo("🔄 Applying Enhanced AI migration...")
+        result = subprocess.run(
+            ["alembic", "upgrade", "01_enhanced_ai"],
+            capture_output=True, text=True, check=True
+        )
+        click.echo("✅ Migration applied successfully")
 
-            # Статистика за последние 7 дней
-            week_ago = datetime.now() - timedelta(days=7)
-            new_users_week = await session.scalar(
-                select(func.count(User.id)).where(User.created_at >= week_ago)
-            )
-            new_apps_week = await session.scalar(
-                select(func.count(AppModel.id)).where(
-                    AppModel.created_at >= week_ago)
-            )
+        # Test Enhanced AI
+        click.echo("🧪 Testing Enhanced AI initialization...")
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
 
-            # По статусам заявок
-            status_stats = await session.execute(
-                select(AppModel.status, func.count(AppModel.id))
-                .group_by(AppModel.status)
-            )
+        health = await ai_manager.health_check()
+        click.echo(f"✅ Enhanced AI health: {health.get('status', 'unknown')}")
 
-            click.echo(f"👥 Total Users: {total_users}")
-            click.echo(f"📋 Total Applications: {total_apps}")
-            click.echo(f"🆕 New Users (7 days): {new_users_week}")
-            click.echo(f"📝 New Applications (7 days): {new_apps_week}")
-            click.echo("\n📊 Application Status:")
+        click.echo("🎉 Enhanced AI deployment completed!")
 
-            for status, count in status_stats:
-                click.echo(f"   {status}: {count}")
-
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Migration failed: {e}")
+        click.echo(f"STDERR: {e.stderr}")
+        raise
     except Exception as e:
-        click.echo(f"❌ Stats failed: {e}")
+        click.echo(f"❌ Enhanced AI test failed: {e}")
+        raise
 
 
 @cli.command()
-def clean_logs():
-    """🧹 Очистка старых логов"""
-    click.echo("🧹 Cleaning old logs...")
-
-    log_files = ["bot.log", "error.log", "access.log"]
-    cleaned = 0
-
-    for log_file in log_files:
-        if Path(log_file).exists():
-            try:
-                # Архивируем старые логи
-                timestamp = datetime.now().strftime("%Y%m%d")
-                archived_name = f"{log_file}.{timestamp}"
-                Path(log_file).rename(archived_name)
-                Path(log_file).touch()  # Создаем новый пустой лог
-                cleaned += 1
-                click.echo(f"📦 Archived: {log_file} -> {archived_name}")
-            except Exception as e:
-                click.echo(f"❌ Failed to clean {log_file}: {e}")
-
-    click.echo(f"✅ Cleaned {cleaned} log files")
-
-
-@cli.command()
-@click.option('--interval', default=30, help='Monitoring interval in seconds')
-async def monitor(interval):
-    """📈 Мониторинг системы в реальном времени"""
-    click.echo(f"📈 Starting system monitor (interval: {interval}s)")
-    click.echo("Press Ctrl+C to stop...")
+async def test_enhanced_ai():
+    """🧪 Test Enhanced AI system functionality"""
+    click.echo("🔧 Testing Enhanced AI system...")
 
     try:
-        while True:
-            await asyncio.sleep(interval)
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
 
-            # Проверяем здоровье
-            health_ok = await health_check()
+        # Health check
+        health = await ai_manager.health_check()
+        click.echo(f"📊 Health status: {health.get('status', 'unknown')}")
 
-            # Показываем timestamp и статус
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            status = "🟢 HEALTHY" if health_ok else "🔴 ISSUES"
-            click.echo(f"[{now}] System Status: {status}")
+        # Test components
+        components = health.get('components', {})
+        for name, status in components.items():
+            emoji = "✅" if status.get('status') == 'ok' else "⚠️"
+            click.echo(f"  {emoji} {name}: {status.get('status', 'unknown')}")
 
-    except KeyboardInterrupt:
-        click.echo("\n👋 Monitoring stopped")
+        # Test response generation
+        click.echo("\n🧪 Testing response generation...")
+        test_message = "Вопрос о семейном праве: как подать на развод?"
 
-if __name__ == '__main__':
-    # Поддержка async команд
-    for cmd_name, cmd in cli.commands.items():
-        if asyncio.iscoroutinefunction(cmd.callback):
-            cmd.callback = lambda *args, **kwargs: asyncio.run(
-                cmd.callback(*args, **kwargs))
+        response = await ai_manager.generate_response(
+            user_id=999999,  # Test user ID
+            message=test_message
+        )
+
+        click.echo(f"✅ Generated response ({len(response)} chars)")
+        click.echo(f"📝 Sample: {response[:100]}...")
+
+        click.echo("\n🎉 Enhanced AI test completed successfully!")
+
+    except Exception as e:
+        click.echo(f"❌ Enhanced AI test failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@cli.command()
+async def migrate():
+    """🔄 Apply database migrations"""
+    import subprocess
+
+    try:
+        click.echo("🔄 Applying database migrations...")
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True, text=True, check=True
+        )
+        click.echo("✅ Migrations applied successfully")
+        click.echo(result.stdout)
+
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Migration failed: {e}")
+        click.echo(f"STDERR: {e.stderr}")
+
+
+@cli.command()
+async def check_tables():
+    """📊 Check database tables"""
+    click.echo("📊 Checking database tables...")
+
+    async with async_sessionmaker() as session:
+        # Get all tables
+        result = await session.execute(text("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            ORDER BY table_name
+        """))
+
+        tables = [row[0] for row in result.fetchall()]
+
+        click.echo(f"\n📋 Found {len(tables)} tables:")
+
+        # Basic tables
+        basic_tables = ['users', 'categories',
+                        'applications', 'admins', 'payments', 'logs']
+        enhanced_ai_tables = [
+            'user_profiles', 'dialogue_sessions', 'dialogue_messages',
+            'message_embeddings', 'category_embeddings', 'ai_metrics',
+            'user_preferences', 'training_data'
+        ]
+
+        click.echo("\n🏗️  Basic tables:")
+        for table in basic_tables:
+            emoji = "✅" if table in tables else "❌"
+            click.echo(f"  {emoji} {table}")
+
+        click.echo("\n🤖 Enhanced AI tables:")
+        for table in enhanced_ai_tables:
+            emoji = "✅" if table in tables else "❌"
+            click.echo(f"  {emoji} {table}")
+
+        # Check for any missing Enhanced AI tables
+        missing_enhanced = [t for t in enhanced_ai_tables if t not in tables]
+        if missing_enhanced:
+            click.echo(f"\n⚠️  Missing Enhanced AI tables: {missing_enhanced}")
+            click.echo("💡 Run: python manage.py deploy-enhanced-ai")
+
+
+if __name__ == "__main__":
+    # Run async commands
+    import inspect
+
+    def run_async_command(cmd):
+        def wrapper(*args, **kwargs):
+            if inspect.iscoroutinefunction(cmd):
+                return asyncio.run(cmd(*args, **kwargs))
+            return cmd(*args, **kwargs)
+        return wrapper
+
+    # Wrap async commands
+    for command in cli.commands.values():
+        if hasattr(command, 'callback') and inspect.iscoroutinefunction(command.callback):
+            command.callback = run_async_command(command.callback)
 
     cli()
