@@ -1,7 +1,7 @@
 """
 ML Classifier - машинное обучение для классификации категорий.
 
-Использует OpenAI Embeddings для векторизации и cosine similarity для классификации.
+Использует Azure OpenAI Embeddings для векторизации и cosine similarity для классификации.
 Fallback на keyword matching при низкой уверенности.
 """
 
@@ -17,6 +17,15 @@ from ...db import async_sessionmaker, Category
 
 logger = logging.getLogger(__name__)
 
+# Azure OpenAI Configuration для эмбеддингов
+AZURE_OPENAI_API_KEY = os.getenv(
+    "AZURE_OPENAI_API_KEY", "Fjaj2B7pc9tXPnLT4jY8Wv4Gl9435Ifw6ymyQ68OolKP0LVxBoqjJQQJ99BEACfhMk5XJ3w3AAAAACOGrsqR")
+AZURE_OPENAI_ENDPOINT = os.getenv(
+    "AZURE_OPENAI_ENDPOINT", "https://divan-mb68c0s7-swedencentral.cognitiveservices.azure.com")
+AZURE_OPENAI_API_VERSION = os.getenv(
+    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+
+# Fallback to OpenRouter if Azure not configured
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
@@ -48,11 +57,15 @@ class MLClassifier:
             await self._load_categories()
 
             # Создаем базовые эмбеддинги для категорий
-            if OPENROUTER_API_KEY:
+            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
+                logger.info("Using Azure OpenAI for embeddings")
+                await self._initialize_category_embeddings()
+            elif OPENROUTER_API_KEY:
+                logger.info("Using OpenRouter for embeddings")
                 await self._initialize_category_embeddings()
             else:
                 logger.warning(
-                    "No OpenRouter API key - using keyword fallback only")
+                    "No API key available - using keyword fallback only")
 
             self.initialized = True
             logger.info("✅ ML Classifier initialized")
@@ -77,7 +90,7 @@ class MLClassifier:
                 await self.initialize()
 
             # Сначала пробуем ML подход
-            if OPENROUTER_API_KEY and self.embeddings_cache:
+            if (AZURE_OPENAI_API_KEY or OPENROUTER_API_KEY) and self.embeddings_cache:
                 ml_result = await self._ml_classify(message)
                 if ml_result['confidence'] > 0.6:  # высокая уверенность
                     return ml_result
@@ -186,45 +199,73 @@ class MLClassifier:
         except Exception as e:
             logger.error(f"Failed to create category embeddings: {e}")
 
-    async def _get_embedding(self, text: str) -> Optional[np.ndarray]:
-        """Получение эмбеддинга через простую векторизацию (fallback)"""
+    async def _get_embedding(self, text: str) -> Optional[List[float]]:
+        """Получение эмбеддинга текста через Azure OpenAI или OpenRouter"""
         try:
-            # Поскольку OpenRouter не поддерживает embeddings,
-            # используем простую векторизацию на основе TF-IDF
-
-            # Простая векторизация - подсчет символов и слов
-            words = text.lower().split()
-
-            # Создаем простой вектор на основе характеристик текста
-            features = []
-
-            # Длина текста
-            features.append(len(text) / 1000.0)  # нормализуем
-
-            # Количество слов
-            features.append(len(words) / 100.0)
-
-            # Наличие ключевых юридических терминов
-            legal_terms = ['закон', 'право', 'суд', 'договор',
-                           'статья', 'кодекс', 'налог', 'штраф']
-            for term in legal_terms:
-                features.append(1.0 if term in text.lower() else 0.0)
-
-            # Создаем простой hash-based вектор из слов
-            word_hash_sum = sum(
-                hash(word) % 100 for word in words) / len(words) if words else 0
-            features.append(word_hash_sum / 100.0)
-
-            # Дополняем до 50 элементов нулями для стабильного размера
-            while len(features) < 50:
-                features.append(0.0)
-
-            return np.array(features[:50])  # фиксированный размер 50
+            # Пробуем Azure OpenAI сначала
+            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
+                return await self._get_azure_embedding(text)
+            elif OPENROUTER_API_KEY:
+                return await self._get_openrouter_embedding(text)
+            else:
+                return None
 
         except Exception as e:
-            logger.error(f"Failed to create simple embedding: {e}")
-            # Возвращаем простой вектор по умолчанию
-            return np.ones(50) * 0.1
+            logger.error(f"Failed to get embedding: {e}")
+            return None
+
+    async def _get_azure_embedding(self, text: str) -> Optional[List[float]]:
+        """Получение эмбеддинга через Azure OpenAI"""
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "api-key": AZURE_OPENAI_API_KEY,
+                "Content-Type": "application/json"
+            }
+
+            # Azure OpenAI embeddings endpoint
+            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/text-embedding-ada-002/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
+
+            data = {
+                "input": text,
+                "encoding_format": "float"
+            }
+
+            async with session.post(url, headers=headers, json=data) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result["data"][0]["embedding"]
+                else:
+                    error_text = await response.text()
+                    logger.error(
+                        f"Azure OpenAI embedding error {response.status}: {error_text}")
+                    return None
+
+    async def _get_openrouter_embedding(self, text: str) -> Optional[List[float]]:
+        """Fallback получение эмбеддинга через OpenRouter"""
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            data = {
+                "model": "text-embedding-ada-002",
+                "input": text
+            }
+
+            async with session.post(
+                "https://openrouter.ai/api/v1/embeddings",
+                headers=headers,
+                json=data
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result["data"][0]["embedding"]
+                else:
+                    error_text = await response.text()
+                    logger.error(
+                        f"OpenRouter embedding error {response.status}: {error_text}")
+                    return None
 
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         """Вычисление cosine similarity"""
@@ -248,5 +289,5 @@ class MLClassifier:
             "status": "ok" if self.initialized else "not_initialized",
             "categories_loaded": len(self.categories_cache),
             "embeddings_ready": len(self.embeddings_cache),
-            "ml_available": bool(OPENROUTER_API_KEY)
+            "ml_available": bool(AZURE_OPENAI_API_KEY or OPENROUTER_API_KEY)
         }
