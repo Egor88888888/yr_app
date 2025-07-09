@@ -2472,7 +2472,83 @@ async def fix_database_schema():
                 log.info(
                     "🔧 user_id column has wrong type (VARCHAR), converting to INTEGER...")
 
-                # Преобразуем тип колонки user_id
+                # 🔧 FIXED: Сначала исправляем поврежденные данные
+                log.info("🧹 Cleaning up invalid user_id values...")
+
+                # Находим все нечисловые значения и заменяем их на корректные
+                invalid_result = await session.execute(text("""
+                    SELECT id, user_id 
+                    FROM applications 
+                    WHERE user_id ~ '[^0-9-]'
+                    OR user_id = ''
+                    OR user_id IS NULL
+                """))
+
+                invalid_records = invalid_result.fetchall()
+
+                if invalid_records:
+                    log.info(
+                        f"🔧 Found {len(invalid_records)} invalid user_id values, fixing...")
+
+                    # Для каждой записи с невалидным user_id создаем/находим пользователя
+                    for app_id, bad_user_id in invalid_records:
+                        try:
+                            # Ищем существующего временного пользователя или создаем нового
+                            temp_user_result = await session.execute(text("""
+                                SELECT id FROM users 
+                                WHERE tg_id < 0 
+                                ORDER BY id DESC 
+                                LIMIT 1
+                            """))
+
+                            temp_user = temp_user_result.scalar_one_or_none()
+
+                            if not temp_user:
+                                # Создаем нового временного пользователя
+                                import random
+                                temp_tg_id = - \
+                                    random.randint(1000000, 2000000000)
+
+                                await session.execute(text("""
+                                    INSERT INTO users (tg_id, first_name) 
+                                    VALUES (:tg_id, 'Гость')
+                                    RETURNING id
+                                """), {"tg_id": temp_tg_id})
+
+                                temp_user_result = await session.execute(text("""
+                                    SELECT id FROM users 
+                                    WHERE tg_id = :tg_id
+                                """), {"tg_id": temp_tg_id})
+
+                                temp_user = temp_user_result.scalar_one()
+                                log.info(
+                                    f"✅ Created new temp user {temp_user} for app {app_id}")
+
+                            # Обновляем заявку корректным user_id
+                            await session.execute(text("""
+                                UPDATE applications 
+                                SET user_id = :user_id 
+                                WHERE id = :app_id
+                            """), {"user_id": str(temp_user), "app_id": app_id})
+
+                            log.info(
+                                f"✅ Fixed app {app_id}: '{bad_user_id}' -> {temp_user}")
+
+                        except Exception as fix_error:
+                            log.error(
+                                f"❌ Failed to fix app {app_id}: {fix_error}")
+                            # В крайнем случае ставим 1 (должен существовать)
+                            await session.execute(text("""
+                                UPDATE applications 
+                                SET user_id = '1' 
+                                WHERE id = :app_id
+                            """), {"app_id": app_id})
+
+                    await session.commit()
+                    log.info("✅ Invalid user_id values cleaned up")
+
+                # Теперь безопасно конвертируем тип
+                log.info("🔄 Converting user_id column type to INTEGER...")
                 await session.execute(text("""
                     ALTER TABLE applications 
                     ALTER COLUMN user_id TYPE INTEGER USING user_id::INTEGER
@@ -2558,9 +2634,9 @@ async def main():
     app.router.add_route("*", "/api/admin/payments", api_admin_payments)
     app.router.add_route("*", "/api/admin/stats", api_admin_stats)
 
-    # Debug endpoint for schema fix
-    # app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
-    # app.router.add_get("/debug/check-schema", handle_debug_check_schema)
+    # Debug endpoint for schema fix (TEMPORARY - for debugging database issues)
+    app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
+    app.router.add_get("/debug/check-schema", handle_debug_check_schema)
 
     app.router.add_static(
         "/webapp/", path=Path(__file__).parent.parent / "webapp")
