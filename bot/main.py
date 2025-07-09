@@ -2676,9 +2676,6 @@ async def main():
         print("⚠️ Job queue not available - autopost disabled")
         log.warning("Job queue not available, autopost functionality disabled")
 
-    # Инициализация после запуска
-    application.post_init = post_init
-
     # Устанавливаем webhook
     webhook_url = f"https://{PUBLIC_HOST}/{TOKEN}"
     await application.bot.set_webhook(webhook_url)
@@ -2693,6 +2690,11 @@ async def main():
     async with application:
         await application.start()
         log.info(f"Bot started on port {PORT}")
+
+        # 🚀 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Вызываем post_init ВРУЧНУЮ
+        print("🔧 Calling post_init manually...")
+        await post_init(application)
+        print("✅ Post-init completed")
 
         # Уведомляем админа
         try:
