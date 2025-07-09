@@ -1381,7 +1381,7 @@ async def handle_health(request: web.Request) -> web.Response:
     try:
         # Проверка БД
         async with async_sessionmaker() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
         health_data["database"] = "connected"
     except Exception as e:
         health_data["database"] = f"error: {str(e)}"
