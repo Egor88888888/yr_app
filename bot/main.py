@@ -844,7 +844,7 @@ async def handle_application_action(query, context):
 
                 # Создаем ссылку на оплату
                 try:
-                    pay_url = create_payment(app, app.price)
+                    pay_url = create_payment(app, user, app.price)
                 except Exception as e:
                     log.error(f"Payment creation error: {e}")
                     # Fallback URL
@@ -860,7 +860,7 @@ async def handle_application_action(query, context):
 
             # Уведомляем клиента о необходимости оплаты
             try:
-                await notify_client_payment_required(user, app, pay_url)
+                await notify_client_payment_required(user, app, float(app.price), pay_url)
             except Exception as e:
                 log.error(f"Payment notification error: {e}")
 
@@ -2366,389 +2366,87 @@ async def post_init(application: Application):
 
 
 async def fix_database_schema():
-    """Исправляет схему БД если отсутствуют необходимые колонки"""
+    """Исправление схемы БД после предыдущих проблем"""
     try:
+        log.info("🔧 Checking and fixing database schema...")
+
         async with async_sessionmaker() as session:
-            # Проверяем есть ли колонка category_id в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'category_id'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing category_id column, adding it...")
-
-                # Добавляем колонку category_id
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN category_id INTEGER
-                """))
-
-                # Обновляем существующие записи значением по умолчанию
-                await session.execute(text("""
-                    UPDATE applications 
-                    SET category_id = 1 
-                    WHERE category_id IS NULL
-                """))
-
-                # Добавляем NOT NULL constraint
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ALTER COLUMN category_id SET NOT NULL
-                """))
-
-                # Добавляем внешний ключ
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD CONSTRAINT fk_applications_category_id 
-                    FOREIGN KEY (category_id) REFERENCES categories (id)
-                """))
-
-                await session.commit()
-                log.info("✅ category_id column added successfully")
-                print("✅ Database schema fixed: category_id column added")
-            else:
-                log.info("✅ category_id column exists")
-
-            # Проверяем есть ли колонка subcategory в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'subcategory'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing subcategory column, adding it...")
-
-                # Добавляем колонку subcategory
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN subcategory VARCHAR(120)
-                """))
-
-                await session.commit()
-                log.info("✅ subcategory column added successfully")
-                print("✅ Database schema fixed: subcategory column added")
-            else:
-                log.info("✅ subcategory column exists")
-
-            # Проверяем есть ли колонка contact_method в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'contact_method'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing contact_method column, adding it...")
-
-                # Добавляем колонку contact_method
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN contact_method VARCHAR(50) DEFAULT 'telegram'
-                """))
-
-                await session.commit()
-                log.info("✅ contact_method column added successfully")
-                print("✅ Database schema fixed: contact_method column added")
-            else:
-                log.info("✅ contact_method column exists")
-
-            # Проверяем есть ли колонка contact_time в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'contact_time'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing contact_time column, adding it...")
-
-                # Добавляем колонку contact_time
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN contact_time VARCHAR(50) DEFAULT 'any'
-                """))
-
-                await session.commit()
-                log.info("✅ contact_time column added successfully")
-                print("✅ Database schema fixed: contact_time column added")
-            else:
-                log.info("✅ contact_time column exists")
-
-            # Проверяем есть ли колонка files_data в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'files_data'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing files_data column, adding it...")
-
-                # Добавляем колонку files_data
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN files_data JSON
-                """))
-
-                await session.commit()
-                log.info("✅ files_data column added successfully")
-                print("✅ Database schema fixed: files_data column added")
-            else:
-                log.info("✅ files_data column exists")
-
-            # Проверяем есть ли колонка utm_source в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'utm_source'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing utm_source column, adding it...")
-
-                # Добавляем колонку utm_source
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN utm_source VARCHAR(64)
-                """))
-
-                await session.commit()
-                log.info("✅ utm_source column added successfully")
-                print("✅ Database schema fixed: utm_source column added")
-            else:
-                log.info("✅ utm_source column exists")
-
-            # Проверяем есть ли колонка status в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'status'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing status column, adding it...")
-
-                # Добавляем колонку status
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN status VARCHAR(32) DEFAULT 'new'
-                """))
-
-                await session.commit()
-                log.info("✅ status column added successfully")
-                print("✅ Database schema fixed: status column added")
-            else:
-                log.info("✅ status column exists")
-
-            # Проверяем есть ли колонка price в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'price'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing price column, adding it...")
-
-                # Добавляем колонку price
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN price NUMERIC(10, 2)
-                """))
-
-                await session.commit()
-                log.info("✅ price column added successfully")
-                print("✅ Database schema fixed: price column added")
-            else:
-                log.info("✅ price column exists")
-
-            # Проверяем есть ли колонка created_at в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'created_at'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing created_at column, adding it...")
-
-                # Добавляем колонку created_at
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                """))
-
-                await session.commit()
-                log.info("✅ created_at column added successfully")
-                print("✅ Database schema fixed: created_at column added")
-            else:
-                log.info("✅ created_at column exists")
-
-            # Проверяем есть ли колонка updated_at в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'updated_at'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing updated_at column, adding it...")
-
-                # Добавляем колонку updated_at
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                """))
-
-                await session.commit()
-                log.info("✅ updated_at column added successfully")
-                print("✅ Database schema fixed: updated_at column added")
-            else:
-                log.info("✅ updated_at column exists")
-
-            # Проверяем есть ли колонка user_id в таблице applications
-            result = await session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'user_id'
-            """))
-
-            if not result.scalar_one_or_none():
-                log.info("🔧 Missing user_id column, adding it...")
-
-                # Добавляем колонку user_id
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD COLUMN user_id INTEGER
-                """))
-
-                # Обновляем существующие записи значением по умолчанию
-                await session.execute(text("""
-                    UPDATE applications 
-                    SET user_id = 1 
-                    WHERE user_id IS NULL
-                """))
-
-                # Добавляем NOT NULL constraint
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ALTER COLUMN user_id SET NOT NULL
-                """))
-
-                # Добавляем внешний ключ
-                await session.execute(text("""
-                    ALTER TABLE applications 
-                    ADD CONSTRAINT fk_applications_user_id 
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                """))
-
-                await session.commit()
-                log.info("✅ user_id column added successfully")
-                print("✅ Database schema fixed: user_id column added")
-            else:
-                log.info("✅ user_id column exists")
-
-            # Проверяем тип колонки user_id - должен быть INTEGER
+            # Проверяем тип колонки user_id
             result = await session.execute(text("""
                 SELECT data_type 
                 FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                AND column_name = 'user_id'
+                WHERE table_name = 'applications' AND column_name = 'user_id'
             """))
-
             user_id_type = result.scalar_one_or_none()
-            if user_id_type and 'character' in user_id_type:
-                log.info(
-                    "🔧 user_id column has wrong type (VARCHAR), converting to INTEGER...")
 
-                # 🔧 FIXED: Сначала исправляем поврежденные данные
+            if user_id_type != "integer":
+                log.info("🔄 user_id column type needs conversion")
+
+                # Сначала исправляем некорректные значения
                 log.info("🧹 Cleaning up invalid user_id values...")
 
-                # Находим все нечисловые значения и заменяем их на корректные
+                # Находим все некорректные user_id (не числовые)
                 invalid_result = await session.execute(text("""
                     SELECT id, user_id 
                     FROM applications 
-                    WHERE user_id ~ '[^0-9-]'
-                    OR user_id = ''
-                    OR user_id IS NULL
+                    WHERE user_id !~ '^[0-9]+$'
                 """))
+                invalid_apps = invalid_result.fetchall()
 
-                invalid_records = invalid_result.fetchall()
+                for app_id, bad_user_id in invalid_apps:
+                    try:
+                        log.info(
+                            f"🔧 Fixing app {app_id} with bad user_id: '{bad_user_id}'")
 
-                if invalid_records:
-                    log.info(
-                        f"🔧 Found {len(invalid_records)} invalid user_id values, fixing...")
+                        # Ищем существующего пользователя для привязки
+                        temp_user_result = await session.execute(text("""
+                            SELECT id FROM users 
+                            WHERE first_name = 'Гость' 
+                            LIMIT 1
+                        """))
+                        temp_user = temp_user_result.scalar_one_or_none()
 
-                    # Для каждой записи с невалидным user_id создаем/находим пользователя
-                    for app_id, bad_user_id in invalid_records:
-                        try:
-                            # Ищем существующего временного пользователя или создаем нового
+                        if not temp_user:
+                            # Создаем нового временного пользователя
+                            import random
+                            temp_tg_id = -random.randint(1000000, 2000000000)
+
+                            await session.execute(text("""
+                                INSERT INTO users (tg_id, first_name) 
+                                VALUES (:tg_id, 'Гость')
+                                RETURNING id
+                            """), {"tg_id": temp_tg_id})
+
                             temp_user_result = await session.execute(text("""
                                 SELECT id FROM users 
-                                WHERE tg_id < 0 
-                                ORDER BY id DESC 
-                                LIMIT 1
-                            """))
+                                WHERE tg_id = :tg_id
+                            """), {"tg_id": temp_tg_id})
 
-                            temp_user = temp_user_result.scalar_one_or_none()
-
-                            if not temp_user:
-                                # Создаем нового временного пользователя
-                                import random
-                                temp_tg_id = - \
-                                    random.randint(1000000, 2000000000)
-
-                                await session.execute(text("""
-                                    INSERT INTO users (tg_id, first_name) 
-                                    VALUES (:tg_id, 'Гость')
-                                    RETURNING id
-                                """), {"tg_id": temp_tg_id})
-
-                                temp_user_result = await session.execute(text("""
-                                    SELECT id FROM users 
-                                    WHERE tg_id = :tg_id
-                                """), {"tg_id": temp_tg_id})
-
-                                temp_user = temp_user_result.scalar_one()
-                                log.info(
-                                    f"✅ Created new temp user {temp_user} for app {app_id}")
-
-                            # Обновляем заявку корректным user_id
-                            await session.execute(text("""
-                                UPDATE applications 
-                                SET user_id = :user_id 
-                                WHERE id = :app_id
-                            """), {"user_id": str(temp_user), "app_id": app_id})
-
+                            temp_user = temp_user_result.scalar_one()
                             log.info(
-                                f"✅ Fixed app {app_id}: '{bad_user_id}' -> {temp_user}")
+                                f"✅ Created new temp user {temp_user} for app {app_id}")
 
-                        except Exception as fix_error:
-                            log.error(
-                                f"❌ Failed to fix app {app_id}: {fix_error}")
-                            # В крайнем случае ставим 1 (должен существовать)
-                            await session.execute(text("""
-                                UPDATE applications 
-                                SET user_id = '1' 
-                                WHERE id = :app_id
-                            """), {"app_id": app_id})
+                        # Обновляем заявку корректным user_id
+                        await session.execute(text("""
+                            UPDATE applications 
+                            SET user_id = :user_id 
+                            WHERE id = :app_id
+                        """), {"user_id": str(temp_user), "app_id": app_id})
 
-                    await session.commit()
-                    log.info("✅ Invalid user_id values cleaned up")
+                        log.info(
+                            f"✅ Fixed app {app_id}: '{bad_user_id}' -> {temp_user}")
+
+                    except Exception as fix_error:
+                        log.error(f"❌ Failed to fix app {app_id}: {fix_error}")
+                        # В крайнем случае ставим 1 (должен существовать)
+                        await session.execute(text("""
+                            UPDATE applications 
+                            SET user_id = '1' 
+                            WHERE id = :app_id
+                        """), {"app_id": app_id})
+
+                await session.commit()
+                log.info("✅ Invalid user_id values cleaned up")
 
                 # Теперь безопасно конвертируем тип
                 log.info("🔄 Converting user_id column type to INTEGER...")
@@ -2762,6 +2460,45 @@ async def fix_database_schema():
                 print("✅ Database schema fixed: user_id converted to INTEGER")
             else:
                 log.info("✅ user_id column has correct type")
+
+            # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем отсутствующие колонки
+            log.info("🔧 Checking for missing columns...")
+
+            # Проверяем наличие колонки notes
+            notes_result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' AND column_name = 'notes'
+            """))
+            has_notes = notes_result.scalar_one_or_none()
+
+            if not has_notes:
+                log.info("➕ Adding missing 'notes' column...")
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN notes TEXT
+                """))
+                await session.commit()
+                log.info("✅ Added 'notes' column")
+                print("✅ Added missing 'notes' column")
+
+            # Проверяем наличие колонки assigned_admin
+            admin_result = await session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'applications' AND column_name = 'assigned_admin'
+            """))
+            has_assigned_admin = admin_result.scalar_one_or_none()
+
+            if not has_assigned_admin:
+                log.info("➕ Adding missing 'assigned_admin' column...")
+                await session.execute(text("""
+                    ALTER TABLE applications 
+                    ADD COLUMN assigned_admin VARCHAR(64)
+                """))
+                await session.commit()
+                log.info("✅ Added 'assigned_admin' column")
+                print("✅ Added missing 'assigned_admin' column")
 
             print("✅ Database schema is up to date")
 

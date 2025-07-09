@@ -130,6 +130,10 @@ class Application(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(32), default="new")  # new/processing/completed
     price: Mapped[Optional[Numeric]] = mapped_column(Numeric(10, 2))
+    notes: Mapped[Optional[str]] = mapped_column(
+        Text)  # 🔧 ДОБАВЛЕНО: Заметки администратора
+    assigned_admin: Mapped[Optional[str]] = mapped_column(
+        String(64))  # 🔧 ДОБАВЛЕНО: ID назначенного админа
 
     user: Mapped["User"] = relationship(back_populates="applications")
     category: Mapped["Category"] = relationship(back_populates="applications")
