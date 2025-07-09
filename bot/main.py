@@ -2634,9 +2634,9 @@ async def main():
     app.router.add_route("*", "/api/admin/payments", api_admin_payments)
     app.router.add_route("*", "/api/admin/stats", api_admin_stats)
 
-    # Debug endpoint for schema fix (TEMPORARY - for debugging database issues)
-    app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
-    app.router.add_get("/debug/check-schema", handle_debug_check_schema)
+    # Debug endpoint for schema fix (DISABLED in production for security)
+    # app.router.add_get("/debug/fix-schema", handle_debug_fix_schema)
+    # app.router.add_get("/debug/check-schema", handle_debug_check_schema)
 
     app.router.add_static(
         "/webapp/", path=Path(__file__).parent.parent / "webapp")
