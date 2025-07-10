@@ -23,6 +23,7 @@ from sqlalchemy import (
     MetaData,
     String,
     Integer,
+    BigInteger,
     DateTime,
     Boolean,
     Numeric,
@@ -30,6 +31,7 @@ from sqlalchemy import (
     Text,
     JSON,
     func,
+    text,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -103,7 +105,7 @@ class User(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    tg_id: Mapped[int] = mapped_column(Integer, unique=True)
+    tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
     first_name: Mapped[Optional[str]] = mapped_column(String(100))
     last_name: Mapped[Optional[str]] = mapped_column(String(100))
     phone: Mapped[Optional[str]] = mapped_column(String(32))
@@ -146,7 +148,7 @@ class Admin(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True)
-    tg_id: Mapped[int] = mapped_column(Integer, unique=True)
+    tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
     role: Mapped[str] = mapped_column(
         String(32), default="operator")  # operator / lawyer / super
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -185,6 +187,48 @@ async def init_db() -> None:
     """Create tables if they don't exist (for first run)"""
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # 🚨 КРИТИЧЕСКИЙ ФИКС: Telegram ID overflow INTEGER → BIGINT
+        try:
+            print("🔧 Checking for Telegram ID overflow fix...")
+
+            # Проверяем тип колонки users.tg_id
+            result = await conn.execute(text("""
+                SELECT data_type FROM information_schema.columns 
+                WHERE table_name = 'users' AND column_name = 'tg_id'
+                AND table_schema = 'public'
+            """))
+
+            current_type = result.scalar_one_or_none()
+
+            if current_type == "integer":
+                print("🚨 APPLYING CRITICAL FIX: Converting INTEGER → BIGINT...")
+
+                # Фиксим users.tg_id
+                await conn.execute(text("ALTER TABLE users ALTER COLUMN tg_id TYPE BIGINT;"))
+                print("   ✅ users.tg_id → BIGINT")
+
+                # Фиксим admins.tg_id (если существует)
+                admin_check = await conn.execute(text("""
+                    SELECT data_type FROM information_schema.columns 
+                    WHERE table_name = 'admins' AND column_name = 'tg_id'
+                    AND table_schema = 'public'
+                """))
+
+                if admin_check.scalar_one_or_none() == "integer":
+                    await conn.execute(text("ALTER TABLE admins ALTER COLUMN tg_id TYPE BIGINT;"))
+                    print("   ✅ admins.tg_id → BIGINT")
+
+                print("🎉 TELEGRAM ID OVERFLOW FIXED! Large IDs now supported.")
+
+            elif current_type == "bigint":
+                print("✅ Telegram ID overflow already fixed (BIGINT detected)")
+            else:
+                print(f"⚠️  Unexpected tg_id type: {current_type}")
+
+        except Exception as e:
+            print(f"⚠️  Could not apply Telegram ID fix: {e}")
+            # Не критично - продолжаем инициализацию
 
     # seed default categories if empty
     async with async_sessionmaker() as session:
