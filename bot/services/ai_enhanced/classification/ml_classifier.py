@@ -250,22 +250,29 @@ class MLClassifier:
                 "Content-Type": "application/json"
             }
 
+            # Используем правильную API версию для эмбеддингов
+            api_version = os.getenv(
+                "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+
             # Azure OpenAI embeddings endpoint
-            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{deployment_name}/embeddings?api-version={AZURE_OPENAI_API_VERSION}"
+            url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{deployment_name}/embeddings?api-version={api_version}"
 
             data = {
                 "input": text,
                 "encoding_format": "float"
             }
 
+            logger.info(f"🔧 Testing Azure embedding: {deployment_name}")
             async with session.post(url, headers=headers, json=data) as response:
                 if response.status == 200:
                     result = await response.json()
+                    logger.info(
+                        f"✅ Azure embedding SUCCESS: {deployment_name}")
                     return result["data"][0]["embedding"]
                 else:
                     error_text = await response.text()
                     logger.error(
-                        f"Azure OpenAI embedding error {response.status}: {error_text}")
+                        f"❌ Azure embedding FAILED {deployment_name}: {response.status} - {error_text}")
                     return None
 
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
