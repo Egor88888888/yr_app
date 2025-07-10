@@ -71,8 +71,7 @@ try:
 
     app = fastapi.FastAPI()
 
-    app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
-    app.mount("/admin", StaticFiles(directory="webapp", html=True), name="admin")
+    # ===== API ROUTES FIRST (before static mounts) =====
 
     @app.get("/health")
     async def health():
@@ -187,6 +186,10 @@ try:
     @app.post("/{token}")
     async def handle_telegram_webhook_direct(token: str, request: fastapi.Request):
         return await handle_telegram_webhook(token, request)
+
+    # ===== STATIC MOUNTS LAST =====
+    app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
+    app.mount("/admin", StaticFiles(directory="webapp", html=True), name="admin")
 
     async def main():
         config = uvicorn.Config(app, host="0.0.0.0",
