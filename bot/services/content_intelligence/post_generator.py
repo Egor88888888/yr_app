@@ -199,38 +199,41 @@ class PostGenerator:
     async def _create_educational_content(self, topic: Dict) -> str:
         """Создание образовательного контента с AI"""
 
-        # Создаем продвинутый промпт для образовательного поста
-        system_prompt = f"""Ты - ведущий юрист-эксперт, создающий практические гиды для обычных граждан.
+        # Создаем ЧЕТКИЙ промпт для избежания дублирования
+        system_prompt = f"""Ты - ведущий юрист-эксперт. Создай СТРОГО СТРУКТУРИРОВАННЫЙ пост.
 
-ЗАДАЧА: Создать максимально полезный пост на тему "{topic['title']}"
+ТЕМА: {topic['title']}
 
-ОБЯЗАТЕЛЬНАЯ СТРУКТУРА:
-1. ПОШАГОВЫЙ АЛГОРИТМ (4-6 конкретных шагов)
-2. ВОЗМОЖНЫЕ ПРОБЛЕМЫ (3-4 типичные ситуации)
-3. ПОЛЕЗНЫЕ РЕСУРСЫ (официальные сайты и телефоны)
-4. ПРАКТИЧЕСКИЕ СОВЕТЫ (что делать, если что-то пошло не так)
+ВАЖНО! Отвечай ТОЛЬКО содержимым разделов, без повторения заголовков!
+
+ФОРМАТ ОТВЕТА:
+АЛГОРИТМ:
+[здесь 4-5 четких шагов с номерами]
+
+ПРОБЛЕМЫ:
+[здесь 3-4 проблемы с символом •]
+
+РЕСУРСЫ:
+[здесь 3 ресурса с эмодзи и ссылками]
+
+СОВЕТЫ:
+[здесь 2-3 практических совета]
 
 ТРЕБОВАНИЯ:
-✅ Конкретные действия с указанием сроков
-✅ Реальные ссылки на госресурсы
-✅ Предупреждения о подводных камнях
-✅ Простые формулировки для обычных людей
-✅ Эмодзи для структурирования
-✅ Объем: 600-800 символов
+- НЕ дублируй названия разделов
+- НЕ повторяй заголовок темы
+- Используй четкую нумерацию 1., 2., 3.
+- Каждая проблема начинается с •
+- Ресурсы в формате: 🏛️ Название: ссылка
+- Объем каждого раздела: 100-150 символов
+- Простые формулировки для граждан"""
 
-СТИЛЬ: Экспертный, но понятный. Как будто объясняешь другу."""
-
-        user_prompt = f"""Создай подробный практический гид: "{topic['title']}"
-
-Включи:
-- Четкий алгоритм действий по шагам
-- Конкретные сроки и документы
-- Официальные ссылки и контакты
-- Предупреждения о возможных проблемах
-- Советы при возникновении трудностей
+        user_prompt = f"""Создай содержимое разделов для темы: {topic['title']}
 
 Категория: {topic['category']}
-Тип поста: {topic['type']}"""
+Тип: {topic['type']}
+
+НЕ повторяй заголовки! Только содержимое разделов!"""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -238,11 +241,10 @@ class PostGenerator:
         ]
 
         try:
-            ai_response = await generate_ai_response(messages, model="openai/gpt-4o", max_tokens=1000)
+            ai_response = await generate_ai_response(messages, model="openai/gpt-4o", max_tokens=800)
 
-            # Парсим ответ AI и структурируем
-            structured_content = self._parse_educational_response(
-                ai_response, topic)
+            # УЛУЧШЕННЫЙ парсинг для избежания дублирования
+            structured_content = self._parse_clean_response(ai_response, topic)
 
             # Форматируем по шаблону
             template = self.enhanced_templates.get(
@@ -254,8 +256,8 @@ class PostGenerator:
             logger.error(f"Failed to generate educational content: {e}")
             return await self._create_fallback_post(topic)
 
-    def _parse_educational_response(self, ai_response: str, topic: Dict) -> Dict[str, str]:
-        """Парсинг образовательного ответа AI в структурированный формат"""
+    def _parse_clean_response(self, ai_response: str, topic: Dict) -> Dict[str, str]:
+        """УЛУЧШЕННЫЙ парсинг AI ответа без дублирования"""
 
         # Базовая структура
         result = {
@@ -263,13 +265,13 @@ class PostGenerator:
             'step_algorithm': '',
             'potential_problems': '',
             'useful_resources': '',
+            'practical_tips': '',
             'key_changes': '',
             'citizen_actions': '',
             'warnings': '',
             'official_sources': '',
             'solution_steps': '',
             'statistics': '',
-            'practical_tips': '',
             'additional_info': '',
             'urgent_actions': '',
             'important_dates': '',
@@ -277,48 +279,254 @@ class PostGenerator:
             'required_documents': ''
         }
 
-        # Разбиваем ответ на секции
-        lines = ai_response.split('\n')
-        current_section = 'step_algorithm'
+        # Очищаем ответ от мусора
+        cleaned_response = ai_response.strip()
+
+        # Удаляем дублирование заголовка темы
+        title_variations = [
+            topic['title'],
+            topic['title'].lower(),
+            topic['title'].upper()
+        ]
+
+        for title_var in title_variations:
+            cleaned_response = cleaned_response.replace(title_var, '').strip()
+
+        # Разбиваем по четким маркерам
+        sections = {}
+        current_section = None
+        current_content = []
+
+        lines = cleaned_response.split('\n')
 
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
-            # Определяем секцию по ключевым словам
-            line_lower = line.lower()
+            # Определяем начало новой секции
+            line_upper = line.upper()
 
-            if any(word in line_lower for word in ['шаг', 'алгоритм', 'действия', 'порядок']):
-                current_section = 'step_algorithm'
-            elif any(word in line_lower for word in ['проблем', 'трудност', 'ошибк', 'подводн']):
-                current_section = 'potential_problems'
-            elif any(word in line_lower for word in ['ресурс', 'сайт', 'ссылк', 'контакт']):
-                current_section = 'useful_resources'
-            elif any(word in line_lower for word in ['совет', 'рекоменд', 'tip']):
-                current_section = 'practical_tips'
-            elif any(word in line_lower for word in ['документ', 'справк', 'заявлен']):
-                current_section = 'required_documents'
-            elif any(word in line_lower for word in ['срок', 'дата', 'время']):
-                current_section = 'important_dates'
+            if any(marker in line_upper for marker in ['АЛГОРИТМ:', 'ДЕЙСТВИЯ:', 'ШАГИ:']):
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'algorithm'
+                current_content = []
+                continue
 
-            # Добавляем контент в нужную секцию
-            if result[current_section]:
-                result[current_section] += f"\n{line}"
-            else:
-                result[current_section] = line
+            elif any(marker in line_upper for marker in ['ПРОБЛЕМЫ:', 'ТРУДНОСТИ:', 'ОШИБКИ:']):
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'problems'
+                current_content = []
+                continue
 
-        # Дополняем ресурсами из базы знаний
-        if not result['useful_resources']:
-            result['useful_resources'] = self._get_relevant_resources(
-                topic['category'])
+            elif any(marker in line_upper for marker in ['РЕСУРСЫ:', 'ССЫЛКИ:', 'САЙТЫ:']):
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'resources'
+                current_content = []
+                continue
 
-        # Дополняем типовыми проблемами
+            elif any(marker in line_upper for marker in ['СОВЕТЫ:', 'РЕКОМЕНДАЦИИ:', 'TIPS:']):
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'tips'
+                current_content = []
+                continue
+
+            # Добавляем контент в текущую секцию
+            if current_section:
+                # Очищаем от лишних символов
+                clean_line = line.replace('**', '').replace('*', '').strip()
+                if clean_line and not clean_line.startswith('#'):
+                    current_content.append(clean_line)
+
+        # Добавляем последнюю секцию
+        if current_section and current_content:
+            sections[current_section] = '\n'.join(current_content)
+
+        # Заполняем результат
+        if 'algorithm' in sections:
+            result['step_algorithm'] = self._clean_algorithm(
+                sections['algorithm'])
+            result['solution_steps'] = result['step_algorithm']
+            result['urgent_actions'] = result['step_algorithm']
+
+        if 'problems' in sections:
+            result['potential_problems'] = self._clean_problems(
+                sections['problems'])
+            result['warnings'] = result['potential_problems']
+
+        if 'resources' in sections:
+            result['useful_resources'] = self._clean_resources(
+                sections['resources'])
+            result['official_sources'] = result['useful_resources']
+
+        if 'tips' in sections:
+            result['practical_tips'] = self._clean_tips(sections['tips'])
+            result['citizen_actions'] = result['practical_tips']
+            result['additional_info'] = result['practical_tips']
+
+        # Дополняем пустые поля качественным контентом
+        if not result['step_algorithm']:
+            result['step_algorithm'] = self._generate_default_algorithm(topic)
+
         if not result['potential_problems']:
             result['potential_problems'] = self._get_relevant_problems(
                 topic['category'])
 
+        if not result['useful_resources']:
+            result['useful_resources'] = self._get_relevant_resources(
+                topic['category'])
+
         return result
+
+    def _clean_algorithm(self, text: str) -> str:
+        """Очистка алгоритма"""
+        lines = text.split('\n')
+        cleaned_lines = []
+
+        for i, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:
+                continue
+
+            # Убираем лишние номера и символы
+            line = line.replace('**', '').replace('*', '').strip()
+
+            # Добавляем номер если его нет
+            if not line[0].isdigit():
+                line = f"{i}. {line}"
+
+            cleaned_lines.append(line)
+
+            # Ограничиваем количество шагов
+            if len(cleaned_lines) >= 5:
+                break
+
+        return '\n'.join(cleaned_lines)
+
+    def _clean_problems(self, text: str) -> str:
+        """Очистка проблем"""
+        lines = text.split('\n')
+        cleaned_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Убираем лишние символы
+            line = line.replace('**', '').replace('*', '').strip()
+
+            # Добавляем маркер если его нет
+            if not line.startswith('•') and not line.startswith('-'):
+                line = f"• {line}"
+            elif line.startswith('-'):
+                line = line.replace('-', '•', 1)
+
+            cleaned_lines.append(line)
+
+            # Ограничиваем количество проблем
+            if len(cleaned_lines) >= 4:
+                break
+
+        return '\n'.join(cleaned_lines)
+
+    def _clean_resources(self, text: str) -> str:
+        """Очистка ресурсов"""
+        lines = text.split('\n')
+        cleaned_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Убираем лишние символы
+            line = line.replace('**', '').replace('*', '').strip()
+
+            # Если нет эмодзи, добавляем
+            if not any(char in line for char in ['🏛️', '📋', '💼', '🛡️', '📞']):
+                if 'госуслуги' in line.lower():
+                    line = f"🏛️ {line}"
+                elif 'роспотребнадзор' in line.lower():
+                    line = f"🛡️ {line}"
+                elif 'росреестр' in line.lower():
+                    line = f"📋 {line}"
+                else:
+                    line = f"💼 {line}"
+
+            cleaned_lines.append(line)
+
+            # Ограничиваем количество ресурсов
+            if len(cleaned_lines) >= 3:
+                break
+
+        return '\n'.join(cleaned_lines)
+
+    def _clean_tips(self, text: str) -> str:
+        """Очистка советов"""
+        lines = text.split('\n')
+        cleaned_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Убираем лишние символы
+            line = line.replace('**', '').replace('*', '').strip()
+
+            # Добавляем маркер если его нет
+            if not line.startswith('•') and not line.startswith('-'):
+                line = f"• {line}"
+            elif line.startswith('-'):
+                line = line.replace('-', '•', 1)
+
+            cleaned_lines.append(line)
+
+            # Ограничиваем количество советов
+            if len(cleaned_lines) >= 3:
+                break
+
+        return '\n'.join(cleaned_lines)
+
+    def _generate_default_algorithm(self, topic: Dict) -> str:
+        """Генерация алгоритма по умолчанию"""
+
+        default_algorithms = {
+            'consumer_protection': '''1. Соберите документы (чеки, договоры)
+2. Зафиксируйте нарушение (фото, видео)
+3. Обратитесь к продавцу с претензией
+4. Подайте жалобу в Роспотребнадзор
+5. Дождитесь решения в течение 30 дней''',
+
+            'labor_law': '''1. Изучите трудовой договор и законы
+2. Соберите доказательства нарушения
+3. Обратитесь к работодателю письменно
+4. Подайте жалобу в трудовую инспекцию
+5. При необходимости - в суд''',
+
+            'housing_law': '''1. Изучите управляющий договор
+2. Зафиксируйте проблему документально
+3. Подайте заявление в УК
+4. Обратитесь в жилищную инспекцию
+5. Подайте иск в суд при необходимости'''
+        }
+
+        category = topic.get('category', 'general')
+
+        for key, algorithm in default_algorithms.items():
+            if key in category:
+                return algorithm
+
+        return '''1. Изучите применимое законодательство
+2. Соберите необходимые документы
+3. Обратитесь в компетентный орган
+4. Подайте официальное заявление
+5. Отслеживайте рассмотрение вопроса'''
 
     def _get_relevant_resources(self, category: str) -> str:
         """Получение релевантных ресурсов из базы знаний"""
