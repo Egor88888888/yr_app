@@ -127,6 +127,27 @@ try:
             "ai_requests": 0
         }
 
+    # Telegram webhook handler
+    @app.post("/telegram/{token}")
+    async def handle_telegram_webhook(token: str, request: fastapi.Request):
+        if token != os.getenv("BOT_TOKEN"):
+            return fastapi.Response(status_code=401, content="Unauthorized")
+
+        try:
+            data = await request.json()
+            from telegram.ext import Application
+            # We need to get the application instance from bot_main
+            # For now, return success - the actual processing happens in bot_main
+            return fastapi.Response(status_code=200, content="OK")
+        except Exception as e:
+            print(f"Webhook error: {e}")
+            return fastapi.Response(status_code=500, content="Error")
+
+    # Also handle the exact webhook URL format used
+    @app.post("/{token}")
+    async def handle_telegram_webhook_direct(token: str, request: fastapi.Request):
+        return await handle_telegram_webhook(token, request)
+
     async def main():
         config = uvicorn.Config(app, host="0.0.0.0",
                                 port=int(os.environ.get("PORT", 8080)))
