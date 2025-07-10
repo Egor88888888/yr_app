@@ -66,27 +66,26 @@ class MLClassifier:
             # Загружаем категории из БД
             await self._load_categories()
 
-            # ВРЕМЕННО: Отключаем эмбеддинги до настройки Azure deployment
-            # TODO: Включить когда будет создан embedding deployment в Azure OpenAI Studio
+            # ГОТОВО К ВКЛЮЧЕНИЮ: Раскомментировать после создания embedding deployment в Azure
+            # Создаем базовые эмбеддинги для категорий через Azure OpenAI
             embeddings_available = False
 
-            # Закомментировано до создания embedding deployment в Azure
-            # if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
-            #     logger.info("Using Azure OpenAI for embeddings...")
-            #     await self._initialize_category_embeddings()
-            #     embeddings_available = bool(self.embeddings_cache)
+            # ВКЛЮЧИТЬ ПОСЛЕ СОЗДАНИЯ DEPLOYMENT:
+            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
+                logger.info("Trying Azure OpenAI embeddings...")
+                await self._initialize_category_embeddings()
+                embeddings_available = bool(self.embeddings_cache)
 
             if not embeddings_available:
                 logger.info(
-                    "🔧 Embeddings disabled - using keyword classification only (production stable)")
+                    "🔧 Azure embeddings not available - using keyword classification (production stable)")
             else:
                 logger.info(
                     f"✅ Azure embeddings ready for {len(self.embeddings_cache)} categories")
 
             # Всегда помечаем как инициализированный
             self.initialized = True
-            logger.info(
-                "✅ ML Classifier initialized in keyword mode (fully functional)")
+            logger.info("✅ ML Classifier initialized")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize ML Classifier: {e}")
@@ -109,15 +108,13 @@ class MLClassifier:
             if not self.initialized:
                 await self.initialize()
 
-            # ВРЕМЕННО: Используем только keyword классификацию
-            # TODO: Включить ML когда будет настроен Azure embeddings deployment
-            # Сначала пробуем ML подход
-            # if AZURE_OPENAI_API_KEY and self.embeddings_cache:
-            #     ml_result = await self._ml_classify(message)
-            #     if ml_result['confidence'] > 0.6:  # высокая уверенность
-            #         return ml_result
+            # Пробуем ML подход если эмбеддинги доступны
+            if AZURE_OPENAI_API_KEY and self.embeddings_cache:
+                ml_result = await self._ml_classify(message)
+                if ml_result['confidence'] > 0.6:  # высокая уверенность
+                    return ml_result
 
-            # Используем keyword classification (стабильно работает)
+            # Fallback: keyword classification (всегда работает)
             keyword_result = await self._keyword_classify(message)
             return keyword_result
 
