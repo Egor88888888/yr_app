@@ -3021,13 +3021,17 @@ async def main():
 
     # Джобы
     if application.job_queue is not None:
+        # Используем переменную окружения для интервала автопостинга
+        autopost_hours = int(os.getenv("POST_INTERVAL_HOURS", "2"))
+
         application.job_queue.run_repeating(
             autopost_job,
-            interval=timedelta(hours=2),
+            interval=timedelta(hours=autopost_hours),
             first=timedelta(minutes=10)
         )
-        print("✅ Job queue initialized - autopost enabled")
-        log.info("Job queue initialized successfully")
+        print(
+            f"✅ Job queue initialized - autopost every {autopost_hours} hours")
+        log.info(f"Job queue initialized with {autopost_hours}h interval")
     else:
         print("⚠️ Job queue not available - autopost disabled")
         log.warning("Job queue not available, autopost functionality disabled")
