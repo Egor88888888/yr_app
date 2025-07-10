@@ -71,6 +71,9 @@ try:
 
     app = fastapi.FastAPI()
 
+    # Global variable to store bot application
+    bot_application = None
+
     # ===== API ROUTES FIRST (before static mounts) =====
 
     @app.get("/health")
@@ -166,20 +169,33 @@ try:
             "engine": "Enhanced AI" if ai_manager._initialized else "Fallback AI"
         }
 
-    # Telegram webhook handler
+    # Telegram webhook handler - FIXED to actually process updates
     @app.post("/telegram/{token}")
     async def handle_telegram_webhook(token: str, request: fastapi.Request):
         if token != os.getenv("BOT_TOKEN"):
+            print(
+                f"❌ Unauthorized webhook attempt with token: {token[:10]}...")
             return fastapi.Response(status_code=401, content="Unauthorized")
 
         try:
             data = await request.json()
-            from telegram.ext import Application
-            # We need to get the application instance from bot_main
-            # For now, return success - the actual processing happens in bot_main
+            print(f"📨 Received webhook data: {len(str(data))} chars")
+
+            # Process update through bot application
+            if bot_application:
+                update = Update.de_json(data, bot_application.bot)
+                print(
+                    f"📥 Processing update: {update.update_id if update else 'None'}")
+                await bot_application.process_update(update)
+                print("✅ Update processed successfully")
+            else:
+                print("⚠️ Bot application not ready yet")
+
             return fastapi.Response(status_code=200, content="OK")
         except Exception as e:
-            print(f"Webhook error: {e}")
+            print(f"❌ Webhook error: {e}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
             return fastapi.Response(status_code=500, content="Error")
 
     # Also handle the exact webhook URL format used
@@ -192,13 +208,50 @@ try:
     app.mount("/admin", StaticFiles(directory="webapp", html=True), name="admin")
 
     async def main():
+        global bot_application
+
         config = uvicorn.Config(app, host="0.0.0.0",
                                 port=int(os.environ.get("PORT", 8080)))
         server = uvicorn.Server(config)
 
+        # Create a modified bot_main that returns the application
+        async def run_bot():
+            from bot.main import TOKEN
+            from telegram.ext import Application
+
+            # Import and setup the bot application
+            application = Application.builder().token(TOKEN).build()
+
+            # Store globally for webhook access
+            bot_application = application
+
+            # Setup handlers (import from bot.main)
+            from bot.main import cmd_start, cmd_admin, admin_callback, post_init
+            from telegram.ext import CommandHandler, CallbackQueryHandler
+
+            application.add_handler(CommandHandler("start", cmd_start))
+            application.add_handler(CommandHandler("admin", cmd_admin))
+            application.add_handler(CallbackQueryHandler(admin_callback))
+
+            # Initialize
+            await application.initialize()
+            await post_init(application)
+
+            # Set webhook
+            webhook_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}/telegram/{TOKEN}"
+            await application.bot.set_webhook(webhook_url)
+            print(f"✅ Webhook set to: {webhook_url}")
+
+            # Start application
+            await application.start()
+            print("✅ Bot application started and ready")
+
+            # Keep running
+            await asyncio.Event().wait()
+
         await asyncio.gather(
             server.serve(),
-            bot_main()
+            run_bot()
         )
 
     if __name__ == "__main__":
