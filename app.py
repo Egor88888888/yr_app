@@ -95,14 +95,23 @@ try:
             "enhanced_ai_health": ai_health
         }
 
-    @app.get("/ai_status")
-    async def ai_status():
+    @app.get("/api/stats")
+    async def api_stats():
+        return {
+            "total_requests": 0,
+            "success_rate": 0.0,
+            "ai_requests": 0
+        }
+
+    # Move ai_status to correct path
+    @app.get("/api/ai_status")
+    async def api_ai_status():
         ai_manager = AIEnhancedManager()
         await ai_manager.initialize()
         return await ai_manager.health_check()
 
-    @app.post("/ai_chat_test")
-    async def ai_chat_test(payload: dict):
+    @app.post("/api/ai_chat_test")
+    async def api_ai_chat_test(payload: dict):
         import time
         ai_manager = AIEnhancedManager()
         await ai_manager.initialize()
@@ -115,16 +124,8 @@ try:
         return {
             "response": response,
             "response_time_ms": int(response_time),
-            "category": "test_category",  # Placeholder, adapt if needed
+            "category": "test_category",
             "intent": "test_intent"
-        }
-
-    @app.get("/api/stats")
-    async def api_stats():
-        return {
-            "total_requests": 0,
-            "success_rate": 0.0,
-            "ai_requests": 0
         }
 
     # Telegram webhook handler
