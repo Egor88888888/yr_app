@@ -313,7 +313,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """AI консультант по всем юридическим вопросам с Enhanced AI + обработка рассылок"""
+    """ИСПРАВЛЕННЫЙ AI консультант с памятью диалогов и клиентским путем"""
     global ai_enhanced_manager
 
     user_id = update.effective_user.id
@@ -329,14 +329,33 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("AI консультант временно недоступен")
         return
 
+    # Логирование для диагностики
+    await log_request(user_id, "ai", True)
+
     try:
-        # Используем Enhanced AI если доступен
+        # 🚀 ИСПРАВЛЕНИЕ: Используем Enhanced AI с правильными параметрами
         if ai_enhanced_manager and ai_enhanced_manager._initialized:
+            log.info(f"🧠 Using Enhanced AI for user {user_id}")
+
+            # ИСПРАВЛЕНО: Передаем правильный user_id (Telegram ID, не database ID)
             response = await ai_enhanced_manager.generate_response(
-                user_id=user.id,
-                message=user_text
+                user_id=user_id,  # Telegram ID
+                message=user_text,
+                context={
+                    'telegram_user': {
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'username': user.username
+                    },
+                    'message_timestamp': datetime.now().isoformat()
+                }
             )
+
+            log.info(
+                f"✅ Enhanced AI response generated: {len(response)} chars")
         else:
+            log.info(f"⚠️ Using fallback AI for user {user_id}")
+
             # Fallback к старому AI
             category = detect_category(user_text)
 
@@ -354,14 +373,44 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Проверяем на код 402 и не добавляем дубль текста
             if "код 402" not in response:
-                response += "\n\n💼 Для детальной консультации нажмите /start и заполните заявку."
+                response += "\n\n💼 Для детальной консультации нажмите кнопки ниже."
 
-        await update.message.reply_text(response)
+        # 🎯 НОВОЕ: Добавляем клиентский путь с кнопками
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                InlineKeyboardButton("📞 Заказать звонок",
+                                     callback_data="request_call")
+            ],
+            [
+                InlineKeyboardButton(
+                    "💬 Консультация в чате", callback_data="chat_consultation"),
+                InlineKeyboardButton("📊 Узнать стоимость",
+                                     callback_data="get_price")
+            ]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(response, reply_markup=reply_markup)
+
+        log.info(
+            f"✅ AI response sent to user {user_id} with client flow buttons")
 
     except Exception as e:
-        log.error(f"AI Chat error: {e}")
+        log.error(f"❌ AI Chat error for user {user_id}: {e}")
+        await log_request(user_id, "ai", False, str(e))
+
+        # Fallback ответ с кнопками
+        fallback_keyboard = [[
+            InlineKeyboardButton(
+                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
+        ]]
+
         await update.message.reply_text(
-            "🏠 🤖 AI временно недоступен 💼 Для детальной консультации нажмите /start и заполните заявку."
+            "🤖 AI временно недоступен, но вы можете оставить заявку на консультацию.",
+            reply_markup=InlineKeyboardMarkup(fallback_keyboard)
         )
 
 
@@ -531,11 +580,22 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     user_id = query.from_user.id
+    data = query.data
+
+    # 🎯 НОВОЕ: Клиентские кнопки доступны всем пользователям
+    client_actions = [
+        "request_call", "chat_consultation", "get_price", "back_to_chat",
+        "enter_phone", "submit_call_request"
+    ]
+
+    if data in client_actions or data.startswith("consultation_category_"):
+        await client_flow_callback(update, context)
+        return
+
+    # Проверка админ-доступа только для админских действий
     if not await is_admin(user_id):
         await query.answer("Нет доступа", show_alert=True)
         return
-
-    data = query.data
 
     if data == "admin_apps":
         await show_applications(query, context)
@@ -2562,6 +2622,326 @@ async def show_detailed_stats(query, context):
             await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
+async def client_flow_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """🎯 НОВЫЙ: Обработчик клиентского пути"""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    user = query.from_user
+
+    if data == "request_call":
+        await handle_request_call(query, context)
+    elif data == "chat_consultation":
+        await handle_chat_consultation(query, context)
+    elif data == "get_price":
+        await handle_get_price(query, context)
+    elif data.startswith("consultation_category_"):
+        await handle_consultation_category(query, context)
+    elif data == "submit_call_request":
+        await handle_submit_call_request(query, context)
+    elif data == "back_to_chat":
+        await handle_back_to_chat(query, context)
+
+
+async def handle_request_call(query, context):
+    """📞 Заказать звонок"""
+    text = """
+📞 **ЗАКАЗАТЬ ОБРАТНЫЙ ЗВОНОК**
+
+Укажите ваш номер телефона и удобное время для звонка.
+Наш юрист свяжется с вами в течение 30 минут.
+
+🕐 **Рабочие часы:** 9:00 - 21:00 (МСК)
+💰 **Стоимость:** Первые 15 минут БЕСПЛАТНО
+
+📝 Или оставьте заявку через форму:
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("📱 Указать телефон",
+                              callback_data="enter_phone")],
+        [InlineKeyboardButton(
+            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("◀️ Назад", callback_data="back_to_chat")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_chat_consultation(query, context):
+    """💬 Консультация в чате"""
+    text = """
+💬 **КОНСУЛЬТАЦИЯ В ЧАТЕ**
+
+Выберите категорию вашего вопроса для получения персональной консультации:
+
+🎯 **Преимущества чат-консультации:**
+• Быстрые ответы в течение 5-10 минут
+• Сохранение переписки для истории
+• Возможность отправки документов
+• Первичная консультация БЕСПЛАТНО
+"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton("👨‍👩‍👧 Семейное право",
+                                 callback_data="consultation_category_family"),
+            InlineKeyboardButton("🏠 Жилищные вопросы",
+                                 callback_data="consultation_category_housing")
+        ],
+        [
+            InlineKeyboardButton("💼 Трудовые споры",
+                                 callback_data="consultation_category_labor"),
+            InlineKeyboardButton(
+                "💳 Банкротство", callback_data="consultation_category_bankruptcy")
+        ],
+        [
+            InlineKeyboardButton("🛒 Защита потребителей",
+                                 callback_data="consultation_category_consumer"),
+            InlineKeyboardButton("⚖️ Другие вопросы",
+                                 callback_data="consultation_category_other")
+        ],
+        [InlineKeyboardButton("◀️ Назад", callback_data="back_to_chat")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_get_price(query, context):
+    """📊 Узнать стоимость"""
+    text = """
+📊 **СТОИМОСТЬ ЮРИДИЧЕСКИХ УСЛУГ**
+
+💰 **КОНСУЛЬТАЦИИ:**
+• Устная консультация: 2 000 ₽/час
+• Письменная консультация: 1 500 ₽
+• Анализ документов: 3 000 ₽
+
+⚖️ **СУДЕБНОЕ ПРЕДСТАВИТЕЛЬСТВО:**
+• Гражданские дела: от 30 000 ₽
+• Административные дела: от 15 000 ₽
+• Арбитражные споры: от 50 000 ₽
+
+📝 **СОСТАВЛЕНИЕ ДОКУМЕНТОВ:**
+• Претензии: от 5 000 ₽
+• Договоры: от 10 000 ₽
+• Исковые заявления: от 15 000 ₽
+
+🎁 **СПЕЦИАЛЬНЫЕ ПРЕДЛОЖЕНИЯ:**
+• Первая консультация БЕСПЛАТНО
+• Скидка 20% при заключении договора на месяц
+• Фиксированная стоимость по результату
+
+Точную стоимость рассчитаем после анализа вашей ситуации.
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Получить расчет",
+                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📞 Обсудить по телефону",
+                              callback_data="request_call")],
+        [InlineKeyboardButton("◀️ Назад", callback_data="back_to_chat")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_consultation_category(query, context):
+    """Обработка выбора категории консультации"""
+    category_map = {
+        "consultation_category_family": "Семейное право",
+        "consultation_category_housing": "Жилищные вопросы",
+        "consultation_category_labor": "Трудовые споры",
+        "consultation_category_bankruptcy": "Банкротство",
+        "consultation_category_consumer": "Защита прав потребителей",
+        "consultation_category_other": "Другие вопросы"
+    }
+
+    category = category_map.get(query.data, "Общие вопросы")
+
+    text = f"""
+✅ **ВЫБРАНА КАТЕГОРИЯ: {category.upper()}**
+
+Теперь опишите вашу ситуацию максимально подробно:
+
+📝 **Что указать:**
+• Суть проблемы
+• Что уже предпринимали
+• Какой результат нужен
+• Есть ли срочность
+
+⚡ **Наш юрист ответит в течение 10 минут**
+
+Либо заполните подробную заявку для более детального анализа:
+"""
+
+    # Сохраняем выбранную категорию в контекст пользователя
+    context.user_data['consultation_category'] = category
+    context.user_data['awaiting_consultation_details'] = True
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Заполнить подробную заявку",
+                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("◀️ Выбрать другую категорию",
+                              callback_data="chat_consultation")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_back_to_chat(query, context):
+    """Возврат к основному сообщению"""
+    text = """
+💬 Продолжайте задавать вопросы в чате.
+
+Наш AI-консультант готов помочь с любыми юридическими вопросами!
+"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+            InlineKeyboardButton("📞 Заказать звонок",
+                                 callback_data="request_call")
+        ],
+        [
+            InlineKeyboardButton("💬 Консультация в чате",
+                                 callback_data="chat_consultation"),
+            InlineKeyboardButton("📊 Узнать стоимость",
+                                 callback_data="get_price")
+        ]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def handle_consultation_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка деталей консультации от пользователя"""
+    user_id = update.effective_user.id
+    user_text = update.message.text
+    user = update.effective_user
+    category = context.user_data.get('consultation_category', 'Общие вопросы')
+
+    # Очищаем флаг ожидания
+    context.user_data['awaiting_consultation_details'] = False
+
+    # Формируем заявку в админ чат
+    admin_text = f"""
+📝 **КОНСУЛЬТАЦИЯ В ЧАТЕ**
+
+👤 **Клиент:** {user.first_name} {user.last_name or ''}
+🆔 **ID:** `{user_id}`
+📂 **Категория:** {category}
+
+📄 **Детали проблемы:**
+{user_text}
+
+⏰ **Время:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+🎯 **Требуется:** Оперативная консультация в чате
+"""
+
+    admin_keyboard = [[
+        InlineKeyboardButton("💬 Ответить клиенту",
+                             url=f"tg://user?id={user_id}")
+    ]]
+
+    try:
+        await context.bot.send_message(
+            ADMIN_CHAT_ID,
+            admin_text,
+            reply_markup=InlineKeyboardMarkup(admin_keyboard),
+            parse_mode='Markdown'
+        )
+        log.info(f"✅ Consultation request sent to admin for user {user_id}")
+    except Exception as e:
+        log.error(f"❌ Failed to send consultation request to admin: {e}")
+
+    # Ответ клиенту
+    response_text = f"""
+✅ **ЗАЯВКА НА КОНСУЛЬТАЦИЮ ПРИНЯТА**
+
+📂 **Категория:** {category}
+⏰ **Время подачи:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+🔔 **Что дальше:**
+• Наш юрист изучит вашу ситуацию
+• Ответ поступит в течение 10-15 минут
+• Первичная консультация БЕСПЛАТНО
+
+💡 **Пока ждете ответа:**
+Можете задать дополнительные вопросы или уточнить детали проблемы.
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Подать подробную заявку",
+                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📞 Заказать звонок",
+                              callback_data="request_call")]
+    ]
+
+    await update.message.reply_text(
+        response_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+    # Используем Enhanced AI для генерации предварительного ответа
+    try:
+        if ai_enhanced_manager and ai_enhanced_manager._initialized:
+            ai_response = await ai_enhanced_manager.generate_response(
+                user_id=user_id,
+                message=f"Консультация по {category}: {user_text}",
+                context={
+                    'consultation_category': category,
+                    'is_consultation_request': True
+                }
+            )
+
+            # Отправляем AI ответ как предварительную консультацию
+            await update.message.reply_text(
+                f"🤖 **ПРЕДВАРИТЕЛЬНАЯ AI-КОНСУЛЬТАЦИЯ:**\n\n{ai_response}\n\n"
+                f"⚖️ Наш юрист дополнительно изучит детали и даст персональные рекомендации."
+            )
+
+    except Exception as e:
+        log.error(f"❌ Failed to generate AI consultation: {e}")
+
+
+async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """🎯 Улучшенный обработчик сообщений с поддержкой консультаций"""
+    user_id = update.effective_user.id
+    user_text = update.message.text
+
+    # Проверяем, ожидается ли ввод деталей консультации
+    if context.user_data.get('awaiting_consultation_details'):
+        await handle_consultation_details(update, context)
+        return
+
+    # Обычная AI-консультация
+    await ai_chat(update, context)
+
+
 async def show_ai_status(query, context):
     """Показать статус Enhanced AI"""
     global ai_enhanced_manager
@@ -2629,6 +3009,116 @@ async def show_ai_status(query, context):
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
             await query.answer("❌ Ошибка отображения данных", show_alert=True)
+
+
+async def handle_enter_phone(query, context):
+    """📱 Ввод телефона для заказа звонка"""
+    text = """
+📱 **УКАЖИТЕ ВАШ НОМЕР ТЕЛЕФОНА**
+
+Отправьте ваш номер телефона в следующем сообщении.
+
+📝 **Формат:** +7 (900) 123-45-67 или 89001234567
+
+⏰ **Также укажите удобное время для звонка:**
+• Утром (9:00-12:00)
+• Днем (12:00-17:00) 
+• Вечером (17:00-21:00)
+• Сейчас (в рабочее время)
+
+Пример сообщения:
+`+7 (900) 123-45-67, звонить вечером`
+"""
+
+    # Сохраняем состояние ожидания номера телефона
+    context.user_data['awaiting_phone_input'] = True
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Заполнить заявку вместо звонка",
+                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("◀️ Назад", callback_data="request_call")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_phone_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка введенного номера телефона"""
+    user_id = update.effective_user.id
+    user_text = update.message.text
+    user = update.effective_user
+
+    # Очищаем флаг ожидания
+    context.user_data['awaiting_phone_input'] = False
+
+    # Формируем заявку на звонок в админ чат
+    admin_text = f"""
+📞 **ЗАЯВКА НА ОБРАТНЫЙ ЗВОНОК**
+
+👤 **Клиент:** {user.first_name} {user.last_name or ''}
+🆔 **ID:** `{user_id}`
+
+📱 **Контакт:** {user_text}
+
+⏰ **Время заявки:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+🎯 **Требуется:** Обратный звонок в указанное время
+💰 **Условие:** Первые 15 минут БЕСПЛАТНО
+"""
+
+    admin_keyboard = [[
+        InlineKeyboardButton("📞 Позвонить", url=f"tg://user?id={user_id}"),
+        InlineKeyboardButton("💬 Написать", url=f"tg://user?id={user_id}")
+    ]]
+
+    try:
+        await context.bot.send_message(
+            ADMIN_CHAT_ID,
+            admin_text,
+            reply_markup=InlineKeyboardMarkup(admin_keyboard),
+            parse_mode='Markdown'
+        )
+        log.info(f"✅ Call request sent to admin for user {user_id}")
+    except Exception as e:
+        log.error(f"❌ Failed to send call request to admin: {e}")
+
+    # Ответ клиенту
+    response_text = f"""
+✅ **ЗАЯВКА НА ЗВОНОК ПРИНЯТА**
+
+📱 **Ваш номер:** {user_text}
+⏰ **Время подачи:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+🔔 **Что дальше:**
+• Наш юрист свяжется с вами в указанное время
+• Проверьте, что телефон доступен для входящих
+• Первые 15 минут консультации БЕСПЛАТНО
+
+📞 **Если не дозвонимся:**
+Попробуем связаться через Telegram или вы можете написать нам сами.
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("📝 Дополнительная заявка",
+                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("💬 Задать вопрос в чате",
+                              callback_data="chat_consultation")]
+    ]
+
+    await update.message.reply_text(
+        response_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_submit_call_request(query, context):
+    """Обработка подтверждения заявки на звонок"""
+    await query.answer("Заявка обработана!", show_alert=True)
 
 
 # ================ JOBS ================
@@ -3175,7 +3665,7 @@ async def main():
     application.add_handler(CallbackQueryHandler(admin_callback))
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
-        ai_chat
+        enhanced_message_handler
     ))
 
     # Джобы
