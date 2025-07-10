@@ -15,12 +15,11 @@ from aiohttp import web
 import json
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Payment, Admin
 from sqlalchemy import select, func, desc
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
 from bot.services.pay import create_payment
 from bot.services.sheets import append_lead
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
-from fastapi.openapi.models import WebAppInfo
 
 print("🚀 Starting from app.py...")
 
