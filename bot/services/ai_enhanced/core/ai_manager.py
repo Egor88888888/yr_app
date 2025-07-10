@@ -73,7 +73,7 @@ class AIEnhancedManager:
             return
 
         try:
-            logger.info("🚀 Initializing Enhanced AI system...")
+            logger.info("Initializing Enhanced AI system...")
 
             # Инициализируем компоненты параллельно
             await asyncio.gather(
@@ -86,10 +86,10 @@ class AIEnhancedManager:
             )
 
             self._initialized = True
-            logger.info("✅ Enhanced AI system initialized successfully")
+            logger.info("Enhanced AI system initialized successfully")
 
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize Enhanced AI: {e}")
+        except (ValueError, RuntimeError) as e:
+            logger.error("Failed to initialize Enhanced AI: %s", e)
             raise
 
     async def generate_response(
@@ -176,22 +176,8 @@ class AIEnhancedManager:
 
             return final_response
 
-        except Exception as e:
-            logger.error(f"❌ Enhanced AI error for user {user_id}: {e}")
-            logger.error(
-                f"❌ Enhanced AI error traceback: {traceback.format_exc()}")
-
-            # Подробная диагностика ошибки
-            error_context = {
-                "initialized": self._initialized,
-                "user_id": user_id,
-                "message_length": len(message),
-                "error_type": type(e).__name__,
-                "error_message": str(e)
-            }
-            logger.error(f"❌ Enhanced AI error context: {error_context}")
-
-            # Fallback к базовому AI при ошибке
+        except (ValueError, RuntimeError) as e:
+            logger.error("Enhanced AI error for user %s: %s", user_id, e)
             return await self._fallback_response(message, str(e))
 
     async def _generate_base_response(self, context: AIContext) -> str:

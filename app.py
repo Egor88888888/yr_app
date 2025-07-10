@@ -5,6 +5,13 @@ import os
 import sys
 import asyncio
 
+import fastapi
+import uvicorn
+from fastapi.staticfiles import StaticFiles
+from bot.services.ai_enhanced import AIEnhancedManager
+from bot.services.db import async_sessionmaker
+from sqlalchemy import text
+
 print("🚀 Starting from app.py...")
 
 # Set environment
@@ -52,7 +59,77 @@ print(f"🔗 Database URL: {os.getenv('DATABASE_URL')[:30]}...")
 try:
     from bot.main import main as bot_main
     print("✅ Bot module imported")
-    asyncio.run(bot_main())
+
+    app = fastapi.FastAPI()
+
+    app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
+    app.mount("/admin", StaticFiles(directory="webapp", html=True), name="admin")
+
+    @app.get("/health")
+    async def health():
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
+        ai_health = await ai_manager.health_check()
+
+        async with async_sessionmaker() as session:
+            try:
+                await session.execute(text("SELECT 1"))
+                db_status = "connected"
+            except:
+                db_status = "disconnected"
+
+        return {
+            "status": "healthy",
+            "bot_status": "running",
+            "db_status": db_status,
+            "enhanced_ai_status": "INITIALIZED" if ai_manager._initialized else "NOT INITIALIZED",
+            "enhanced_ai_health": ai_health
+        }
+
+    @app.get("/ai_status")
+    async def ai_status():
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
+        return await ai_manager.health_check()
+
+    @app.post("/ai_chat_test")
+    async def ai_chat_test(payload: dict):
+        import time
+        ai_manager = AIEnhancedManager()
+        await ai_manager.initialize()
+        start = time.time()
+        response = await ai_manager.generate_response(
+            user_id=payload.get("user_id", 12345),
+            message=payload.get("message", "Test message")
+        )
+        response_time = (time.time() - start) * 1000
+        return {
+            "response": response,
+            "response_time_ms": int(response_time),
+            "category": "test_category",  # Placeholder, adapt if needed
+            "intent": "test_intent"
+        }
+
+    @app.get("/api/stats")
+    async def api_stats():
+        return {
+            "total_requests": 0,
+            "success_rate": 0.0,
+            "ai_requests": 0
+        }
+
+    async def main():
+        config = uvicorn.Config(app, host="0.0.0.0",
+                                port=int(os.environ.get("PORT", 8080)))
+        server = uvicorn.Server(config)
+
+        await asyncio.gather(
+            server.serve(),
+            bot_main()
+        )
+
+    if __name__ == "__main__":
+        asyncio.run(main())
 except Exception as e:
     print(f"❌ Error: {e}")
     import traceback

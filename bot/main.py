@@ -48,6 +48,8 @@ from bot.services.pay import create_payment
 from bot.services.ai import generate_ai_response, generate_post_content
 from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
+from bot.handlers.smm_admin import register_smm_admin_handlers
+from .handlers.smm_admin import register_smm_admin_handlers
 
 # ================ PRODUCTION CONFIG ================
 
@@ -4026,6 +4028,9 @@ async def main():
     application.add_handler(CommandHandler("add_admin", cmd_add_admin))
     application.add_handler(CommandHandler("list_admins", cmd_list_admins))
     application.add_handler(CallbackQueryHandler(admin_callback))
+
+    # Регистрируем SMM админ обработчики
+    register_smm_admin_handlers(application)
 
     # 🔧 ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
     async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
