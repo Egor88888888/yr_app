@@ -37,6 +37,7 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, ContextTypes, filters
 )
+from telegram.constants import ParseMode
 
 from bot.services.db import (
     async_sessionmaker, init_db, Base,
@@ -3163,7 +3164,20 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
         try:
             from bot.services.ai_enhanced.analytics.interaction_tracker import InteractionTracker
             tracker = InteractionTracker()
-            await tracker.track_autopost_sent(post_text, len(post_text))
+            # Трекинг автопоста через обычный метод отслеживания
+            try:
+                from bot.services.ai_enhanced.core.context_builder import AIContext
+                context = AIContext()
+                await tracker.track_interaction(
+                    user_id=0,  # системный пользователь
+                    session_id=0,  # системная сессия
+                    message="autopost_generation",
+                    response=post_text,
+                    context=context,
+                    response_time_ms=1000  # примерное время
+                )
+            except Exception as track_error:
+                log.error(f"Autopost tracking failed: {track_error}")
         except Exception as analytics_error:
             log.error(f"Analytics tracking failed: {analytics_error}")
 
@@ -3663,10 +3677,33 @@ async def main():
     application.add_handler(CommandHandler("add_admin", cmd_add_admin))
     application.add_handler(CommandHandler("list_admins", cmd_list_admins))
     application.add_handler(CallbackQueryHandler(admin_callback))
+
+    # 🔧 ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
+    async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Роутер для обработки текстовых сообщений"""
+        user_id = update.effective_user.id
+
+        # Проверяем, ожидается ли ввод телефона
+        if context.user_data.get('awaiting_phone_input'):
+            await handle_phone_input(update, context)
+            return
+
+        # Проверяем, ожидается ли ввод деталей консультации
+        if context.user_data.get('awaiting_consultation_details'):
+            await handle_consultation_details(update, context)
+            return
+
+        # Обычная AI-консультация
+        await ai_chat(update, context)
+
+    # Регистрируем универсальный обработчик сообщений
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
-        enhanced_message_handler
-    ))
+        filters.TEXT & ~filters.COMMAND, message_handler_router))
+    # 🔧 УДАЛЯЕМ ДУБЛИРУЮЩИЙ ОБРАБОТЧИК
+    # application.add_handler(MessageHandler(
+    #     filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+    #     enhanced_message_handler
+    # ))
 
     # Джобы
     if application.job_queue is not None:
