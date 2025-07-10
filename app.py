@@ -234,12 +234,13 @@ try:
                 f"✅ Bot application stored globally: {bot_application is not None}")
 
             # Setup handlers (import from bot.main)
-            from bot.main import cmd_start, cmd_admin, admin_callback, post_init
+            from bot.main import cmd_start, cmd_admin, universal_callback_handler, post_init
             from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
             application.add_handler(CommandHandler("start", cmd_start))
             application.add_handler(CommandHandler("admin", cmd_admin))
-            application.add_handler(CallbackQueryHandler(admin_callback))
+            application.add_handler(
+                CallbackQueryHandler(universal_callback_handler))
 
             # Add message handler for AI
             from bot.main import ai_chat
