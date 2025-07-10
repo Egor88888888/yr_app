@@ -180,6 +180,7 @@ try:
         try:
             data = await request.json()
             print(f"📨 Received webhook data: {len(str(data))} chars")
+            print(f"🔍 Bot application state: {bot_application is not None}")
 
             # Process update through bot application
             if bot_application:
@@ -189,7 +190,9 @@ try:
                 await bot_application.process_update(update)
                 print("✅ Update processed successfully")
             else:
-                print("⚠️ Bot application not ready yet")
+                print("⚠️ Bot application not ready yet - checking global state...")
+                print(
+                    f"⚠️ Global bot_application is None: {bot_application is None}")
 
             return fastapi.Response(status_code=200, content="OK")
         except Exception as e:
@@ -216,22 +219,34 @@ try:
 
         # Create a modified bot_main that returns the application
         async def run_bot():
+            global bot_application
             from bot.main import TOKEN
             from telegram.ext import Application
+
+            print("🔧 Starting bot setup...")
 
             # Import and setup the bot application
             application = Application.builder().token(TOKEN).build()
 
-            # Store globally for webhook access
+            # Store globally for webhook access - FIX: proper global assignment
             bot_application = application
+            print(
+                f"✅ Bot application stored globally: {bot_application is not None}")
 
             # Setup handlers (import from bot.main)
             from bot.main import cmd_start, cmd_admin, admin_callback, post_init
-            from telegram.ext import CommandHandler, CallbackQueryHandler
+            from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
             application.add_handler(CommandHandler("start", cmd_start))
             application.add_handler(CommandHandler("admin", cmd_admin))
             application.add_handler(CallbackQueryHandler(admin_callback))
+
+            # Add message handler for AI
+            from bot.main import ai_chat
+            application.add_handler(MessageHandler(
+                filters.TEXT & ~filters.COMMAND, ai_chat))
+
+            print("✅ Handlers registered")
 
             # Initialize
             await application.initialize()
@@ -245,6 +260,8 @@ try:
             # Start application
             await application.start()
             print("✅ Bot application started and ready")
+            print(
+                f"🔍 Global bot_application check: {bot_application is not None}")
 
             # Keep running
             await asyncio.Event().wait()
