@@ -3024,6 +3024,15 @@ async def main():
         # Используем переменную окружения для интервала автопостинга
         autopost_hours = int(os.getenv("POST_INTERVAL_HOURS", "2"))
 
+        # ДОБАВЛЯЕМ: Одиночный автопост через 5 минут после перезапуска
+        application.job_queue.run_once(
+            autopost_job,
+            when=timedelta(minutes=5)
+        )
+        print("✅ One-time autopost scheduled for 5 minutes after restart")
+        log.info("One-time autopost job scheduled for 5 minutes after restart")
+
+        # Основной повторяющийся автопостинг
         application.job_queue.run_repeating(
             autopost_job,
             interval=timedelta(hours=autopost_hours),
