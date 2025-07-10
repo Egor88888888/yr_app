@@ -3,6 +3,7 @@ ML Classifier - машинное обучение для классификац�
 
 Использует Azure OpenAI Embeddings для векторизации и cosine similarity для классификации.
 Fallback на keyword matching при низкой уверенности.
+Azure Embeddings Deployment: text-embedding-ada-002 ГОТОВ К РАБОТЕ!
 """
 
 import asyncio
