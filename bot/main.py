@@ -2639,6 +2639,8 @@ async def client_flow_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await handle_get_price(query, context)
     elif data.startswith("consultation_category_"):
         await handle_consultation_category(query, context)
+    elif data == "enter_phone":
+        await handle_enter_phone(query, context)
     elif data == "submit_call_request":
         await handle_submit_call_request(query, context)
     elif data == "back_to_chat":
