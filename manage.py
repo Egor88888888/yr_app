@@ -327,5 +327,105 @@ async def _test_news_parser():
         click.echo(f"Error details: {traceback.format_exc()}")
 
 
+@cli.command()
+async def test_enhanced_autopost():
+    """Test Enhanced Autopost System with high-quality structured posts"""
+
+    try:
+        click.echo("🚀 Testing Enhanced Autopost System...")
+
+        # Import and initialize
+        from bot.services.content_intelligence.post_generator import PostGenerator
+
+        generator = PostGenerator()
+
+        click.echo("📝 Generating sample educational posts...")
+
+        # Generate 3 sample posts
+        for i in range(3):
+            click.echo(f"\n{'='*60}")
+            click.echo(f"📄 SAMPLE POST #{i+1}")
+            click.echo(f"{'='*60}")
+
+            try:
+                post = await generator.generate_post()
+
+                click.echo(f"Length: {len(post)} characters")
+                click.echo(f"\nContent:\n{post}")
+
+                # Check structure quality
+                quality_score = 0
+                if "📋" in post or "🎯" in post:
+                    quality_score += 1
+                if "⚠️" in post:
+                    quality_score += 1
+                if "🔗" in post:
+                    quality_score += 1
+                if "📞" in post:
+                    quality_score += 1
+                if any(site in post for site in ['gosuslugi.ru', 'nalog.gov.ru', 'rosreestr.gov.ru']):
+                    quality_score += 1
+
+                click.echo(f"Quality Score: {quality_score}/5 ⭐")
+
+                if quality_score >= 4:
+                    click.echo("✅ HIGH QUALITY POST")
+                elif quality_score >= 3:
+                    click.echo("⚡ GOOD QUALITY POST")
+                else:
+                    click.echo("⚠️ NEEDS IMPROVEMENT")
+
+            except Exception as e:
+                click.echo(f"❌ Failed to generate post #{i+1}: {e}")
+
+        click.echo(f"\n{'='*60}")
+        click.echo("🎉 Enhanced Autopost Test Completed!")
+        click.echo(f"{'='*60}")
+
+        # Test fallback system
+        click.echo("\n🔄 Testing Fallback System...")
+
+        from bot.main import _fallback_autopost
+
+        class MockContext:
+            class MockBot:
+                def __init__(self):
+                    self.username = "test_bot"
+
+                async def send_message(self, chat_id, text, reply_markup=None, parse_mode=None):
+                    click.echo(f"\n📤 FALLBACK POST (would send to {chat_id}):")
+                    click.echo(f"Text: {text[:200]}...")
+                    click.echo(f"Parse mode: {parse_mode}")
+                    return True
+
+            def __init__(self):
+                self.bot = self.MockBot()
+
+        # Test fallback (this will use our enhanced system)
+        mock_context = MockContext()
+
+        # Temporarily set CHANNEL_ID for test
+        import os
+        original_channel_id = os.environ.get('CHANNEL_ID')
+        os.environ['CHANNEL_ID'] = "@test_channel"
+
+        try:
+            await _fallback_autopost(mock_context)
+            click.echo("✅ Fallback system test completed")
+        except Exception as e:
+            click.echo(f"❌ Fallback test failed: {e}")
+        finally:
+            # Restore original CHANNEL_ID
+            if original_channel_id:
+                os.environ['CHANNEL_ID'] = original_channel_id
+            elif 'CHANNEL_ID' in os.environ:
+                del os.environ['CHANNEL_ID']
+
+    except Exception as e:
+        click.echo(f"❌ Enhanced autopost test failed: {e}")
+        import traceback
+        click.echo(f"Error details: {traceback.format_exc()}")
+
+
 if __name__ == "__main__":
     cli()
