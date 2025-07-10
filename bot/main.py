@@ -3075,42 +3075,6 @@ async def fix_database_schema():
         # Не прерываем запуск, продолжаем работу
 
 
-async def handle_debug_fix_schema(request: web.Request) -> web.Response:
-    """Debug endpoint для ручного исправления схемы БД"""
-    log.info("🔧 Debug endpoint hit for schema fix")
-    try:
-        await fix_database_schema()
-        return web.Response(text="Database schema fixed successfully!")
-    except Exception as e:
-        log.error(f"❌ Failed to fix database schema: {e}")
-        return web.Response(text=f"Failed to fix database schema: {e}", status=500)
-
-
-async def handle_debug_check_schema(request: web.Request) -> web.Response:
-    """Debug endpoint для проверки текущей схемы БД"""
-    log.info("🔍 Debug endpoint hit for schema check")
-    try:
-        async with async_sessionmaker() as session:
-            # Получаем все колонки таблицы applications
-            result = await session.execute(text("""
-                SELECT column_name, data_type, is_nullable, column_default
-                FROM information_schema.columns 
-                WHERE table_name = 'applications' 
-                ORDER BY ordinal_position
-            """))
-
-            columns = result.fetchall()
-
-            response_text = "APPLICATIONS TABLE SCHEMA:\n\n"
-            for col in columns:
-                response_text += f"- {col[0]} ({col[1]}) nullable={col[2]} default={col[3]}\n"
-
-            return web.Response(text=response_text)
-    except Exception as e:
-        log.error(f"❌ Failed to check database schema: {e}")
-        return web.Response(text=f"Failed to check database schema: {e}", status=500)
-
-
 async def main():
     """Точка входа"""
     # Инициализируем БД
