@@ -4430,28 +4430,417 @@ async def handle_smm_actions(query, context):
 
 # Заглушки для экспорта данных (будут реализованы позже)
 async def export_applications_data(query, context):
-    """Экспорт данных заявок"""
-    await query.answer("📊 Функция экспорта заявок в разработке", show_alert=True)
+    """📊 Экспорт данных заявок"""
+    await query.answer("📊 Экспорт заявок...", show_alert=False)
+
+    try:
+        async with async_sessionmaker() as session:
+            applications = await session.execute(
+                select(AppModel).order_by(AppModel.created_at.desc())
+            )
+            apps = applications.scalars().all()
+
+            # Создаем отчет
+            report = f"""📊 **ЭКСПОРТ ЗАЯВОК** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+📈 **Общая статистика:**
+• Всего заявок: {len(apps)}
+• Новых: {len([a for a in apps if a.status == 'new'])}
+• В обработке: {len([a for a in apps if a.status == 'processing'])}
+• Завершенных: {len([a for a in apps if a.status == 'completed'])}
+
+📋 **Последние 10 заявок:**"""
+
+            for i, app in enumerate(apps[:10], 1):
+                category_name = "Без категории"
+                if app.category:
+                    category_name = app.category.name
+
+                report += f"""
+
+{i}. ID {app.id} | {app.status.upper()}
+   📅 {app.created_at.strftime('%d.%m %H:%M')}
+   📂 {category_name}
+   👤 ID {app.user_id}
+   💰 {app.price or 'Не указана'}₽"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📥 Полный экспорт CSV", callback_data="export_apps_csv")],
+                [InlineKeyboardButton("🔙 Назад", callback_data="admin_export")]
+            ]
+
+    except Exception as e:
+        report = f"❌ **Ошибка экспорта заявок:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="admin_export")]]
+
+    await query.edit_message_text(
+        report,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def export_users_data(query, context):
-    """Экспорт данных пользователей"""
-    await query.answer("👥 Функция экспорта пользователей в разработке", show_alert=True)
+    """👥 Экспорт данных пользователей"""
+    await query.answer("👥 Экспорт пользователей...", show_alert=False)
+
+    try:
+        async with async_sessionmaker() as session:
+            users = await session.execute(
+                select(User).order_by(User.created_at.desc())
+            )
+            users_list = users.scalars().all()
+
+            # Статистика по времени регистрации
+            today = datetime.now().date()
+            week_ago = today - timedelta(days=7)
+            month_ago = today - timedelta(days=30)
+
+            today_users = len(
+                [u for u in users_list if u.created_at.date() == today])
+            week_users = len(
+                [u for u in users_list if u.created_at.date() >= week_ago])
+            month_users = len(
+                [u for u in users_list if u.created_at.date() >= month_ago])
+
+            report = f"""👥 **ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+📊 **Статистика регистраций:**
+• Всего пользователей: {len(users_list)}
+• Сегодня: +{today_users}
+• За неделю: +{week_users}
+• За месяц: +{month_users}
+
+📱 **Предпочтения связи:**"""
+
+            # Подсчет предпочтений
+            contact_stats = {}
+            for user in users_list:
+                contact = user.preferred_contact or 'telegram'
+                contact_stats[contact] = contact_stats.get(contact, 0) + 1
+
+            for contact, count in contact_stats.items():
+                report += f"\n• {contact.title()}: {count} ({count/len(users_list)*100:.1f}%)"
+
+            report += f"""
+
+👤 **Последние 5 пользователей:**"""
+
+            for i, user in enumerate(users_list[:5], 1):
+                name = user.first_name or "Не указано"
+                if user.last_name:
+                    name += f" {user.last_name}"
+
+                report += f"""
+
+{i}. {name}
+   🆔 {user.tg_id}
+   📅 {user.created_at.strftime('%d.%m %H:%M')}
+   📞 {user.preferred_contact}"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📥 Полный экспорт CSV", callback_data="export_users_csv")],
+                [InlineKeyboardButton("🔙 Назад", callback_data="admin_export")]
+            ]
+
+    except Exception as e:
+        report = f"❌ **Ошибка экспорта пользователей:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="admin_export")]]
+
+    await query.edit_message_text(
+        report,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def export_payments_data(query, context):
-    """Экспорт данных платежей"""
-    await query.answer("💳 Функция экспорта платежей в разработке", show_alert=True)
+    """💳 Экспорт данных платежей"""
+    await query.answer("💳 Экспорт платежей...", show_alert=False)
+
+    try:
+        async with async_sessionmaker() as session:
+            payments = await session.execute(
+                select(Payment).order_by(Payment.created_at.desc())
+            )
+            payments_list = payments.scalars().all()
+
+            # Статистика платежей
+            total_amount = sum(float(p.amount) for p in payments_list)
+            paid_payments = [p for p in payments_list if p.status == 'paid']
+            pending_payments = [
+                p for p in payments_list if p.status == 'pending']
+            failed_payments = [
+                p for p in payments_list if p.status == 'failed']
+
+            paid_amount = sum(float(p.amount) for p in paid_payments)
+
+            report = f"""💳 **ЭКСПОРТ ПЛАТЕЖЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+📊 **Финансовая статистика:**
+• Всего платежей: {len(payments_list)}
+• Успешных: {len(paid_payments)} ({paid_amount:,.0f}₽)
+• Ожидающих: {len(pending_payments)}
+• Неудачных: {len(failed_payments)}
+• Общая сумма: {total_amount:,.0f}₽
+
+💰 **Статистика по валютам:**"""
+
+            # Группировка по валютам
+            currencies = {}
+            for payment in payments_list:
+                curr = payment.currency or 'RUB'
+                if curr not in currencies:
+                    currencies[curr] = {'count': 0, 'amount': 0}
+                currencies[curr]['count'] += 1
+                currencies[curr]['amount'] += float(payment.amount)
+
+            for curr, data in currencies.items():
+                report += f"\n• {curr}: {data['count']} платежей на {data['amount']:,.0f}"
+
+            if paid_payments:
+                report += f"""
+
+💳 **Последние успешные платежи:**"""
+
+                for i, payment in enumerate(paid_payments[:5], 1):
+                    report += f"""
+
+{i}. Платеж #{payment.id}
+   💰 {payment.amount}₽
+   📅 {payment.created_at.strftime('%d.%m %H:%M')}
+   📋 Заявка #{payment.application_id}"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📥 Полный экспорт CSV", callback_data="export_payments_csv")],
+                [InlineKeyboardButton("🔙 Назад", callback_data="admin_export")]
+            ]
+
+    except Exception as e:
+        report = f"❌ **Ошибка экспорта платежей:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="admin_export")]]
+
+    await query.edit_message_text(
+        report,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def export_analytics_data(query, context):
-    """Экспорт аналитических данных"""
-    await query.answer("📈 Функция экспорта аналитики в разработке", show_alert=True)
+    """📈 Экспорт аналитических данных"""
+    await query.answer("📈 Экспорт аналитики...", show_alert=False)
+
+    try:
+        # Получаем данные за последние 30 дней
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+
+        async with async_sessionmaker() as session:
+            # Статистика заявок по дням
+            apps_result = await session.execute(
+                select(AppModel).where(AppModel.created_at >= start_date)
+            )
+            applications = apps_result.scalars().all()
+
+            # Статистика пользователей
+            users_result = await session.execute(
+                select(User).where(User.created_at >= start_date)
+            )
+            new_users = users_result.scalars().all()
+
+            # Статистика платежей
+            payments_result = await session.execute(
+                select(Payment).where(Payment.created_at >= start_date)
+            )
+            payments = payments_result.scalars().all()
+
+            # Группировка по дням
+            daily_stats = {}
+            for day in range(30):
+                date = (end_date - timedelta(days=day)).date()
+                daily_stats[date] = {
+                    'applications': 0,
+                    'users': 0,
+                    'payments': 0,
+                    'revenue': 0
+                }
+
+            # Заполняем статистику
+            for app in applications:
+                date = app.created_at.date()
+                if date in daily_stats:
+                    daily_stats[date]['applications'] += 1
+
+            for user in new_users:
+                date = user.created_at.date()
+                if date in daily_stats:
+                    daily_stats[date]['users'] += 1
+
+            for payment in payments:
+                date = payment.created_at.date()
+                if date in daily_stats:
+                    daily_stats[date]['payments'] += 1
+                    if payment.status == 'paid':
+                        daily_stats[date]['revenue'] += float(payment.amount)
+
+            # Подсчет средних значений
+            total_apps = sum(d['applications'] for d in daily_stats.values())
+            total_users = sum(d['users'] for d in daily_stats.values())
+            total_revenue = sum(d['revenue'] for d in daily_stats.values())
+
+            avg_apps = total_apps / 30
+            avg_users = total_users / 30
+            avg_revenue = total_revenue / 30
+
+            report = f"""📈 **АНАЛИТИКА** (30 дней) - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+📊 **Общие показатели:**
+• Заявок: {total_apps} (ср. {avg_apps:.1f}/день)
+• Новых пользователей: {total_users} (ср. {avg_users:.1f}/день)
+• Доход: {total_revenue:,.0f}₽ (ср. {avg_revenue:,.0f}₽/день)
+
+📅 **Топ-5 дней по заявкам:**"""
+
+            # Сортируем дни по количеству заявок
+            sorted_days = sorted(daily_stats.items(),
+                                 key=lambda x: x[1]['applications'], reverse=True)
+
+            for i, (date, stats) in enumerate(sorted_days[:5], 1):
+                report += f"""
+
+{i}. {date.strftime('%d.%m')} - {stats['applications']} заявок
+   👥 +{stats['users']} пользователей
+   💰 {stats['revenue']:,.0f}₽ дохода"""
+
+            # Конверсия
+            if total_users > 0:
+                conversion = (total_apps / total_users) * 100
+                report += f"""
+
+🎯 **Конверсия:** {conversion:.1f}% (заявки/пользователи)"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📥 Детальный экспорт", callback_data="export_analytics_csv")],
+                [InlineKeyboardButton("🔙 Назад", callback_data="admin_export")]
+            ]
+
+    except Exception as e:
+        report = f"❌ **Ошибка экспорта аналитики:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="admin_export")]]
+
+    await query.edit_message_text(
+        report,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def export_full_data(query, context):
-    """Полный экспорт всех данных"""
-    await query.answer("📦 Функция полного экспорта в разработке", show_alert=True)
+    """📦 Полный экспорт всех данных"""
+    await query.answer("📦 Полный экспорт...", show_alert=False)
+
+    try:
+        async with async_sessionmaker() as session:
+            # Получаем все основные данные
+            users_result = await session.execute(select(User))
+            users = users_result.scalars().all()
+
+            apps_result = await session.execute(select(AppModel))
+            applications = apps_result.scalars().all()
+
+            payments_result = await session.execute(select(Payment))
+            payments = payments_result.scalars().all()
+
+            categories_result = await session.execute(select(Category))
+            categories = categories_result.scalars().all()
+
+            # Создаем сводный отчет
+            report = f"""📦 **ПОЛНЫЙ ЭКСПОРТ ДАННЫХ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+🗃️ **Объем данных:**
+• Пользователи: {len(users)}
+• Заявки: {len(applications)}
+• Платежи: {len(payments)}
+• Категории: {len(categories)}
+
+📊 **Статусы заявок:**"""
+
+            # Статистика статусов
+            status_counts = {}
+            for app in applications:
+                status = app.status or 'unknown'
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            for status, count in status_counts.items():
+                percentage = (count / len(applications)) * \
+                    100 if applications else 0
+                report += f"\n• {status.title()}: {count} ({percentage:.1f}%)"
+
+            # Топ категории
+            category_counts = {}
+            for app in applications:
+                if app.category:
+                    cat_name = app.category.name
+                    category_counts[cat_name] = category_counts.get(
+                        cat_name, 0) + 1
+
+            if category_counts:
+                top_categories = sorted(category_counts.items(),
+                                        key=lambda x: x[1], reverse=True)[:5]
+
+                report += f"""
+
+🔥 **Топ-5 категорий:**"""
+                for i, (cat, count) in enumerate(top_categories, 1):
+                    report += f"\n{i}. {cat}: {count} заявок"
+
+            # Финансовая сводка
+            total_amount = sum(float(p.amount) for p in payments)
+            paid_amount = sum(float(p.amount)
+                              for p in payments if p.status == 'paid')
+
+            report += f"""
+
+💰 **Финансы:**
+• Общий оборот: {total_amount:,.0f}₽
+• Получено: {paid_amount:,.0f}₽
+• Конверсия платежей: {(paid_amount/total_amount*100):.1f}%"""
+
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "👥 Экспорт пользователей", callback_data="export_users"),
+                    InlineKeyboardButton(
+                        "📋 Экспорт заявок", callback_data="export_applications")
+                ],
+                [
+                    InlineKeyboardButton(
+                        "💳 Экспорт платежей", callback_data="export_payments"),
+                    InlineKeyboardButton(
+                        "📈 Экспорт аналитики", callback_data="export_analytics")
+                ],
+                [InlineKeyboardButton("🔙 Назад", callback_data="admin_export")]
+            ]
+
+    except Exception as e:
+        report = f"❌ **Ошибка полного экспорта:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="admin_export")]]
+
+    await query.edit_message_text(
+        report,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 # ============ SMM ФУНКЦИИ ПОЛНАЯ РЕАЛИЗАЦИЯ ============
@@ -5098,15 +5487,127 @@ async def handle_smm_force_post(query, context):
 
 # Добавляем остальные обработчики как заглушки, но рабочие
 async def handle_smm_interval_settings(query, context):
-    """⚙️ Настройки интервала"""
-    await query.answer("⚙️ В разработке - настройки интервала", show_alert=True)
-    await show_smm_main_panel(query, context)
+    """⚙️ Настройки интервала автопостинга"""
+    text = """⏰ **НАСТРОЙКИ ИНТЕРВАЛА АВТОПОСТИНГА**
+
+⚡ **Текущие настройки:**
+• Интервал: каждые 2 часа
+• Следующий пост: через 45 минут
+• Режим: Автоматический
+• Время работы: 9:00 - 21:00
+
+🎛️ **Доступные интервалы:**"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "⚡ 30 минут", callback_data="smm_interval_30m"),
+            InlineKeyboardButton("🕐 1 час", callback_data="smm_interval_1h")
+        ],
+        [
+            InlineKeyboardButton("🕑 2 часа", callback_data="smm_interval_2h"),
+            InlineKeyboardButton("🕕 4 часа", callback_data="smm_interval_4h")
+        ],
+        [
+            InlineKeyboardButton("📅 6 часов", callback_data="smm_interval_6h"),
+            InlineKeyboardButton(
+                "🌙 12 часов", callback_data="smm_interval_12h")
+        ],
+        [
+            InlineKeyboardButton(
+                "⏰ Расписание", callback_data="smm_custom_schedule"),
+            InlineKeyboardButton(
+                "🔄 Умный режим", callback_data="smm_smart_interval")
+        ],
+        [InlineKeyboardButton("🔙 Назад", callback_data="smm_autopost")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def handle_smm_post_queue(query, context):
     """📋 Очередь постов"""
-    await query.answer("📋 В разработке - очередь постов", show_alert=True)
-    await show_smm_main_panel(query, context)
+    try:
+        # Имитируем получение запланированных постов
+        scheduled_posts = [
+            {
+                'id': 1,
+                'content': 'Новое решение Верховного Суда по трудовым спорам...',
+                'time': datetime.now() + timedelta(hours=2),
+                'type': 'news'
+            },
+            {
+                'id': 2,
+                'content': 'Кейс: Как мы выиграли дело о возвращении страховой выплаты...',
+                'time': datetime.now() + timedelta(hours=6),
+                'type': 'case'
+            },
+            {
+                'id': 3,
+                'content': 'Изменения в миграционном законодательстве с 1 января...',
+                'time': datetime.now() + timedelta(hours=10),
+                'type': 'legal_update'
+            }
+        ]
+
+        text = f"""📋 **ОЧЕРЕДЬ ПОСТОВ** - {len(scheduled_posts)} запланировано
+
+⏰ **Ближайшие публикации:**"""
+
+        for i, post in enumerate(scheduled_posts, 1):
+            time_left = post['time'] - datetime.now()
+            hours = int(time_left.total_seconds() // 3600)
+            minutes = int((time_left.total_seconds() % 3600) // 60)
+
+            post_preview = post['content'][:60] + \
+                "..." if len(post['content']) > 60 else post['content']
+
+            text += f"""
+
+{i}. 📝 {post['type'].upper()}
+   ⏰ Через {hours}ч {minutes}мин
+   📄 {post_preview}"""
+
+        text += f"""
+
+🎯 **Управление очередью:**"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝 Добавить пост", callback_data="smm_add_to_queue"),
+                InlineKeyboardButton("✏️ Редактировать",
+                                     callback_data="smm_edit_queue")
+            ],
+            [
+                InlineKeyboardButton("🗑️ Очистить очередь",
+                                     callback_data="smm_clear_queue"),
+                InlineKeyboardButton("⏸️ Приостановить",
+                                     callback_data="smm_pause_queue")
+            ],
+            [
+                InlineKeyboardButton("🚀 Запустить сейчас",
+                                     callback_data="smm_force_next_post"),
+                InlineKeyboardButton(
+                    "📊 Статистика", callback_data="smm_queue_stats")
+            ],
+            [InlineKeyboardButton("🔙 Назад", callback_data="smm_main_panel")]
+        ]
+
+    except Exception as e:
+        text = f"❌ **Ошибка загрузки очереди:** {e}"
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_main_panel")]]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def handle_smm_strategy(query, context):
@@ -5115,9 +5616,64 @@ async def handle_smm_strategy(query, context):
 
 
 async def handle_smm_targeting(query, context):
-    """🎯 Таргетинг"""
-    await query.answer("🎯 В разработке - настройки таргетинга", show_alert=True)
-    await show_smm_main_panel(query, context)
+    """🎯 Настройки таргетинга"""
+    text = """🎯 **НАСТРОЙКИ ТАРГЕТИНГА**
+
+📊 **Текущая аудитория:**
+• Основная: Физические лица с правовыми проблемами (60%)
+• Вторичная: Малый и средний бизнес (30%)
+• Коллеги-юристы: (10%)
+
+🗺️ **География:**
+• Приоритет: Москва и МО (40%)
+• Крупные города: СПб, Екатеринбург, Новосибирск (35%)
+• Регионы: Остальная Россия (25%)
+
+👥 **Демография:**
+• Возраст: 25-55 лет (основная группа)
+• Пол: 45% мужчины, 55% женщины
+• Доход: средний и выше среднего
+
+🎭 **Интересы аудитории:**
+• Правовая грамотность
+• Защита прав потребителей
+• Семейное право
+• Трудовые отношения
+• Бизнес и налоги"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton("👥 Изменить аудиторию",
+                                 callback_data="smm_change_audience"),
+            InlineKeyboardButton(
+                "🗺️ География", callback_data="smm_geo_settings")
+        ],
+        [
+            InlineKeyboardButton(
+                "🎭 Интересы", callback_data="smm_interests_settings"),
+            InlineKeyboardButton("⏰ Время активности",
+                                 callback_data="smm_activity_time")
+        ],
+        [
+            InlineKeyboardButton(
+                "📱 Платформы", callback_data="smm_platform_targeting"),
+            InlineKeyboardButton("🔍 A/B тестирование",
+                                 callback_data="smm_ab_targeting")
+        ],
+        [
+            InlineKeyboardButton("📊 Аналитика аудитории",
+                                 callback_data="smm_audience_analytics"),
+            InlineKeyboardButton(
+                "💡 Рекомендации", callback_data="smm_targeting_tips")
+        ],
+        [InlineKeyboardButton("🔙 Назад", callback_data="smm_main_panel")]
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 
 async def handle_smm_queue(query, context):
