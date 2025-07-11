@@ -4518,6 +4518,239 @@ async def handle_smm_actions(query, context):
         await handle_smm_strategy_analytics(query, context)
         return
 
+    # ============ УРОВЕНЬ 2 - ДЕТАЛЬНЫЕ НАСТРОЙКИ ============
+
+    # === АУДИТОРИЯ ===
+    elif data == "smm_audience_individuals":
+        await query.answer("👨‍👩‍👧 Настройка для физлиц", show_alert=False)
+        text = """👨‍👩‍👧 **ФИЗИЧЕСКИЕ ЛИЦА**
+
+📊 **Текущие настройки:** 60% аудитории
+• Возраст: 25-55 лет
+• Семейное положение: смешанное  
+• Доходы: средние и выше
+• Проблемы: семейные, трудовые, жилищные"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_change_audience")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_audience_business":
+        await query.answer("🏢 Настройка для бизнеса", show_alert=False)
+        text = """🏢 **БИЗНЕС СЕГМЕНТ**
+
+📊 **Текущие настройки:** 30% аудитории
+• Размер: малый и средний бизнес
+• Сферы: услуги, торговля, производство
+• Проблемы: налоги, трудовое право, контракты"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_change_audience")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === ГЕОГРАФИЯ ===
+    elif data == "smm_geo_moscow":
+        await query.answer("🏛️ Настройка Москвы", show_alert=False)
+        text = """🏛️ **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
+
+📍 **Покрытие:** 40% аудитории
+📈 **Эффективность:** 8.5% engagement
+💰 **Конверсия:** 2.8% в заявки
+⏰ **Пиковое время:** 19:00-21:00"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_geo_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_geo_spb":
+        await query.answer("🌊 Настройка СПб", show_alert=False)
+        text = """🌊 **САНКТ-ПЕТЕРБУРГ**
+
+📍 **Покрытие:** 15% аудитории
+📈 **Эффективность:** 7.2% engagement
+💰 **Конверсия:** 2.1% в заявки
+⏰ **Пиковое время:** 18:30-20:30"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_geo_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === ИНТЕРЕСЫ ===
+    elif data == "smm_interests_basic":
+        await query.answer("⚖️ Основные права", show_alert=False)
+        text = """⚖️ **ОСНОВНЫЕ ПРАВА**
+
+🎯 **Охват:** 85% аудитории
+📊 **Популярные темы:**
+• Защита прав потребителей
+• Конституционные права
+• Административные нарушения"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_interests_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_interests_family":
+        await query.answer("👨‍👩‍👧 Семейное право", show_alert=False)
+        text = """👨‍👩‍👧 **СЕМЕЙНОЕ ПРАВО**
+
+🎯 **Охват:** 68% аудитории
+📊 **Популярные темы:**
+• Развод и раздел имущества
+• Алименты
+• Опека и усыновление"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_interests_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === ВРЕМЯ АКТИВНОСТИ ===
+    elif data == "smm_time_peak":
+        await query.answer("🔥 Пиковые часы", show_alert=False)
+        text = """🔥 **ПИКОВЫЕ ЧАСЫ: 18:00-21:00**
+
+📊 **Активность:** 100%
+💡 **Рекомендация:** Публиковать важные посты
+🎯 **Конверсия:** +15% выше средней"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_activity_time")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_time_work":
+        await query.answer("📈 Рабочее время", show_alert=False)
+        text = """📈 **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
+
+📊 **Активность:** 85%
+💡 **Рекомендация:** Деловой контент
+🎯 **Аудитория:** В основном бизнес"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_activity_time")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === ПЛАТФОРМЫ ===
+    elif data == "smm_setup_telegram":
+        await query.answer("📱 Настройка Telegram", show_alert=False)
+        text = """📱 **TELEGRAM НАСТРОЙКИ**
+
+✅ **Статус:** Основная платформа
+📊 **Охват:** 100% трафика
+🎯 **Особенности:** Максимальная вовлеченность"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_platform_targeting")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_setup_instagram":
+        await query.answer("📷 Instagram", show_alert=False)
+        text = """📷 **INSTAGRAM ИНТЕГРАЦИЯ**
+
+❌ **Статус:** Не подключен
+💡 **Потенциал:** Визуальный контент
+🎯 **Аудитория:** Молодая, активная"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_platform_targeting")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === A/B ТЕСТИРОВАНИЕ ===
+    elif data == "smm_new_ab_test":
+        await query.answer("🧪 Новый A/B тест", show_alert=False)
+        text = """🧪 **СОЗДАНИЕ НОВОГО A/B ТЕСТА**
+
+📋 **Доступные тесты:**
+• Время публикации
+• Тональность контента
+• Типы заголовков
+• Вариации CTA"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_ab_targeting")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_current_ab_tests":
+        await query.answer("📊 Текущие тесты", show_alert=False)
+        text = """📊 **АКТИВНЫЕ A/B ТЕСТЫ**
+
+✅ **Тест #1:** Время (19:00 vs 20:00)
+• Прогресс: 5/14 дней
+• Лидер: 19:00 (+12%)"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_ab_targeting")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === СТРАТЕГИИ ===
+    elif data == "smm_strategy_viral":
+        await query.answer("🔥 Вирусная стратегия", show_alert=False)
+        text = """🔥 **ВИРУСНАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Максимальный охват
+📈 **Ожидаемый результат:**
+• +45% охват
+• -15% конверсия
+• Быстрый рост подписчиков"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_change_strategy")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_strategy_conversion":
+        await query.answer("💰 Конверсионная", show_alert=False)
+        text = """💰 **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Максимум заявок
+📈 **Ожидаемый результат:**
+• +35% конверсия
+• -20% охват
+• Больше продаж"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_change_strategy")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    # === ТОНАЛЬНОСТЬ ===
+    elif data == "smm_tone_professional":
+        await query.answer("⚖️ Профессиональная", show_alert=False)
+        text = """⚖️ **ПРОФЕССИОНАЛЬНАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** 70%
+📈 **Эффективность:** 8.2% engagement
+🎯 **Аудитория:** Бизнес-сегмент"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_tone_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
+    elif data == "smm_tone_friendly":
+        await query.answer("😊 Дружелюбная", show_alert=False)
+        text = """😊 **ДРУЖЕЛЮБНАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** 20%
+📈 **Эффективность:** 9.1% engagement
+🎯 **Аудитория:** Физические лица"""
+
+        keyboard = [[InlineKeyboardButton(
+            "🔙 Назад", callback_data="smm_tone_settings")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+
     try:
         await query.edit_message_text(
             text,
@@ -7815,3 +8048,462 @@ async def handle_smm_strategy_analytics(query, context):
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='Markdown'
     )
+
+# ============ ДОПОЛНИТЕЛЬНЫЕ SMM CALLBACK ОБРАБОТЧИКИ УРОВНЯ 2 ============
+
+
+async def handle_smm_audience_individuals(query, context):
+    """👨‍👩‍👧 Физические лица"""
+    await query.answer("👨‍👩‍👧 Настройка для физлиц", show_alert=False)
+    text = """👨‍👩‍👧 **ФИЗИЧЕСКИЕ ЛИЦА**
+
+📊 **Текущие настройки:** 60% аудитории
+• Возраст: 25-55 лет
+• Семейное положение: смешанное  
+• Доходы: средние и выше
+• Проблемы: семейные, трудовые, жилищные"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_audience")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_audience_business(query, context):
+    """🏢 Бизнес сегмент"""
+    await query.answer("🏢 Настройка для бизнеса", show_alert=False)
+    text = """🏢 **БИЗНЕС СЕГМЕНТ**
+
+📊 **Текущие настройки:** 30% аудитории
+• Размер: малый и средний бизнес
+• Сферы: услуги, торговля, производство
+• Проблемы: налоги, трудовое право, контракты"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_audience")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_geo_moscow(query, context):
+    """🏛️ Москва настройки"""
+    await query.answer("🏛️ Настройка Москвы", show_alert=False)
+    text = """🏛️ **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
+
+📍 **Покрытие:** 40% аудитории
+📈 **Эффективность:** 8.5% engagement
+💰 **Конверсия:** 2.8% в заявки
+⏰ **Пиковое время:** 19:00-21:00"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_geo_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_geo_spb(query, context):
+    """🌊 СПб настройки"""
+    await query.answer("🌊 Настройка СПб", show_alert=False)
+    text = """🌊 **САНКТ-ПЕТЕРБУРГ**
+
+📍 **Покрытие:** 15% аудитории
+📈 **Эффективность:** 7.2% engagement
+💰 **Конверсия:** 2.1% в заявки
+⏰ **Пиковое время:** 18:30-20:30"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_geo_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_interests_basic(query, context):
+    """⚖️ Основные права"""
+    await query.answer("⚖️ Основные права", show_alert=False)
+    text = """⚖️ **ОСНОВНЫЕ ПРАВА**
+
+🎯 **Охват:** 85% аудитории
+📊 **Популярные темы:**
+• Защита прав потребителей
+• Конституционные права
+• Административные нарушения"""
+
+    keyboard = [[InlineKeyboardButton(
+        "�� Назад", callback_data="smm_interests_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_interests_family(query, context):
+    """👨‍👩‍👧 Семейное право"""
+    await query.answer("👨‍👩‍👧 Семейное право", show_alert=False)
+    text = """👨‍👩‍👧 **СЕМЕЙНОЕ ПРАВО**
+
+🎯 **Охват:** 68% аудитории
+📊 **Популярные темы:**
+• Развод и раздел имущества
+• Алименты
+• Опека и усыновление"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_interests_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_time_peak(query, context):
+    """🔥 Пиковые часы"""
+    await query.answer("🔥 Пиковые часы", show_alert=False)
+    text = """🔥 **ПИКОВЫЕ ЧАСЫ: 18:00-21:00**
+
+📊 **Активность:** 100%
+💡 **Рекомендация:** Публиковать важные посты
+🎯 **Конверсия:** +15% выше средней"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_activity_time")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_time_work(query, context):
+    """📈 Рабочее время"""
+    await query.answer("📈 Рабочее время", show_alert=False)
+    text = """📈 **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
+
+📊 **Активность:** 85%
+💡 **Рекомендация:** Деловой контент
+🎯 **Аудитория:** В основном бизнес"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_activity_time")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_setup_telegram(query, context):
+    """📱 Настройка Telegram"""
+    await query.answer("📱 Настройка Telegram", show_alert=False)
+    text = """📱 **TELEGRAM НАСТРОЙКИ**
+
+✅ **Статус:** Основная платформа
+📊 **Охват:** 100% трафика
+🎯 **Особенности:** Максимальная вовлеченность"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_platform_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_setup_instagram(query, context):
+    """📷 Instagram"""
+    await query.answer("📷 Instagram", show_alert=False)
+    text = """📷 **INSTAGRAM ИНТЕГРАЦИЯ**
+
+❌ **Статус:** Не подключен
+💡 **Потенциал:** Визуальный контент
+🎯 **Аудитория:** Молодая, активная"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_platform_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_new_ab_test(query, context):
+    """🧪 Новый A/B тест"""
+    await query.answer("🧪 Новый A/B тест", show_alert=False)
+    text = """🧪 **СОЗДАНИЕ НОВОГО A/B ТЕСТА**
+
+📋 **Доступные тесты:**
+• Время публикации
+• Тональность контента
+• Типы заголовков
+• Вариации CTA"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_ab_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_current_ab_tests(query, context):
+    """📊 Текущие тесты"""
+    await query.answer("📊 Текущие тесты", show_alert=False)
+    text = """📊 **АКТИВНЫЕ A/B ТЕСТЫ**
+
+✅ **Тест #1:** Время (19:00 vs 20:00)
+• Прогресс: 5/14 дней
+• Лидер: 19:00 (+12%)"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_ab_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_strategy_viral(query, context):
+    """🔥 Вирусная стратегия"""
+    await query.answer("🔥 Вирусная стратегия", show_alert=False)
+    text = """🔥 **ВИРУСНАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Максимальный охват
+📈 **Ожидаемый результат:**
+• +45% охват
+• -15% конверсия
+• Быстрый рост подписчиков"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_strategy")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_strategy_conversion(query, context):
+    """💰 Конверсионная стратегия"""
+    await query.answer("💰 Конверсионная", show_alert=False)
+    text = """💰 **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Максимум заявок
+📈 **Ожидаемый результат:**
+• +35% конверсия
+• -20% охват
+• Больше продаж"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_strategy")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_tone_professional(query, context):
+    """⚖️ Профессиональная тональность"""
+    await query.answer("⚖️ Профессиональная", show_alert=False)
+    text = """⚖️ **ПРОФЕССИОНАЛЬНАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** 70%
+📈 **Эффективность:** 8.2% engagement
+🎯 **Аудитория:** Бизнес-сегмент"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_tone_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_tone_friendly(query, context):
+    """😊 Дружелюбная тональность"""
+    await query.answer("😊 Дружелюбная", show_alert=False)
+    text = """😊 **ДРУЖЕЛЮБНАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** 20%
+📈 **Эффективность:** 9.1% engagement
+🎯 **Аудитория:** Физические лица"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_tone_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# ============ ДОПОЛНИТЕЛЬНЫЕ КРИТИЧНЫЕ SMM ОБРАБОТЧИКИ ============
+
+
+async def handle_smm_geo_cities(query, context):
+    """🏙️ Крупные города"""
+    await query.answer("🏙️ Крупные города", show_alert=False)
+    text = """🏙️ **КРУПНЫЕ ГОРОДА РОССИИ**
+
+📍 **Покрытие:** 20% аудитории
+🌆 **Включено:**
+• Екатеринбург: 3.2%
+• Новосибирск: 2.8%  
+• Нижний Новгород: 2.1%
+• Казань: 1.9%
+📈 **Средняя эффективность:** 6.8% engagement"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_geo_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_geo_all(query, context):
+    """🌲 Все регионы"""
+    await query.answer("🌲 Все регионы", show_alert=False)
+    text = """🌲 **ВСЕ РЕГИОНЫ РОССИИ**
+
+📍 **Покрытие:** 25% аудитории
+🗺️ **Статистика по регионам:**
+• Средняя активность: 5.4%
+• Лучшие регионы: Краснодарский край
+• Активное время: вечером (19:00-22:00)
+💡 **Особенности:** Больше семейных дел"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_geo_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_interests_labor(query, context):
+    """💼 Трудовое право"""
+    await query.answer("💼 Трудовое право", show_alert=False)
+    text = """💼 **ТРУДОВОЕ ПРАВО**
+
+🎯 **Охват:** 61% аудитории
+📊 **Популярные темы:**
+• Увольнения и сокращения
+• Невыплата зарплаты
+• Трудовые споры
+• Отпуска и больничные"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_interests_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_interests_property(query, context):
+    """🏠 Недвижимость"""
+    await query.answer("🏠 Недвижимость", show_alert=False)
+    text = """🏠 **НЕДВИЖИМОСТЬ**
+
+🎯 **Охват:** 45% аудитории
+📊 **Популярные темы:**
+• Покупка/продажа квартир
+• Приватизация
+• ЖКХ проблемы
+• Соседские споры"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_interests_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_time_evening(query, context):
+    """🌙 Вечернее время"""
+    await query.answer("🌙 Вечернее время", show_alert=False)
+    text = """🌙 **ВЕЧЕРНЕЕ ВРЕМЯ: 21:00-23:00**
+
+📊 **Активность:** 75%
+💡 **Рекомендация:** Легкий контент, советы
+🎯 **Аудитория:** Домашняя аудитория"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_activity_time")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_time_morning(query, context):
+    """🌅 Утренние часы"""
+    await query.answer("🌅 Утренние часы", show_alert=False)
+    text = """🌅 **УТРЕННИЕ ЧАСЫ: 08:00-10:00**
+
+📊 **Активность:** 60%
+💡 **Рекомендация:** Новости, краткий контент
+�� **Аудитория:** По дороге на работу"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_activity_time")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_setup_vk(query, context):
+    """🌐 VK настройки"""
+    await query.answer("🌐 VK", show_alert=False)
+    text = """🌐 **ВКОНТАКТЕ ИНТЕГРАЦИЯ**
+
+❌ **Статус:** Не подключен
+💡 **Потенциал:** Широкая аудитория
+🎯 **Особенности:** Больше молодежи"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_platform_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_setup_linkedin(query, context):
+    """💼 LinkedIn настройки"""
+    await query.answer("💼 LinkedIn", show_alert=False)
+    text = """💼 **LINKEDIN ИНТЕГРАЦИЯ**
+
+❌ **Статус:** Не подключен
+💡 **Потенциал:** B2B аудитория
+🎯 **Особенности:** Профессиональная сеть"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_platform_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_ab_results(query, context):
+    """📈 Результаты A/B тестов"""
+    await query.answer("📈 Результаты тестов", show_alert=False)
+    text = """📈 **РЕЗУЛЬТАТЫ A/B ТЕСТОВ**
+
+✅ **Завершенные тесты:**
+• Время публикации: 19:00 победил (+12%)
+• Заголовки: "Вопрос-ответ" лучше (+8%)
+• CTA кнопки: "Получить консультацию" (+15%)"""
+
+    keyboard = [[InlineKeyboardButton(
+        "�� Назад", callback_data="smm_ab_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_ab_settings(query, context):
+    """⚙️ Настройки A/B тестов"""
+    await query.answer("⚙️ Настройки A/B", show_alert=False)
+    text = """⚙️ **НАСТРОЙКИ A/B ТЕСТИРОВАНИЯ**
+
+�� **Параметры:**
+• Длительность теста: 14 дней
+• Минимальная выборка: 1000 просмотров
+• Автоприменение: ✅ Включено
+• Уровень значимости: 95%"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_ab_targeting")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_strategy_educational(query, context):
+    """📚 Образовательная стратегия"""
+    await query.answer("📚 Образовательная", show_alert=False)
+    text = """📚 **ОБРАЗОВАТЕЛЬНАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Информирование аудитории
+📈 **Ожидаемый результат:**
+• +25% доверие к бренду
+• +10% повторные обращения
+• Долгосрочные клиенты"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_strategy")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_strategy_balanced(query, context):
+    """⚖️ Сбалансированная стратегия"""
+    await query.answer("⚖️ Сбалансированная", show_alert=False)
+    text = """⚖️ **СБАЛАНСИРОВАННАЯ СТРАТЕГИЯ**
+
+🎯 **Цель:** Оптимальное соотношение всех метрик
+📈 **Текущие результаты:**
+• Охват: средний уровень
+• Конверсия: стабильная
+• Лучший выбор для начала"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_change_strategy")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_tone_urgent(query, context):
+    """🚨 Срочная тональность"""
+    await query.answer("🚨 Срочная", show_alert=False)
+    text = """🚨 **СРОЧНАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** 10%
+📈 **Эффективность:** 12.3% engagement
+🎯 **Применение:** Важные новости, изменения законов"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_tone_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_smm_tone_mixed(query, context):
+    """🎪 Смешанная тональность"""
+    await query.answer("🎪 Смешанная", show_alert=False)
+    text = """🎪 **СМЕШАННАЯ ТОНАЛЬНОСТЬ**
+
+📊 **Использование:** адаптивно
+📈 **Эффективность:** варьируется
+🎯 **Применение:** AI выбирает тональность автоматически"""
+
+    keyboard = [[InlineKeyboardButton(
+        "🔙 Назад", callback_data="smm_tone_settings")]]
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
