@@ -62,7 +62,6 @@ except ImportError:
     print('⚠️ Enhanced autopost system not available')
 
 
-
 # ================ PRODUCTION CONFIG ================
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -4539,6 +4538,27 @@ async def handle_smm_actions(query, context):
         await handle_smm_strategy_analytics(query, context)
         return
 
+    # ============ КРИТИЧЕСКИЕ AUTOPOST CALLBACK'Ы ============
+    elif data == "smm_change_interval":
+        await handle_smm_change_interval(query, context)
+        return
+
+    elif data == "smm_style_settings":
+        await handle_smm_style_settings(query, context)
+        return
+
+    elif data == "smm_schedule_settings":
+        await handle_smm_schedule_settings(query, context)
+        return
+
+    elif data == "smm_content_types":
+        await handle_smm_content_types(query, context)
+        return
+
+    elif data == "smm_restart_autopost":
+        await handle_smm_restart_autopost(query, context)
+        return
+
     # ============ УРОВЕНЬ 2 - ДЕТАЛЬНЫЕ НАСТРОЙКИ ============
 
     # === АУДИТОРИЯ ===
@@ -7954,7 +7974,7 @@ async def handle_smm_audience_analytics(query, context):
 
 async def handle_smm_targeting_tips(query, context):
     """💡 Рекомендации"""
-    await query.answer("�� Генерирую...", show_alert=False)
+    await query.answer("💡 Генерирую...", show_alert=False)
 
     text = """💡 **РЕКОМЕНДАЦИИ**
 
@@ -8080,7 +8100,7 @@ async def handle_smm_strategy_analytics(query, context):
             InlineKeyboardButton(
                 "📈 Детали", callback_data="smm_detailed_strategy_metrics"),
             InlineKeyboardButton(
-                "�� Анализ", callback_data="smm_deep_strategy_analysis")
+                "🔍 Анализ", callback_data="smm_deep_strategy_analysis")
         ],
         [InlineKeyboardButton("🔙 Назад", callback_data="smm_content_strategy")]
     ]
@@ -8167,7 +8187,7 @@ async def handle_smm_interests_basic(query, context):
 • Административные нарушения"""
 
     keyboard = [[InlineKeyboardButton(
-        "�� Назад", callback_data="smm_interests_settings")]]
+        "🔙 Назад", callback_data="smm_interests_settings")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
@@ -8425,7 +8445,7 @@ async def handle_smm_time_morning(query, context):
 
 📊 **Активность:** 60%
 💡 **Рекомендация:** Новости, краткий контент
-�� **Аудитория:** По дороге на работу"""
+🎯 **Аудитория:** По дороге на работу"""
 
     keyboard = [[InlineKeyboardButton(
         "🔙 Назад", callback_data="smm_activity_time")]]
@@ -8471,7 +8491,7 @@ async def handle_smm_ab_results(query, context):
 • CTA кнопки: "Получить консультацию" (+15%)"""
 
     keyboard = [[InlineKeyboardButton(
-        "�� Назад", callback_data="smm_ab_targeting")]]
+        "🔙 Назад", callback_data="smm_ab_targeting")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
@@ -8480,7 +8500,7 @@ async def handle_smm_ab_settings(query, context):
     await query.answer("⚙️ Настройки A/B", show_alert=False)
     text = """⚙️ **НАСТРОЙКИ A/B ТЕСТИРОВАНИЯ**
 
-�� **Параметры:**
+📋 **Параметры:**
 • Длительность теста: 14 дней
 • Минимальная выборка: 1000 просмотров
 • Автоприменение: ✅ Включено
@@ -10146,452 +10166,4 @@ async def handle_smm_behavior_analysis(query, context):
 
     keyboard = [[InlineKeyboardButton(
         "🔙 Назад", callback_data="smm_audience_analytics")]]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-# ============ КРИТИЧЕСКИЕ НЕДОСТАЮЩИЕ CALLBACK'Ы ============
-
-
-async def handle_smm_edit_post(query, context):
-    """📝 Редактировать пост"""
-    await query.answer("📝 Редактирование поста...", show_alert=False)
-
-    if 'generated_post' not in context.user_data:
-        await query.answer("❌ Нет поста для редактирования", show_alert=True)
-        await show_smm_main_panel(query, context)
-        return
-
-    current_post = context.user_data['generated_post']
-
-    text = f"""📝 **РЕДАКТИРОВАНИЕ ПОСТА**
-    
-📄 **Текущий пост:**
-{current_post[:300]}{'...' if len(current_post) > 300 else ''}
-
-✏️ **Для редактирования:**
-Отправьте новую версию поста следующим сообщением
-
-📊 **Текущая статистика:**
-• Длина: {len(current_post)} символов
-• Слов: {len(current_post.split())}"""
-
-    keyboard = [
-        [InlineKeyboardButton("❌ Отменить редактирование",
-                              callback_data="smm_create_post")]
-    ]
-
-    context.user_data['editing_post'] = True
-
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-
-async def handle_smm_queue_post(query, context):
-    """📋 Добавить в очередь"""
-    await query.answer("📋 Добавление в очередь...", show_alert=False)
-
-    if 'generated_post' not in context.user_data:
-        await query.answer("❌ Нет поста для добавления", show_alert=True)
-        return
-
-    text = """📋 **ПОСТ ДОБАВЛЕН В ОЧЕРЕДЬ**
-    
-✅ **Успешно добавлено:**
-• Позиция в очереди: #4
-• Время публикации: через 6 часов
-• Автопубликация: включена
-• Статус: ожидает модерации
-
-📊 **Очередь постов:**
-• Всего в очереди: 4 поста
-• Следующий пост: через 2 часа
-• Среднее время ожидания: 6 часов"""
-
-    keyboard = [
-        [
-            InlineKeyboardButton("📋 Просмотреть очередь",
-                                 callback_data="smm_post_queue"),
-            InlineKeyboardButton(
-                "📝 Создать еще", callback_data="smm_create_post")
-        ],
-        [InlineKeyboardButton("🔙 Назад в SMM", callback_data="smm_main_panel")]
-    ]
-
-    # Очищаем сохраненный пост
-    context.user_data.pop('generated_post', None)
-
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-
-async def handle_smm_show_charts(query, context):
-    """📈 Показать графики"""
-    await query.answer("📈 Загрузка графиков...", show_alert=False)
-    text = """📈 **ГРАФИКИ АНАЛИТИКИ SMM**
-    
-📊 **Доступные графики:**
-• 📈 Динамика просмотров (30 дней)
-• 💬 Вовлеченность по времени
-• 🎯 Конверсия по типам контента
-• 👥 Прирост аудитории
-• 📱 Активность по платформам
-
-🎨 **Интерактивные диаграммы:**
-[График динамики просмотров]
-▁▂▃▅▆▇█▇▆▅▃▂▁ (упрощенное отображение)
-
-💡 **Инсайты:**
-• Лучшее время: 19:00-21:00
-• Лучший тип: кейсы из практики
-• Рост аудитории: +12% за месяц"""
-
-    keyboard = [
-        [
-            InlineKeyboardButton("📊 Экспорт графиков",
-                                 callback_data="smm_export_charts"),
-            InlineKeyboardButton("🔄 Обновить данные",
-                                 callback_data="smm_show_charts")
-        ],
-        [InlineKeyboardButton(
-            "🔙 Назад", callback_data="smm_detailed_analytics")]
-    ]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-
-async def handle_smm_optimization(query, context):
-    """🎯 Оптимизация"""
-    await query.answer("🎯 Анализ оптимизации...", show_alert=False)
-    text = """🎯 **ОПТИМИЗАЦИЯ SMM СИСТЕМЫ**
-    
-🤖 **AI обнаружил возможности улучшения:**
-
-📈 **Рекомендации (потенциал +23%):**
-1. ⏰ Сдвинуть время публикации на 19:30 (+8%)
-2. 🎨 Добавить больше визуального контента (+7%)
-3. 🏷️ Использовать тренды хештеги (+5%)
-4. 💬 Чаще задавать вопросы аудитории (+3%)
-
-⚡ **Быстрые улучшения:**
-• Оптимизировать длину заголовков
-• Улучшить CTA кнопки
-• Настроить автоответы"""
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "✅ Применить все", callback_data="smm_apply_optimizations"),
-            InlineKeyboardButton("🔍 Детальный анализ",
-                                 callback_data="smm_detailed_optimization")
-        ],
-        [InlineKeyboardButton(
-            "🔙 Назад", callback_data="smm_detailed_analytics")]
-    ]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-
-async def handle_smm_optimize(query, context):
-    """🔄 Оптимизация SMM (из smm_admin.py)"""
-    await query.answer("🔄 Оптимизация системы...", show_alert=False)
-    text = """🔄 **ОПТИМИЗАЦИЯ SMM СИСТЕМЫ**
-    
-🤖 **AI оптимизатор обнаружил:**
-• 📈 Можно улучшить время публикации (+12% охват)
-• 🎯 Оптимизировать таргетинг (+8% конверсия)
-• 📝 Улучшить заголовки постов (+15% CTR)
-• 🔗 Добавить больше CTA кнопок (+5% заявок)
-
-⚡ **Быстрые улучшения:**
-1. Сдвинуть публикацию на 19:30
-2. Добавить эмоциональные хуки
-3. Использовать актуальные хештеги
-4. Оптимизировать длину контента
-
-📊 **Ожидаемый эффект:** +25% общей эффективности"""
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "✅ Применить все", callback_data="smm_apply_optimizations"),
-            InlineKeyboardButton(
-                "🔍 Детали", callback_data="smm_optimization_details")
-        ],
-        [InlineKeyboardButton("🔙 Назад", callback_data="smm_status")]
-    ]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-
-async def handle_smm_toggle(query, context):
-    """🟢/🔴 Переключить SMM (из smm_admin.py)"""
-    await query.answer("🔄 Переключение режима...", show_alert=False)
-
-    # Здесь должна быть логика переключения SMM системы
-    # Пока симулируем
-    import random
-    is_running = random.choice([True, False])
-
-    if is_running:
-        text = """🔴 **SMM СИСТЕМА ОСТАНОВЛЕНА**
-        
-⏸️ **Статус изменен:**
-• Автопостинг: ❌ Остановлен
-• Запланированные посты: приостановлены
-• Аналитика: продолжает сбор данных
-• Уведомления: отключены
-
-🔄 **Для возобновления работы нажмите "Старт\""""
-        toggle_text = "🟢 Старт"
-    else:
-        text = """🟢 **SMM СИСТЕМА ЗАПУЩЕНА**
-        
-▶️ **Статус изменен:**
-• Автопостинг: ✅ Активен
-• Следующий пост: через 45 минут
-• Интервал: каждые 2 часа
-• Уведомления: включены
-
-⚡ **Система работает в полном режиме**"""
-        toggle_text = "🔴 Стоп"
-
-    keyboard = [
-        [
-            InlineKeyboardButton(toggle_text, callback_data="smm_toggle"),
-            InlineKeyboardButton("🔄 Обновить", callback_data="smm_status")
-        ],
-        [InlineKeyboardButton("🔙 Назад", callback_data="smm_status")]
-    ]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-# ============ ELIF БЛОКИ ДЛЯ ДОБАВЛЕНИЯ В universal_callback_handler ============
-
-UNIVERSAL_CALLBACK_ADDITIONS = '''    elif data == "smm_optimize":
-        await handle_smm_optimize(query, context)
-    elif data == "smm_toggle":
-        await handle_smm_toggle(query, context)'''
-
-# ============ ELIF БЛОКИ ДЛЯ ДОБАВЛЕНИЯ В handle_smm_actions ============
-
-SMM_ACTIONS_ADDITIONS = '''    elif data == "smm_edit_post":
-        await handle_smm_edit_post(query, context)
-        return
-        
-    elif data == "smm_queue_post":
-        await handle_smm_queue_post(query, context)
-        return
-        
-    elif data == "smm_show_charts":
-        await handle_smm_show_charts(query, context)
-        return
-        
-    elif data == "smm_optimization":
-        await handle_smm_optimization(query, context)
-        return'''
-
-# ============ УЛУЧШЕННЫЕ ФУНКЦИИ АВТОПОСТИНГА ============
-
-async def handle_smm_enhanced_autopost(query, context):
-    """🚀 Улучшенный автопостинг"""
-    await query.answer("🚀 Загрузка улучшенной системы...", show_alert=False)
-    
-    if not ENHANCED_AUTOPOST_AVAILABLE:
-        text = """❌ **УЛУЧШЕННАЯ СИСТЕМА НЕДОСТУПНА**
-        
-⚠️ Модуль enhanced_autopost не найден
-        
-🔧 **Что доступно:**
-• Базовый автопостинг
-• Простая генерация контента
-• Стандартные шаблоны"""
-        
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="smm_autopost")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-        return
-    
-    try:
-        stats = await get_enhanced_autopost_status()
-        
-        text = f"""🚀 **ПРОФЕССИОНАЛЬНАЯ СИСТЕМА АВТОПОСТИНГА**
-        
-📊 **Статистика публикаций:**
-• Всего опубликовано: {stats['total_posts']} постов
-• Кейсы: {stats['by_type'].get('case', 0)}
-• Разборы статей: {stats['by_type'].get('article', 0)}
-• Новости права: {stats['by_type'].get('news', 0)}
-
-🔄 **Система ротации:**
-• ✅ Автоматическое чередование типов контента
-• ✅ Избежание повторов тем
-• ✅ Отслеживание эффективности
-
-📋 **Последние публикации:**"""
-
-        if stats['recent_posts']:
-            for post in stats['recent_posts'][:3]:
-                text += f"\n• {post[2].upper()}: {post[0][:50]}..."
-        else:
-            text += "\n• Пока нет публикаций"
-            
-        text += f"""
-
-⚡ **Функции системы:**
-• 🎯 Реальные кейсы с правовой базой
-• 📚 Разбор статей кодексов простым языком  
-• 📰 Актуальные новости законодательства
-• 🔗 Ссылки на КонсультантПлюс, ГАРАНТ
-• 📊 Судебная практика и прецеденты"""
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("📝 Создать пост сейчас", callback_data="smm_force_enhanced_post"),
-                InlineKeyboardButton("📊 Детальная статистика", callback_data="smm_enhanced_stats")
-            ],
-            [
-                InlineKeyboardButton("⚙️ Настройки ротации", callback_data="smm_rotation_settings"),
-                InlineKeyboardButton("📋 История публикаций", callback_data="smm_publication_history")
-            ],
-            [
-                InlineKeyboardButton("🧪 Тестовый пост", callback_data="smm_test_enhanced_post"),
-                InlineKeyboardButton("📈 Аналитика эффективности", callback_data="smm_content_analytics")
-            ],
-            [InlineKeyboardButton("🔙 Назад", callback_data="smm_autopost")]
-        ]
-        
-    except Exception as e:
-        text = f"""❌ **ОШИБКА ЗАГРУЗКИ СИСТЕМЫ**
-        
-Не удалось получить статистику: {str(e)}"""
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="smm_autopost")]]
-    
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-async def handle_smm_force_enhanced_post(query, context):
-    """📝 Принудительное создание поста"""
-    await query.answer("📝 Генерация профессионального поста...", show_alert=False)
-    
-    try:
-        post_data = await generate_professional_post()
-        
-        text = f"""✅ **ПРОФЕССИОНАЛЬНЫЙ ПОСТ СОЗДАН**
-
-📋 **Тип контента:** {post_data['type'].upper()}
-📝 **Тема:** {post_data['topic']}
-⚖️ **Правовая база:** {post_data.get('legal_reference', 'Общие нормы')}
-
-📄 **Превью поста:**
-{post_data['content'][:300]}...
-
-🎯 **Особенности:**
-• ✅ Реальная правовая база
-• ✅ Ссылки на официальные источники
-• ✅ Практические алгоритмы действий
-• ✅ Понятный язык для неюристов
-• ✅ CTA кнопки для конверсии"""
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("📢 Опубликовать сейчас", callback_data="smm_publish_enhanced_now"),
-                InlineKeyboardButton("📝 Редактировать", callback_data="smm_edit_enhanced_post")
-            ],
-            [
-                InlineKeyboardButton("📋 Добавить в очередь", callback_data="smm_queue_enhanced_post"),
-                InlineKeyboardButton("🔄 Сгенерировать новый", callback_data="smm_force_enhanced_post")
-            ],
-            [InlineKeyboardButton("🔙 Назад", callback_data="smm_enhanced_autopost")]
-        ]
-        
-        # Сохраняем пост в контексте
-        context.user_data['enhanced_post'] = post_data
-        
-    except Exception as e:
-        text = f"""❌ **ОШИБКА ГЕНЕРАЦИИ ПОСТА**
-        
-{str(e)}
-
-Попробуйте еще раз или используйте базовую систему."""
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="smm_enhanced_autopost")]]
-    
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-async def handle_smm_publish_enhanced_now(query, context):
-    """📢 Публикация улучшенного поста"""
-    await query.answer("📢 Публикация профессионального поста...", show_alert=False)
-    
-    if 'enhanced_post' not in context.user_data:
-        await query.answer("❌ Нет поста для публикации", show_alert=True)
-        await handle_smm_enhanced_autopost(query, context)
-        return
-    
-    post_data = context.user_data['enhanced_post']
-    
-    try:
-        # Здесь была бы реальная публикация в канал
-        # await bot.send_message(CHANNEL_ID, post_data['content'])
-        
-        text = f"""✅ **ПОСТ ОПУБЛИКОВАН УСПЕШНО**
-
-📊 **Детали публикации:**
-• Тип: {post_data['type'].upper()}
-• Тема: {post_data['topic']}
-• Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
-• Правовая база: {post_data.get('legal_reference', 'Н/Д')}
-
-📈 **Прогноз эффективности:**
-• Ожидаемый охват: 2,800+ просмотров
-• Вовлеченность: ~9.2%
-• Конверсия в заявки: ~2.8%
-• Переходы по ссылкам: ~340
-
-🎯 **Следующий пост через 24 часа**
-Система автоматически подберет тему по ротации"""
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("📊 Статистика поста", callback_data="smm_post_performance"),
-                InlineKeyboardButton("📝 Создать еще", callback_data="smm_force_enhanced_post")
-            ],
-            [InlineKeyboardButton("🔙 Назад к автопостингу", callback_data="smm_enhanced_autopost")]
-        ]
-        
-        # Очищаем пост из контекста
-        context.user_data.pop('enhanced_post', None)
-        
-    except Exception as e:
-        text = f"""❌ **ОШИБКА ПУБЛИКАЦИИ**
-        
-{str(e)}
-
-Пост сохранен в черновиках."""
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="smm_enhanced_autopost")]]
-    
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-async def handle_smm_test_enhanced_post(query, context):
-    """🧪 Тестовый пост для проверки системы"""
-    await query.answer("🧪 Генерация тестового поста...", show_alert=False)
-    
-    # Принудительно создаем пост прямо сейчас для тестирования
-    try:
-        post_data = await generate_professional_post()
-        
-        text = f"""�� **ТЕСТОВЫЙ ПОСТ СГЕНЕРИРОВАН**
-
-{post_data['content']}
-
----
-📊 **Метаданные:**
-• Тип: {post_data['type']}
-• Тема: {post_data['topic']}
-• Правовая база: {post_data.get('legal_reference', 'Н/Д')}"""
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("✅ Отлично, применить!", callback_data="smm_apply_enhanced_system"),
-                InlineKeyboardButton("🔄 Другой тест", callback_data="smm_test_enhanced_post")
-            ],
-            [InlineKeyboardButton("🔙 Назад", callback_data="smm_enhanced_autopost")]
-        ]
-        
-    except Exception as e:
-        text = f"""❌ **ОШИБКА ТЕСТИРОВАНИЯ**
-        
-{str(e)}
-
-Проверьте настройки системы."""
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="smm_enhanced_autopost")]]
-    
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
