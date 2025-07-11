@@ -56,7 +56,13 @@ try:
     from bot.services.enhanced_autopost import (
         generate_professional_post,
         should_create_autopost,
-        get_enhanced_autopost_status
+        get_enhanced_autopost_status,
+        schedule_smart_post,
+        get_scheduled_posts,
+        add_post_comment,
+        get_post_comments,
+        get_autopost_dashboard,
+        publish_post_now
     )
     ENHANCED_AUTOPOST_AVAILABLE = True
 except ImportError:
@@ -509,6 +515,10 @@ async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                  callback_data="admin_detailed_analytics")
         ],
         [
+            InlineKeyboardButton("📅 Автопостинг", callback_data="admin_autopost"),
+            InlineKeyboardButton("📋 Запланированные", callback_data="admin_view_scheduled")
+        ],
+        [
             InlineKeyboardButton("🔄 Обновить панель",
                                  callback_data="admin_refresh"),
             InlineKeyboardButton("📊 Экспорт данных",
@@ -704,6 +714,12 @@ async def universal_callback_handler(update: Update, context: ContextTypes.DEFAU
         await refresh_admin_panel(query, context)
     elif data == "admin_export":
         await show_export_options(query, context)
+    elif data == "admin_autopost":
+        await show_autopost_panel(query, context)
+    elif data == "admin_schedule_post":
+        await handle_schedule_post(query, context)
+    elif data == "admin_view_scheduled":
+        await show_scheduled_posts(query, context)
     elif data == "smm_main_panel":
         await show_smm_main_panel(query, context)
     elif data.startswith("app_"):
@@ -728,9 +744,365 @@ async def universal_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_smm_toggle(query, context)
     elif data.startswith("smm_"):
         await handle_smm_actions(query, context)
+    elif data.startswith("post_"):
+        await handle_post_actions(query, context)
+    elif data.startswith("comment_"):
+        await handle_comment_actions(query, context)
     else:
         # Catch-all for unimplemented callbacks
         await handle_missing_callback(query, context, data)
+
+
+async def show_autopost_panel(query, context):
+    """📅 Панель управления автопостингом"""
+    try:
+        if ENHANCED_AUTOPOST_AVAILABLE:
+            dashboard_data = await get_autopost_dashboard()
+            
+            stats = dashboard_data['statistics']
+            scheduled = dashboard_data['scheduled_posts']
+            
+            text = f"""📅 **ПАНЕЛЬ АВТОПОСТИНГА**
+
+📊 **Статистика:**
+• Всего постов: {stats['total_posts']}
+• Последний пост: {stats.get('last_post_time', 'Никогда')}
+• Статус: {'🟢 Активен' if dashboard_data['system_status'] == 'active' else '🔴 Неактивен'}
+
+📋 **Запланировано постов:** {len(scheduled)}"""
+
+            if scheduled:
+                text += "\n\n📅 **Ближайшие посты:**"
+                for post in scheduled[:3]:
+                    text += f"\n• {post['title'][:40]}... ({post['scheduled_time'][:16]})"
+        else:
+            text = "❌ **Система автопостинга недоступна**"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("➕ Запланировать пост", callback_data="admin_schedule_post"),
+                InlineKeyboardButton("📋 Все запланированные", callback_data="admin_view_scheduled")
+            ],
+            [
+                InlineKeyboardButton("🔄 Обновить", callback_data="admin_autopost"),
+                InlineKeyboardButton("◀️ Назад в меню", callback_data="back_admin")
+            ]
+        ]
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        log.error(f"Error in show_autopost_panel: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка загрузки панели автопостинга",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="back_admin")
+            ]])
+        )
+
+
+async def handle_schedule_post(query, context):
+    """➕ Запланировать новый пост"""
+    try:
+        if not ENHANCED_AUTOPOST_AVAILABLE:
+            await query.edit_message_text(
+                "❌ Система автопостинга недоступна",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+                ]])
+            )
+            return
+        
+        # Планируем пост на завтра
+        post_data = await schedule_smart_post(24)  # 24 часа от сейчас
+        
+        text = f"""✅ **ПОСТ ЗАПЛАНИРОВАН**
+
+📝 **Заголовок:** {post_data['title']}
+🗂 **Тип:** {post_data['type']}
+📋 **Тема:** {post_data['topic']}
+⏰ **Время публикации:** {post_data['scheduled_time'][:16]}
+
+💬 **Комментарии:** {'✅ Включены' if post_data.get('enable_comments') else '❌ Отключены'}"""
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("📝 Предпросмотр", callback_data=f"post_preview_{post_data['post_id']}"),
+                InlineKeyboardButton("🚀 Опубликовать сейчас", callback_data=f"post_publish_{post_data['post_id']}")
+            ],
+            [
+                InlineKeyboardButton("➕ Запланировать еще", callback_data="admin_schedule_post"),
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+            ]
+        ]
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        log.error(f"Error in handle_schedule_post: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка планирования поста",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+            ]])
+        )
+
+
+async def show_scheduled_posts(query, context):
+    """📋 Показать запланированные посты"""
+    try:
+        if not ENHANCED_AUTOPOST_AVAILABLE:
+            await query.edit_message_text(
+                "❌ Система автопостинга недоступна",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+                ]])
+            )
+            return
+        
+        scheduled_posts = await get_scheduled_posts(10)
+        
+        if not scheduled_posts:
+            text = "📋 **ЗАПЛАНИРОВАННЫЕ ПОСТЫ**\n\nНет запланированных постов"
+            keyboard = [
+                [
+                    InlineKeyboardButton("➕ Запланировать пост", callback_data="admin_schedule_post"),
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+                ]
+            ]
+        else:
+            text = f"📋 **ЗАПЛАНИРОВАННЫЕ ПОСТЫ** ({len(scheduled_posts)})\n\n"
+            keyboard = []
+            
+            for i, post in enumerate(scheduled_posts[:5], 1):
+                scheduled_time = post['scheduled_time'][:16]
+                text += f"{i}. **{post['title'][:30]}...**\n"
+                text += f"   📅 {scheduled_time} | 💬 {post['comments_count']} комм.\n\n"
+                
+                keyboard.append([
+                    InlineKeyboardButton(f"📝 Пост #{i}", callback_data=f"post_view_{post['post_id']}"),
+                    InlineKeyboardButton(f"💬 Комм.", callback_data=f"post_comments_{post['post_id']}")
+                ])
+            
+            keyboard.append([
+                InlineKeyboardButton("➕ Запланировать еще", callback_data="admin_schedule_post"),
+                InlineKeyboardButton("🔄 Обновить", callback_data="admin_view_scheduled")
+            ])
+            keyboard.append([
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+            ])
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        log.error(f"Error in show_scheduled_posts: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка загрузки постов",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+            ]])
+        )
+
+
+async def handle_post_actions(query, context):
+    """🔧 Обработчик действий с постами"""
+    data = query.data
+    
+    try:
+        if data.startswith("post_view_"):
+            post_id = data.replace("post_view_", "")
+            await show_post_preview(query, context, post_id)
+        
+        elif data.startswith("post_publish_"):
+            post_id = data.replace("post_publish_", "")
+            await publish_post_immediately(query, context, post_id)
+        
+        elif data.startswith("post_comments_"):
+            post_id = data.replace("post_comments_", "")
+            await show_post_comments(query, context, post_id)
+        
+        elif data.startswith("post_preview_"):
+            post_id = data.replace("post_preview_", "")
+            await show_post_preview(query, context, post_id)
+        
+        else:
+            await handle_missing_callback(query, context, data)
+    
+    except Exception as e:
+        log.error(f"Error in handle_post_actions: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка обработки действия с постом",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_autopost")
+            ]])
+        )
+
+
+async def handle_comment_actions(query, context):
+    """💬 Обработчик действий с комментариями"""
+    data = query.data
+    
+    try:
+        if data.startswith("comment_add_"):
+            post_id = data.replace("comment_add_", "")
+            # Здесь можно добавить диалог для написания комментария
+            await query.answer("💬 Функция добавления комментариев в разработке")
+        
+        elif data.startswith("comment_moderate_"):
+            comment_id = data.replace("comment_moderate_", "")
+            await query.answer("🛡️ Функция модерации комментариев в разработке")
+        
+        else:
+            await handle_missing_callback(query, context, data)
+    
+    except Exception as e:
+        log.error(f"Error in handle_comment_actions: {e}")
+        await query.answer("❌ Ошибка обработки комментария")
+
+
+async def show_post_preview(query, context, post_id: str):
+    """📝 Показать предпросмотр поста"""
+    try:
+        if not ENHANCED_AUTOPOST_AVAILABLE:
+            await query.edit_message_text(
+                "❌ Система автопостинга недоступна",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_view_scheduled")
+                ]])
+            )
+            return
+        
+        # В реальной реализации здесь будет получение поста из БД
+        text = f"""📝 **ПРЕДПРОСМОТР ПОСТА**
+
+🆔 **ID:** {post_id}
+⚠️ **Статус:** В разработке
+
+Функция предпросмотра постов в разработке.
+Скоро здесь будет полный контент поста."""
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("🚀 Опубликовать", callback_data=f"post_publish_{post_id}"),
+                InlineKeyboardButton("💬 Комментарии", callback_data=f"post_comments_{post_id}")
+            ],
+            [
+                InlineKeyboardButton("◀️ К списку", callback_data="admin_view_scheduled")
+            ]
+        ]
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        log.error(f"Error in show_post_preview: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка загрузки предпросмотра",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_view_scheduled")
+            ]])
+        )
+
+
+async def publish_post_immediately(query, context, post_id: str):
+    """🚀 Опубликовать пост немедленно"""
+    try:
+        if not ENHANCED_AUTOPOST_AVAILABLE:
+            await query.answer("❌ Система автопостинга недоступна")
+            return
+        
+        # Попытка опубликовать пост
+        success = await publish_post_now(post_id)
+        
+        if success:
+            await query.edit_message_text(
+                f"✅ **ПОСТ ОПУБЛИКОВАН**\n\n🆔 ID: {post_id}\n⏰ Время: {datetime.now().strftime('%H:%M:%S')}",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("📋 К списку", callback_data="admin_view_scheduled"),
+                    InlineKeyboardButton("📅 Автопостинг", callback_data="admin_autopost")
+                ]]),
+                parse_mode='Markdown'
+            )
+        else:
+            await query.edit_message_text(
+                f"❌ **ОШИБКА ПУБЛИКАЦИИ**\n\n🆔 ID: {post_id}\nПопробуйте позже.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔄 Повторить", callback_data=f"post_publish_{post_id}"),
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_view_scheduled")
+                ]]),
+                parse_mode='Markdown'
+            )
+        
+    except Exception as e:
+        log.error(f"Error in publish_post_immediately: {e}")
+        await query.answer("❌ Ошибка публикации поста")
+
+
+async def show_post_comments(query, context, post_id: str):
+    """💬 Показать комментарии к посту"""
+    try:
+        if not ENHANCED_AUTOPOST_AVAILABLE:
+            await query.edit_message_text(
+                "❌ Система автопостинга недоступна",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("◀️ Назад", callback_data="admin_view_scheduled")
+                ]])
+            )
+            return
+        
+        comments = await get_post_comments(post_id, 5)
+        
+        if not comments:
+            text = f"💬 **КОММЕНТАРИИ К ПОСТУ**\n\n🆔 **ID поста:** {post_id}\n\n📝 Комментариев пока нет"
+        else:
+            text = f"💬 **КОММЕНТАРИИ К ПОСТУ** ({len(comments)})\n\n🆔 **ID поста:** {post_id}\n\n"
+            
+            for i, comment in enumerate(comments, 1):
+                username = comment.get('username', 'Аноним')
+                comment_time = comment['comment_time'][:16] if comment['comment_time'] else 'Неизвестно'
+                text += f"{i}. **@{username}** ({comment_time})\n"
+                text += f"   {comment['comment_text'][:50]}...\n\n"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("➕ Добавить комментарий", callback_data=f"comment_add_{post_id}"),
+                InlineKeyboardButton("🛡️ Модерация", callback_data=f"comment_moderate_{post_id}")
+            ],
+            [
+                InlineKeyboardButton("🔄 Обновить", callback_data=f"post_comments_{post_id}"),
+                InlineKeyboardButton("◀️ К посту", callback_data=f"post_view_{post_id}")
+            ]
+        ]
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        log.error(f"Error in show_post_comments: {e}")
+        await query.edit_message_text(
+            "❌ Ошибка загрузки комментариев",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="admin_view_scheduled")
+            ]])
+        )
 
 
 async def show_applications(query, context):
@@ -4032,6 +4404,10 @@ async def cmd_admin_callback(query, context):
                                  callback_data="admin_manage_admins"),
             InlineKeyboardButton("📈 Детальная аналитика",
                                  callback_data="admin_detailed_analytics")
+        ],
+        [
+            InlineKeyboardButton("📅 Автопостинг", callback_data="admin_autopost"),
+            InlineKeyboardButton("📋 Запланированные", callback_data="admin_view_scheduled")
         ],
         [
             InlineKeyboardButton("🔄 Обновить панель",
