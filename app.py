@@ -218,6 +218,18 @@ try:
 
     # ===== MINI APP SUBMIT ENDPOINT =====
     
+    @app.options("/submit")
+    async def submit_options():
+        """Handle preflight requests for submit endpoint"""
+        return fastapi.Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Accept",
+            }
+        )
+    
     @app.post("/submit")
     async def submit_application(request: fastapi.Request):
         """Handle Mini App form submissions"""
