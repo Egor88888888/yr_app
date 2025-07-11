@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-BUILDING: ЮРИДИЧЕСКИЙ ЦЕНТР - PRODUCTION-READY BOT
+🏛️ ЮРИДИЧЕСКИЙ ЦЕНТР - PRODUCTION-READY BOT
 
-ROCKET: ПОЛНОФУНКЦИОНАЛЬНЫЙ ПРОДУКТ ДЛЯ ПРОДАКШЕНА:
+🚀 ПОЛНОФУНКЦИОНАЛЬНЫЙ ПРОДУКТ ДЛЯ ПРОДАКШЕНА:
 - 12 категорий юридических услуг
 - Enhanced AI с ML классификацией
 - Telegram Mini App с современным UI
@@ -48,6 +49,8 @@ from bot.services.ai import generate_ai_response, generate_post_content
 from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received, notify_client_status_update, notify_client_payment_required
 from bot.handlers.smm_admin import register_smm_admin_handlers
+from menu_utils import MenuBuilder, format_menu_title, format_stats_section
+from missing_handlers import handle_missing_callback, validate_callback_coverage
 # Импорт улучшенной системы автопостинга
 try:
     from bot.services.enhanced_autopost import (
@@ -105,7 +108,7 @@ WEB_APP_URL = f"https://{PUBLIC_HOST}/webapp/"
 
 print(f"GLOBE: WebApp URL: {WEB_APP_URL}")
 print(f"LINK: Webhook URL: https://{PUBLIC_HOST}/{TOKEN}")
-print(f"ROCKET: Production Mode: {PRODUCTION_MODE}")
+print(f"🚀 Production Mode: {PRODUCTION_MODE}")
 
 PORT = int(os.getenv("PORT", 8080))
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -124,7 +127,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# FIX: FIXED: Улучшенная система администраторов
+# 🔧 FIXED: Улучшенная система администраторов
 HARDCODED_ADMIN_IDS = {
     6373924442,  # Основной администратор (замените на ваш реальный ID)
     ADMIN_CHAT_ID if ADMIN_CHAT_ID != 0 else None
@@ -134,7 +137,7 @@ HARDCODED_ADMIN_IDS.discard(None)  # Убираем None если ADMIN_CHAT_ID=
 # Global admin set - теперь правильный
 ADMIN_USERS = HARDCODED_ADMIN_IDS.copy()
 
-print(f"FIX: Admin users initialized: {ADMIN_USERS}")
+print(f"🔧 Admin users initialized: {ADMIN_USERS}")
 log.info(f"Admin users configured: {list(ADMIN_USERS)}")
 
 # Role permissions
@@ -149,7 +152,7 @@ ROLE_PERMISSIONS = {
 
 async def is_admin(user_id: int) -> bool:
     """
-    FIX: FIXED: Улучшенная проверка администраторов
+    🔧 FIXED: Улучшенная проверка администраторов
     Проверяет в нескольких источниках:
     1. Хардкодированные ID
     2. Таблица admins в БД
@@ -267,7 +270,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.set_chat_menu_button(
             chat_id=user.id,
             menu_button=MenuButtonWebApp(
-                text="MEMO: Подать заявку",
+                text="📝 Подать заявку",
                 web_app=WebAppInfo(url=WEB_APP_URL)
             )
         )
@@ -290,31 +293,31 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await session.commit()
 
     welcome_text = f"""
-HELLO: Здравствуйте, {user.first_name}!
+👋 Здравствуйте, {user.first_name}!
 
-BUILDING: **ЮРИДИЧЕСКИЙ ЦЕНТР**
+🏛️ **ЮРИДИЧЕСКИЙ ЦЕНТР**
 Полный спектр юридических услуг:
 
-- Семейное право и развод
-- Наследственные споры
-- Трудовые конфликты
-- Жилищные вопросы
-- Банкротство физлиц
-- Налоговые консультации
-- Административные дела
-- Защита прав потребителей
-- Миграционное право
-- И многое другое!
+• 👨‍👩‍👧‍👦 Семейное право и развод
+• 📋 Наследственные споры
+• 💼 Трудовые конфликты
+• 🏠 Жилищные вопросы
+• 📉 Банкротство физлиц
+• 💰 Налоговые консультации
+• ⚖️ Административные дела
+• 🛡️ Защита прав потребителей
+• 🛂 Миграционное право
+• 📚 И многое другое!
 
-CHAT: Задайте вопрос прямо в чате или нажмите синюю кнопку меню рядом с полем ввода для подачи заявки.
+💬 Задайте вопрос прямо в чате или нажмите синюю кнопку меню рядом с полем ввода для подачи заявки.
 
-SUCCESS: Работаем по всей России
-DOLLAR: Оплата по результату
+✅ Работаем по всей России
+💵 Оплата по результату
 """
 
     keyboard = [[
         InlineKeyboardButton(
-            "MEMO: Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
+            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -333,27 +336,27 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     user = update.effective_user
 
-    # FIX: ФИКС: Проверяем специальные состояния пользователя
+    # 🔧 ФИКС: Проверяем специальные состояния пользователя
     if await is_admin(user_id) and context.user_data.get('pending_broadcast', {}).get('waiting_for_text'):
         await handle_broadcast_text(update, context)
         return
 
-    # FIX: ФИКС: Если пользователь ожидает ввода деталей консультации, обрабатываем их отдельно
+    # 🔧 ФИКС: Если пользователь ожидает ввода деталей консультации, обрабатываем их отдельно
     if context.user_data.get('awaiting_consultation_details'):
         await handle_consultation_details(update, context)
         return
 
-    # FIX: ФИКС: Если пользователь ожидает ввода телефона, обрабатываем его отдельно
+    # 🔧 ФИКС: Если пользователь ожидает ввода телефона, обрабатываем его отдельно
     if context.user_data.get('awaiting_phone_input'):
         await handle_phone_input(update, context)
         return
 
-    # FIX: ФИКС: Если админ создает пост вручную
+    # 🔧 ФИКС: Если админ создает пост вручную
     if context.user_data.get('awaiting_manual_post') and await is_admin(user_id):
         await handle_manual_post_input(update, context)
         return
 
-    # FIX: ФИКС: Если админ редактирует пост
+    # 🔧 ФИКС: Если админ редактирует пост
     if context.user_data.get('editing_post') and await is_admin(user_id):
         await handle_edit_post_input(update, context)
         return
@@ -366,7 +369,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await log_request(user_id, "ai", True)
 
     try:
-        # ROCKET: ИСПРАВЛЕНИЕ: Используем Enhanced AI с правильными параметрами
+        # 🚀 ИСПРАВЛЕНИЕ: Используем Enhanced AI с правильными параметрами
         if ai_enhanced_manager and ai_enhanced_manager._initialized:
             log.info(f" Using Enhanced AI for user {user_id}")
 
@@ -385,7 +388,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             log.info(
-                f"SUCCESS: Enhanced AI response generated: {len(response)} chars")
+                f"✅ Enhanced AI response generated: {len(response)} chars")
         else:
             log.info(f"WARNING: Using fallback AI for user {user_id}")
 
@@ -408,18 +411,18 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if "код 402" not in response:
                 response += "\n\n Для детальной консультации нажмите кнопки ниже."
 
-        # TARGET: НОВОЕ: Добавляем клиентский путь с кнопками
+        # 🎯 НОВОЕ: Добавляем клиентский путь с кнопками
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "MEMO: Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
-                InlineKeyboardButton("PHONE: Звонок",
+                    "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                InlineKeyboardButton("📞 Заказать звонок",
                                      callback_data="request_call")
             ],
             [
                 InlineKeyboardButton(
-                    "CHAT: Консультация", callback_data="chat_consultation"),
-                InlineKeyboardButton("CHART: Стоимость",
+                    "💬 Консультация", callback_data="chat_consultation"),
+                InlineKeyboardButton("💳 Узнать стоимость",
                                      callback_data="get_price")
             ]
         ]
@@ -429,20 +432,20 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(response, reply_markup=reply_markup)
 
         log.info(
-            f"SUCCESS: AI response sent to user {user_id} with client flow buttons")
+            f"✅ AI response sent to user {user_id} with client flow buttons")
 
     except Exception as e:
-        log.error(f"ERROR: AI Chat error for user {user_id}: {e}")
+        log.error(f"❌ AI Chat error for user {user_id}: {e}")
         await log_request(user_id, "ai", False, str(e))
 
         # Fallback ответ с кнопками
         fallback_keyboard = [[
             InlineKeyboardButton(
-                "MEMO: Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
+                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
         ]]
 
         await update.message.reply_text(
-            "BOT: AI временно недоступен, но вы можете оставить заявку на консультацию.",
+            "🤖 AI временно недоступен, но вы можете оставить заявку на консультацию.",
             reply_markup=InlineKeyboardMarkup(fallback_keyboard)
         )
 
@@ -466,49 +469,49 @@ async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         total_users = total_apps = new_apps_today = 0
 
-    admin_text = f"""BUILDING: **ЮРИДИЧЕСКИЙ ЦЕНТР - АДМИН ПАНЕЛЬ**
+    admin_text = f"""🏛️ **ЮРИДИЧЕСКИЙ ЦЕНТР - АДМИН ПАНЕЛЬ**
 
-CHART: **Быстрая статистика:**
+📊 **Быстрая статистика:**
 - Пользователей: {total_users}
 - Заявок: {total_apps}
 - Новых сегодня: {new_apps_today}
 - Админов: {len(ADMIN_USERS)}
 
-CONTROL: **Выберите раздел управления:**"""
+🎛️ **Выберите раздел управления:**"""
 
     keyboard = [
         [
-            InlineKeyboardButton("CLIPBOARD: Заявки",
+            InlineKeyboardButton("📋 Заявки",
                                  callback_data="admin_apps"),
-            InlineKeyboardButton("CHART: Статистика",
+            InlineKeyboardButton("📊 Статистика",
                                  callback_data="admin_stats")
         ],
         [
             InlineKeyboardButton(
-                "CARD: Платежи", callback_data="admin_payments"),
-            InlineKeyboardButton("USERS: Клиенты", callback_data="admin_users")
+                "💳 Платежи", callback_data="admin_payments"),
+            InlineKeyboardButton("👥 Клиенты", callback_data="admin_users")
         ],
         [
             InlineKeyboardButton(
-                "BOT: AI Статус", callback_data="admin_ai_status"),
+                "🤖 AI Статус", callback_data="admin_ai_status"),
             InlineKeyboardButton(" Рассылка", callback_data="admin_broadcast")
         ],
         [
             InlineKeyboardButton(
-                "ROCKET: SMM Система", callback_data="smm_main_panel"),
+                "🚀 SMM Система", callback_data="smm_main_panel"),
             InlineKeyboardButton(
                 " Настройки", callback_data="admin_settings")
         ],
         [
-            InlineKeyboardButton("USERS: Управление админами",
+            InlineKeyboardButton("👥 Управление админами",
                                  callback_data="admin_manage_admins"),
-            InlineKeyboardButton("GROWTH: Детальная аналитика",
+            InlineKeyboardButton("📈 Детальная аналитика",
                                  callback_data="admin_detailed_analytics")
         ],
         [
-            InlineKeyboardButton("CHANGES: Обновить панель",
+            InlineKeyboardButton("🔄 Обновить панель",
                                  callback_data="admin_refresh"),
-            InlineKeyboardButton("CHART: Экспорт данных",
+            InlineKeyboardButton("📊 Экспорт данных",
                                  callback_data="admin_export")
         ]
     ]
@@ -521,7 +524,7 @@ CONTROL: **Выберите раздел управления:**"""
 
 
 async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """FIX: FIXED: Команда для добавления нового администратора"""
+    """🔧 FIXED: Команда для добавления нового администратора"""
     user_id = update.effective_user.id
 
     # Проверяем права текущего пользователя
@@ -532,7 +535,7 @@ async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Проверяем аргументы
     if not context.args:
         await update.message.reply_text(
-            "CLIPBOARD: **Добавление администратора**\n\n"
+            "📋 **Добавление администратора**\n\n"
             "Использование: `/add_admin <ID> [роль]`\n\n"
             "Роли:\n"
             "- `operator` - просмотр заявок\n"
@@ -549,14 +552,14 @@ async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if role not in ROLE_PERMISSIONS:
             await update.message.reply_text(
-                f"ERROR: Неверная роль: `{role}`\n\n"
+                f"❌ Неверная роль: `{role}`\n\n"
                 f"Доступные роли: {', '.join(ROLE_PERMISSIONS.keys())}",
                 parse_mode='Markdown'
             )
             return
 
     except ValueError:
-        await update.message.reply_text("ERROR: ID должен быть числом")
+        await update.message.reply_text("❌ ID должен быть числом")
         return
 
     # Проверяем, не является ли уже администратором
@@ -580,10 +583,10 @@ async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Уведомляем об успехе
         await update.message.reply_text(
-            f"SUCCESS: **Администратор добавлен**\n\n"
-            f"USER: ID: `{new_admin_id}`\n"
-            f"TARGET: Роль: `{role}`\n"
-            f"CHART: Всего админов: {len(ADMIN_USERS)}",
+            f"✅ **Администратор добавлен**\n\n"
+            f"👤 ID: `{new_admin_id}`\n"
+            f"🎯 Роль: `{role}`\n"
+            f"📊 Всего админов: {len(ADMIN_USERS)}",
             parse_mode='Markdown'
         )
 
@@ -592,8 +595,8 @@ async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 new_admin_id,
                 f"PARTY: **Вы назначены администратором!**\n\n"
-                f"TARGET: Роль: {role}\n"
-                f"CLIPBOARD: Команды: /admin, /start\n\n"
+                f"🎯 Роль: {role}\n"
+                f"📋 Команды: /admin, /start\n\n"
                 f"Добро пожаловать в команду! HELLO:",
                 parse_mode='Markdown'
             )
@@ -605,15 +608,15 @@ async def cmd_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         log.info(
-            f"FIX: New admin added: {new_admin_id} with role {role} by {user_id}")
+            f"🔧 New admin added: {new_admin_id} with role {role} by {user_id}")
 
     except Exception as e:
         log.error(f"Failed to add admin {new_admin_id}: {e}")
-        await update.message.reply_text(f"ERROR: Ошибка добавления администратора: {e}")
+        await update.message.reply_text(f"❌ Ошибка добавления администратора: {e}")
 
 
 async def cmd_list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """FIX: FIXED: Команда для просмотра списка администраторов"""
+    """🔧 FIXED: Команда для просмотра списка администраторов"""
     user_id = update.effective_user.id
 
     # Проверяем права текущего пользователя
@@ -622,11 +625,11 @@ async def cmd_list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        text = "USERS: **СПИСОК АДМИНИСТРАТОРОВ**\n\n"
+        text = "👥 **СПИСОК АДМИНИСТРАТОРОВ**\n\n"
 
         # Хардкодированные администраторы
         if HARDCODED_ADMIN_IDS:
-            text += "FIX: **Хардкодированные:**\n"
+            text += "🔧 **Хардкодированные:**\n"
             for admin_id in sorted(HARDCODED_ADMIN_IDS):
                 text += f"- `{admin_id}` (системный)\n"
             text += "\n"
@@ -642,18 +645,18 @@ async def cmd_list_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if db_admins:
             text += " **Из базы данных:**\n"
             for admin in db_admins:
-                status = "SUCCESS:" if admin.is_active else "ERROR:"
+                status = "✅" if admin.is_active else "❌"
                 text += f"{status} `{admin.tg_id}` ({admin.role})\n"
         else:
             text += " **Из базы данных:** нет\n"
 
-        text += f"\nCHART: **Всего активных:** {len(ADMIN_USERS)}"
+        text += f"\n📊 **Всего активных:** {len(ADMIN_USERS)}"
 
         await update.message.reply_text(text, parse_mode='Markdown')
 
     except Exception as e:
         log.error(f"Failed to list admins: {e}")
-        await update.message.reply_text(f"ERROR: Ошибка получения списка: {e}")
+        await update.message.reply_text(f"❌ Ошибка получения списка: {e}")
 
 
 async def universal_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -664,7 +667,7 @@ async def universal_callback_handler(update: Update, context: ContextTypes.DEFAU
     user_id = query.from_user.id
     data = query.data
 
-    # TARGET: НОВОЕ: Клиентские кнопки доступны всем пользователям
+    # 🎯 НОВОЕ: Клиентские кнопки доступны всем пользователям
     client_actions = [
         "request_call", "chat_consultation", "get_price", "back_to_chat",
         "enter_phone", "submit_call_request"
@@ -725,6 +728,9 @@ async def universal_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_smm_toggle(query, context)
     elif data.startswith("smm_"):
         await handle_smm_actions(query, context)
+    else:
+        # Catch-all for unimplemented callbacks
+        await handle_missing_callback(query, context, data)
 
 
 async def show_applications(query, context):
@@ -739,16 +745,16 @@ async def show_applications(query, context):
         apps = result.all()
 
     if not apps:
-        text = "CLIPBOARD: Нет заявок"
+        text = "📋 Нет заявок"
     else:
-        text = "CLIPBOARD: **ПОСЛЕДНИЕ ЗАЯВКИ**\n\n"
+        text = "📋 **ПОСЛЕДНИЕ ЗАЯВКИ**\n\n"
         keyboard = []
 
         for app, user in apps:
             status_emoji = {
-                "new": "NEW:",
+                "new": "🆕",
                 "processing": "⏳",
-                "completed": "SUCCESS:"
+                "completed": "✅"
             }.get(app.status, "")
 
             # Используем subcategory вместо Category.name
@@ -756,8 +762,8 @@ async def show_applications(query, context):
                 ':')[0] if app.subcategory and ':' in app.subcategory else (app.subcategory or "Общие вопросы")
 
             text += f"{status_emoji} #{app.id} | {category_name}\n"
-            text += f"USER: {user.first_name} {user.phone or ''}\n"
-            text += f"CALENDAR: {app.created_at.strftime('%d.%m %H:%M')}\n\n"
+            text += f"👤 {user.first_name} {user.phone or ''}\n"
+            text += f"📅 {app.created_at.strftime('%d.%m %H:%M')}\n\n"
 
             keyboard.append([
                 InlineKeyboardButton(
@@ -767,7 +773,7 @@ async def show_applications(query, context):
             ])
 
     keyboard.append([InlineKeyboardButton(
-        " Назад", callback_data="back_admin")])
+        "◀️ Назад в меню", callback_data="back_admin")])
 
     try:
         await query.edit_message_text(
@@ -787,11 +793,11 @@ async def show_applications(query, context):
             await query.answer("Сообщение обновлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_application_action(query, context):
-    """FIX: ПРОДАКШН-ГОТОВО: Полные действия с заявкой"""
+    """🔧 ПРОДАКШН-ГОТОВО: Полные действия с заявкой"""
     data = query.data
 
     if data.startswith("app_view_"):
@@ -849,12 +855,12 @@ async def handle_application_action(query, context):
         safe_subcategory = escape_markdown(subcategory_detail)
 
         text = f"""
-CLIPBOARD: **ЗАЯВКА #{app.id}**
+📋 **ЗАЯВКА #{app.id}**
 
 FOLDER: Категория: {safe_category}
-MEMO: Подкатегория: {safe_subcategory}
+📝 Подкатегория: {safe_subcategory}
 
-USER: **Клиент:**
+👤 **Клиент:**
 Имя: {safe_first_name} {safe_last_name}
 PHONE: {safe_phone}
 EMAIL: {safe_email}
@@ -867,9 +873,9 @@ CLOCK: Время: {app.contact_time or 'любое'}
 {f' Файлов: {len(app.files_data or [])}' if app.files_data else ''}
 {f' UTM: {app.utm_source}' if app.utm_source else ''}
 
-DOLLAR: Стоимость: {app.price or 'не определена'}  rubles
-CHART: Статус: {app.status}
-CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
+💵 Стоимость: {app.price or 'не определена'}  rubles
+📊 Статус: {app.status}
+📅 Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
 """
 
         # Ограничиваем общую длину сообщения для Telegram
@@ -881,27 +887,27 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
 
         if app.status == "new":
             keyboard.extend([
-                [InlineKeyboardButton("SUCCESS: Взять в работу", callback_data=f"app_take_{app.id}"),
-                 InlineKeyboardButton("ERROR: Отклонить", callback_data=f"app_reject_{app.id}")],
-                [InlineKeyboardButton("CARD: Выставить счет",
+                [InlineKeyboardButton("✅ Взять в работу", callback_data=f"app_take_{app.id}"),
+                 InlineKeyboardButton("❌ Отклонить", callback_data=f"app_reject_{app.id}")],
+                [InlineKeyboardButton("💳 Выставить счет",
                                       callback_data=f"app_bill_{app.id}")]
             ])
         elif app.status == "processing":
             keyboard.extend([
-                [InlineKeyboardButton("SUCCESS: Завершить", callback_data=f"app_complete_{app.id}"),
-                 InlineKeyboardButton("ERROR: Отклонить", callback_data=f"app_reject_{app.id}")],
-                [InlineKeyboardButton("CARD: Выставить счет",
+                [InlineKeyboardButton("✅ Завершить", callback_data=f"app_complete_{app.id}"),
+                 InlineKeyboardButton("❌ Отклонить", callback_data=f"app_reject_{app.id}")],
+                [InlineKeyboardButton("💳 Выставить счет",
                                       callback_data=f"app_bill_{app.id}")]
             ])
         elif app.status == "completed":
             keyboard.append([InlineKeyboardButton(
-                "CARD: Повторный счет", callback_data=f"app_bill_{app.id}")])
+                "💳 Повторный счет", callback_data=f"app_bill_{app.id}")])
         elif app.status == "cancelled":
             keyboard.append([InlineKeyboardButton(
-                "CHANGES: Восстановить", callback_data=f"app_take_{app.id}")])
+                "🔄 Восстановить", callback_data=f"app_take_{app.id}")])
 
         keyboard.append([InlineKeyboardButton(
-            " К списку", callback_data="admin_apps")])
+            "📋 К списку заявок", callback_data="admin_apps")])
 
         try:
             await query.edit_message_text(
@@ -921,10 +927,10 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
                 await query.answer("Сообщение обновлено")
             except Exception as fallback_error:
                 log.error(f"Fallback message also failed: {fallback_error}")
-                await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     elif data.startswith("app_take_"):
-        # SUCCESS: Взять заявку в работу
+        # ✅ Взять заявку в работу
         app_id = int(data.split("_")[2])
         admin_id = query.from_user.id
 
@@ -963,7 +969,7 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
                 log.error(f"Client notification error: {e}")
 
             # Уведомляем администратора об успехе
-            await query.answer("SUCCESS: Заявка взята в работу", show_alert=True)
+            await query.answer("✅ Заявка взята в работу", show_alert=True)
 
             # Возвращаемся к просмотру заявки с обновленной информацией
             await handle_application_action(
@@ -977,10 +983,10 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
 
         except Exception as e:
             log.error(f"Error taking application {app_id}: {e}")
-            await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
     elif data.startswith("app_reject_"):
-        # ERROR: Отклонить заявку
+        # ❌ Отклонить заявку
         app_id = int(data.split("_")[2])
         admin_id = query.from_user.id
 
@@ -1019,7 +1025,7 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
                 log.error(f"Client notification error: {e}")
 
             # Уведомляем администратора об успехе
-            await query.answer("ERROR: Заявка отклонена", show_alert=True)
+            await query.answer("❌ Заявка отклонена", show_alert=True)
 
             # Возвращаемся к просмотру заявки с обновленной информацией
             await handle_application_action(
@@ -1033,10 +1039,10 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
 
         except Exception as e:
             log.error(f"Error rejecting application {app_id}: {e}")
-            await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
     elif data.startswith("app_bill_"):
-        # CARD: Выставить счет
+        # 💳 Выставить счет
         app_id = int(data.split("_")[2])
         admin_id = query.from_user.id
 
@@ -1089,45 +1095,45 @@ CALENDAR: Создана: {app.created_at.strftime('%d.%m.%Y %H:%M')}
             # Отправляем информацию о счете администратору
             if pay_url:
                 text = f"""
-CARD: **СЧЕТ ВЫСТАВЛЕН**
+💳 **СЧЕТ ВЫСТАВЛЕН**
 
-CLIPBOARD: Заявка: #{app.id}
-USER: Клиент: {user.first_name} {user.last_name or ''}
-DOLLAR: Сумма: {app.price}  rubles
+📋 Заявка: #{app.id}
+👤 Клиент: {user.first_name} {user.last_name or ''}
+💵 Сумма: {app.price}  rubles
 
 LINK: **Ссылка на оплату:**
 {pay_url}
 
-SUCCESS: Клиент уведомлен о необходимости оплаты
+✅ Клиент уведомлен о необходимости оплаты
 """
 
                 keyboard = [
                     [InlineKeyboardButton(
                         "LINK: Открыть ссылку", url=pay_url)],
                     [InlineKeyboardButton(
-                        "CLIPBOARD: Вернуться к заявке", callback_data=f"app_view_{app_id}")],
+                        "📋 Вернуться к заявке", callback_data=f"app_view_{app_id}")],
                     [InlineKeyboardButton(
-                        " К списку", callback_data="admin_apps")]
+                        "📋 К списку заявок", callback_data="admin_apps")]
                 ]
             else:
                 text = f"""
-CARD: **СЧЕТ ВЫСТАВЛЕН**
+💳 **СЧЕТ ВЫСТАВЛЕН**
 
-CLIPBOARD: Заявка: #{app.id}
-USER: Клиент: {user.first_name} {user.last_name or ''}
-DOLLAR: Сумма: {app.price}  rubles
+📋 Заявка: #{app.id}
+👤 Клиент: {user.first_name} {user.last_name or ''}
+💵 Сумма: {app.price}  rubles
 
 WARNING: **Платежная система не настроена**
 Клиент должен оплатить другим способом
 
-SUCCESS: Клиент уведомлен о необходимости оплаты
+✅ Клиент уведомлен о необходимости оплаты
 """
 
                 keyboard = [
                     [InlineKeyboardButton(
-                        "CLIPBOARD: Вернуться к заявке", callback_data=f"app_view_{app_id}")],
+                        "📋 Вернуться к заявке", callback_data=f"app_view_{app_id}")],
                     [InlineKeyboardButton(
-                        " К списку", callback_data="admin_apps")]
+                        "📋 К списку заявок", callback_data="admin_apps")]
                 ]
 
             try:
@@ -1149,14 +1155,14 @@ SUCCESS: Клиент уведомлен о необходимости опла�
                 except Exception as fallback_error:
                     log.error(
                         f"Fallback message also failed: {fallback_error}")
-                    await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+                    await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
         except Exception as e:
             log.error(f"Error billing application {app_id}: {e}")
-            await query.answer(f"ERROR: Ошибка выставления счета: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка выставления счета: {e}", show_alert=True)
 
     elif data.startswith("app_complete_"):
-        # SUCCESS: Завершить заявку
+        # ✅ Завершить заявку
         app_id = int(data.split("_")[2])
         admin_id = query.from_user.id
 
@@ -1195,7 +1201,7 @@ SUCCESS: Клиент уведомлен о необходимости опла�
                 log.error(f"Client notification error: {e}")
 
             # Уведомляем администратора об успехе
-            await query.answer("SUCCESS: Заявка завершена", show_alert=True)
+            await query.answer("✅ Заявка завершена", show_alert=True)
 
             # Возвращаемся к просмотру заявки с обновленной информацией
             await handle_application_action(
@@ -1209,11 +1215,11 @@ SUCCESS: Клиент уведомлен о необходимости опла�
 
         except Exception as e:
             log.error(f"Error completing application {app_id}: {e}")
-            await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
 
 async def handle_client_action(query, context):
-    """USER: ПРОДАКШН-ГОТОВО: Действия с клиентами"""
+    """👤 ПРОДАКШН-ГОТОВО: Действия с клиентами"""
     data = query.data
 
     if data.startswith("client_view_"):
@@ -1244,32 +1250,32 @@ async def handle_client_action(query, context):
         recent_app = applications[0] if applications else None
 
         text = f"""
-USER: **КЛИЕНТ: {user.first_name} {user.last_name or ''}**
+👤 **КЛИЕНТ: {user.first_name} {user.last_name or ''}**
 
 PHONE: Телефон: {user.phone or 'не указан'}
 EMAIL: Email: {user.email or 'не указан'}
 ID: Telegram ID: `{user.tg_id}`
-CALENDAR: Регистрация: {user.created_at.strftime('%d.%m.%Y') if hasattr(user, 'created_at') else 'н/д'}
+📅 Регистрация: {user.created_at.strftime('%d.%m.%Y') if hasattr(user, 'created_at') else 'н/д'}
 
-CHART: **Статистика:**
+📊 **Статистика:**
 - Всего заявок: {len(applications)}
 - Общая сумма: {total_amount}  rubles
 - Последняя заявка: {recent_app.created_at.strftime('%d.%m.%Y') if recent_app else 'нет'}
 
-CLIPBOARD: **Последние заявки:**
+📋 **Последние заявки:**
 """
 
         keyboard = []
         for app in applications[:5]:  # Показываем последние 5
-            status_emoji = {"new": "NEW:", "processing": "⏳",
-                            "completed": "SUCCESS:"}.get(app.status, "")
+            status_emoji = {"new": "🆕", "processing": "⏳",
+                            "completed": "✅"}.get(app.status, "")
             category_name = app.subcategory.split(
                 ':')[0] if app.subcategory and ':' in app.subcategory else "Общие"
             text += f"{status_emoji} #{app.id} | {category_name} | {app.price or 0}  rubles\n"
 
             keyboard.append([
                 InlineKeyboardButton(
-                    f"CLIPBOARD: Заявка #{app.id}",
+                    f"📋 Заявка #{app.id}",
                     callback_data=f"app_view_{app.id}"
                 )
             ])
@@ -1295,7 +1301,7 @@ CLIPBOARD: **Последние заявки:**
                 await query.answer("Сообщение обновлено")
             except Exception as fallback_error:
                 log.error(f"Fallback message also failed: {fallback_error}")
-                await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_broadcast_action(query, context):
@@ -1304,8 +1310,8 @@ async def handle_broadcast_action(query, context):
 
     # Определяем тип рассылки
     broadcast_types = {
-        "broadcast_all": ("USERS: Всем клиентам", "SELECT DISTINCT tg_id FROM users WHERE tg_id IS NOT NULL"),
-        "broadcast_active": ("MEMO: С активными заявками", """
+        "broadcast_all": ("👥 Всем клиентам", "SELECT DISTINCT tg_id FROM users WHERE tg_id IS NOT NULL"),
+        "broadcast_active": ("📝 С активными заявками", """
             SELECT DISTINCT u.tg_id FROM users u
             JOIN applications a ON u.id = a.user_id
             WHERE a.status IN ('new', 'processing') AND u.tg_id IS NOT NULL
@@ -1334,16 +1340,16 @@ async def handle_broadcast_action(query, context):
                 user_ids = [row[0] for row in result.fetchall()]
 
             if not user_ids:
-                await query.answer(f"ERROR: Нет пользователей для рассылки в группе '{title}'", show_alert=True)
+                await query.answer(f"❌ Нет пользователей для рассылки в группе '{title}'", show_alert=True)
                 return
 
             # Просим админа ввести текст рассылки
             text = f"""
  **РАССЫЛКА: {title}**
 
-USERS: **Найдено пользователей:** {len(user_ids)}
+👥 **Найдено пользователей:** {len(user_ids)}
 
-MEMO: **Отправьте сообщение для рассылки:**
+📝 **Отправьте сообщение для рассылки:**
 
 Ответьте на это сообщение текстом, который нужно разослать.
 
@@ -1355,7 +1361,7 @@ WARNING: **Внимание:**
 
             keyboard = [
                 [InlineKeyboardButton(
-                    "ERROR: Отменить", callback_data="admin_broadcast")]
+                    "❌ Отменить", callback_data="admin_broadcast")]
             ]
 
             try:
@@ -1377,7 +1383,7 @@ WARNING: **Внимание:**
                 except Exception as fallback_error:
                     log.error(
                         f"Fallback message also failed: {fallback_error}")
-                    await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+                    await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
             # Сохраняем данные рассылки в контексте
             context.user_data['pending_broadcast'] = {
@@ -1389,7 +1395,7 @@ WARNING: **Внимание:**
 
         except Exception as e:
             log.error(f"Broadcast preparation error: {e}")
-            await query.answer(f"ERROR: Ошибка подготовки рассылки: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка подготовки рассылки: {e}", show_alert=True)
 
 
 async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1407,21 +1413,21 @@ async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data['pending_broadcast'] = {}
 
     if len(message_text) > 4000:
-        await update.message.reply_text("ERROR: Текст слишком длинный (максимум 4000 символов)")
+        await update.message.reply_text("❌ Текст слишком длинный (максимум 4000 символов)")
         return
 
     if not user_ids:
-        await update.message.reply_text("ERROR: Список пользователей пуст")
+        await update.message.reply_text("❌ Список пользователей пуст")
         return
 
     # Подтверждение перед отправкой
     confirm_text = f"""
  **ПОДТВЕРЖДЕНИЕ РАССЫЛКИ**
 
-TARGET: **Группа:** {title}
-USERS: **Получателей:** {len(user_ids)}
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
 
-MEMO: **Текст сообщения:**
+📝 **Текст сообщения:**
 {message_text[:500]}{'...' if len(message_text) > 500 else ''}
 
 WARNING: **Внимание:** после подтверждения рассылка будет отправлена немедленно!
@@ -1429,9 +1435,9 @@ WARNING: **Внимание:** после подтверждения рассы�
 
     keyboard = [
         [InlineKeyboardButton(
-            "SUCCESS: ОТПРАВИТЬ", callback_data=f"confirm_broadcast_{len(user_ids)}")],
+            "✅ ОТПРАВИТЬ", callback_data=f"confirm_broadcast_{len(user_ids)}")],
         [InlineKeyboardButton(
-            "ERROR: Отменить", callback_data="admin_broadcast")]
+            "❌ Отменить", callback_data="admin_broadcast")]
     ]
 
     # Сохраняем финальные данные для отправки
@@ -1459,17 +1465,17 @@ WARNING: **Внимание:** после подтверждения рассы�
             await update.answer("Сообщение отправлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await update.answer("ERROR: Ошибка отправки сообщения", show_alert=True)
+            await update.answer("❌ Ошибка отправки сообщения", show_alert=True)
 
 
 async def execute_broadcast(query, context):
-    """ROCKET: ПРОДАКШН-ГОТОВО: Выполнение массовой рассылки"""
+    """🚀 ПРОДАКШН-ГОТОВО: Выполнение массовой рассылки"""
     await query.answer()
 
     broadcast_data = context.user_data.get('broadcast_ready', {})
 
     if not broadcast_data:
-        await query.answer("ERROR: Данные рассылки не найдены", show_alert=True)
+        await query.answer("❌ Данные рассылки не найдены", show_alert=True)
         return
 
     message_text = broadcast_data.get('message_text')
@@ -1480,15 +1486,15 @@ async def execute_broadcast(query, context):
     context.user_data['broadcast_ready'] = {}
 
     if not message_text or not user_ids:
-        await query.answer("ERROR: Недостаточно данных для рассылки", show_alert=True)
+        await query.answer("❌ Недостаточно данных для рассылки", show_alert=True)
         return
 
     # Показываем прогресс
     progress_text = f"""
-ROCKET: **РАССЫЛКА ЗАПУЩЕНА**
+🚀 **РАССЫЛКА ЗАПУЩЕНА**
 
-TARGET: **Группа:** {title}
-USERS: **Получателей:** {len(user_ids)}
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
 
 ⏳ Отправляется... 0/{len(user_ids)}
 """
@@ -1509,7 +1515,7 @@ USERS: **Получателей:** {len(user_ids)}
             await query.answer("Сообщение отправлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отправки сообщения", show_alert=True)
+            await query.answer("❌ Ошибка отправки сообщения", show_alert=True)
 
     # Выполняем рассылку
     bot = query.bot
@@ -1528,13 +1534,13 @@ USERS: **Получателей:** {len(user_ids)}
             # Обновляем прогресс каждые 10 сообщений
             if (i + 1) % 10 == 0:
                 progress_text = f"""
-ROCKET: **РАССЫЛКА В ПРОЦЕССЕ**
+🚀 **РАССЫЛКА В ПРОЦЕССЕ**
 
-TARGET: **Группа:** {title}
-USERS: **Получателей:** {len(user_ids)}
+🎯 **Группа:** {title}
+👥 **Получателей:** {len(user_ids)}
 
 ⏳ Отправлено: {sent_count}/{len(user_ids)}
-ERROR: Ошибок: {failed_count}
+❌ Ошибок: {failed_count}
 """
                 try:
                     await query.edit_message_text(
@@ -1553,15 +1559,15 @@ ERROR: Ошибок: {failed_count}
 
     # Финальный отчет
     final_text = f"""
-SUCCESS: **РАССЫЛКА ЗАВЕРШЕНА**
+✅ **РАССЫЛКА ЗАВЕРШЕНА**
 
-TARGET: **Группа:** {title}
+🎯 **Группа:** {title}
  **Отправлено:** {sent_count}/{len(user_ids)}
-ERROR: **Неудачных:** {failed_count}
+❌ **Неудачных:** {failed_count}
 
-CHART: **Успешность:** {(sent_count/len(user_ids)*100):.1f}%
+📊 **Успешность:** {(sent_count/len(user_ids)*100):.1f}%
 
-MEMO: **Текст сообщения:**
+📝 **Текст сообщения:**
 {message_text[:200]}{'...' if len(message_text) > 200 else ''}
 """
 
@@ -1589,7 +1595,7 @@ MEMO: **Текст сообщения:**
             await query.answer("Сообщение обновлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     log.info(
         f"Broadcast completed: {sent_count}/{len(user_ids)} sent successfully")
@@ -1613,7 +1619,7 @@ async def handle_settings_action(query, context):
 
 
 async def show_admin_management(query, context):
-    """USERS: Управление администраторами"""
+    """👥 Управление администраторами"""
     async with async_sessionmaker() as session:
         result = await session.execute(
             select(Admin).where(Admin.is_active == True)
@@ -1621,10 +1627,10 @@ async def show_admin_management(query, context):
         )
         admins = result.scalars().all()
 
-    text = "USERS: **УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ**\n\n"
+    text = "👥 **УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ**\n\n"
 
     if HARDCODED_ADMIN_IDS:
-        text += "FIX: **Системные администраторы:**\n"
+        text += "🔧 **Системные администраторы:**\n"
         for admin_id in sorted(HARDCODED_ADMIN_IDS):
             text += f"- `{admin_id}` (системный)\n"
         text += "\n"
@@ -1636,13 +1642,13 @@ async def show_admin_management(query, context):
     else:
         text += " **Администраторы из БД:** нет\n"
 
-    text += f"\nCHART: **Всего активных:** {len(ADMIN_USERS)}\n\n"
+    text += f"\n📊 **Всего активных:** {len(ADMIN_USERS)}\n\n"
     text += "**Команды:**\n"
     text += "- `/add_admin <ID> [роль]` - добавить\n"
     text += "- `/list_admins` - список\n"
 
     keyboard = [
-        [InlineKeyboardButton("CHANGES: Обновить список",
+        [InlineKeyboardButton("🔄 Обновить список",
                               callback_data="setting_reload_admins")],
         [InlineKeyboardButton(" Назад", callback_data="admin_settings")]
     ]
@@ -1665,11 +1671,11 @@ async def show_admin_management(query, context):
             await query.answer("Сообщение обновлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def export_data(query, context):
-    """CHART: Экспорт данных"""
+    """📊 Экспорт данных"""
     try:
         async with async_sessionmaker() as session:
             # Статистика заявок
@@ -1684,7 +1690,7 @@ async def export_data(query, context):
 
         # Формируем отчет
         report = f"""
-CHART: **ЭКСПОРТ ДАННЫХ**
+📊 **ЭКСПОРТ ДАННЫХ**
 Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
 **Общая статистика:**
@@ -1730,19 +1736,19 @@ CHART: **ЭКСПОРТ ДАННЫХ**
                 await query.answer("Сообщение обновлено")
             except Exception as fallback_error:
                 log.error(f"Fallback message also failed: {fallback_error}")
-                await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+                await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
     except Exception as e:
         await query.answer(f"Ошибка экспорта: {e}", show_alert=True)
 
 
 async def reload_settings(query, context):
-    """CHANGES: Перезагрузка настроек"""
+    """🔄 Перезагрузка настроек"""
     try:
         # Перезагружаем администраторов из БД
         await load_db_admins()
 
-        await query.answer("SUCCESS: Настройки перезагружены", show_alert=True)
+        await query.answer("✅ Настройки перезагружены", show_alert=True)
         await show_admin_settings(query, context)
 
     except Exception as e:
@@ -1758,12 +1764,12 @@ async def clear_logs(query, context):
     system_metrics["ai_requests"] = 0
     system_metrics["start_time"] = datetime.now()
 
-    await query.answer("SUCCESS: Логи очищены", show_alert=True)
+    await query.answer("✅ Логи очищены", show_alert=True)
     await show_admin_settings(query, context)
 
 
 async def show_detailed_stats(query, context):
-    """GROWTH: Детальная статистика"""
+    """📈 Детальная статистика"""
     async with async_sessionmaker() as session:
         # Статистика по времени
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1799,14 +1805,14 @@ async def show_detailed_stats(query, context):
         )
 
     text = f"""
-GROWTH: **ДЕТАЛЬНАЯ СТАТИСТИКА**
+📈 **ДЕТАЛЬНАЯ СТАТИСТИКА**
 
-CALENDAR: **По периодам:**
+📅 **По периодам:**
 - Сегодня: {today_apps} заявок
 - За неделю: {week_apps} заявок
 - За месяц: {month_apps} заявок
 
-CHART: **Топ категории (месяц):**
+📊 **Топ категории (месяц):**
 """
 
     for subcategory, count in top_categories:
@@ -1831,7 +1837,7 @@ CHART: **Топ категории (месяц):**
 
     keyboard = [
         [InlineKeyboardButton(
-            "CHANGES: Обновить", callback_data="setting_detailed_stats")],
+            "🔄 Обновить", callback_data="setting_detailed_stats")],
         [InlineKeyboardButton(" Назад", callback_data="admin_settings")]
     ]
 
@@ -1853,11 +1859,11 @@ CHART: **Топ категории (месяц):**
             await query.answer("Сообщение обновлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def client_flow_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """TARGET: НОВЫЙ: Обработчик клиентского пути"""
+    """🎯 НОВЫЙ: Обработчик клиентского пути"""
     query = update.callback_query
     await query.answer()
 
@@ -1889,16 +1895,16 @@ PHONE: **ЗАКАЗАТЬ ОБРАТНЫЙ ЗВОНОК**
 Наш юрист свяжется с вами в течение 30 минут.
 
 CLOCK: **Рабочие часы:** 9:00 - 21:00 (МСК)
-DOLLAR: **Стоимость:** Первые 15 минут БЕСПЛАТНО
+💵 **Стоимость:** Первые 15 минут БЕСПЛАТНО
 
-MEMO: Или оставьте заявку через форму:
+📝 Или оставьте заявку через форму:
 """
 
     keyboard = [
         [InlineKeyboardButton("PHONE: Указать телефон",
                               callback_data="enter_phone")],
         [InlineKeyboardButton(
-            "MEMO: Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
+            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("◀ Назад", callback_data="back_to_chat")]
     ]
 
@@ -1916,7 +1922,7 @@ CHAT: **КОНСУЛЬТАЦИЯ В ЧАТЕ**
 
 Выберите категорию вашего вопроса для получения персональной консультации:
 
-TARGET: **Преимущества чат-консультации:**
+🎯 **Преимущества чат-консультации:**
 - Быстрые ответы в течение 5-10 минут
 - Сохранение переписки для истории
 - Возможность отправки документов
@@ -1933,7 +1939,7 @@ TARGET: **Преимущества чат-консультации:**
         [
             InlineKeyboardButton(" Трудовые",
                                  callback_data="consultation_category_labor"),
-            InlineKeyboardButton("CARD: Банкротство",
+            InlineKeyboardButton("💳 Банкротство",
                                  callback_data="consultation_category_bankruptcy")
         ],
         [
@@ -1953,11 +1959,11 @@ TARGET: **Преимущества чат-консультации:**
 
 
 async def handle_get_price(query, context):
-    """CHART: Узнать стоимость"""
+    """📊 Узнать стоимость"""
     text = """
-CHART: **СТОИМОСТЬ ЮРИДИЧЕСКИХ УСЛУГ**
+📊 **СТОИМОСТЬ ЮРИДИЧЕСКИХ УСЛУГ**
 
-DOLLAR: **КОНСУЛЬТАЦИИ:**
+💵 **КОНСУЛЬТАЦИИ:**
 - Устная консультация: 2 000  rubles/час
 - Письменная консультация: 1 500  rubles
 - Анализ документов: 3 000  rubles
@@ -1967,7 +1973,7 @@ SCALES: **СУДЕБНОЕ ПРЕДСТАВИТЕЛЬСТВО:**
 - Административные дела: от 15 000  rubles
 - Арбитражные споры: от 50 000  rubles
 
-MEMO: **СОСТАВЛЕНИЕ ДОКУМЕНТОВ:**
+📝 **СОСТАВЛЕНИЕ ДОКУМЕНТОВ:**
 - Претензии: от 5 000  rubles
 - Договоры: от 10 000  rubles
 - Исковые заявления: от 15 000  rubles
@@ -1981,7 +1987,7 @@ MEMO: **СОСТАВЛЕНИЕ ДОКУМЕНТОВ:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("MEMO: Получить расчет",
+        [InlineKeyboardButton("📝 Получить расчет",
                               web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("PHONE: Обсудить по телефону",
                               callback_data="request_call")],
@@ -2009,11 +2015,11 @@ async def handle_consultation_category(query, context):
     category = category_map.get(query.data, "Общие вопросы")
 
     text = f"""
-SUCCESS: **ВЫБРАНА КАТЕГОРИЯ: {category.upper()}**
+✅ **ВЫБРАНА КАТЕГОРИЯ: {category.upper()}**
 
 Теперь опишите вашу ситуацию максимально подробно:
 
-MEMO: **Что указать:**
+📝 **Что указать:**
 - Суть проблемы
 - Что уже предпринимали
 - Какой результат нужен
@@ -2029,7 +2035,7 @@ MEMO: **Что указать:**
     context.user_data['awaiting_consultation_details'] = True
 
     keyboard = [
-        [InlineKeyboardButton("MEMO: Заполнить подробную заявку",
+        [InlineKeyboardButton("📝 Заполнить подробную заявку",
                               web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("◀ Выбрать другую категорию",
                               callback_data="chat_consultation")]
@@ -2053,14 +2059,14 @@ CHAT: Продолжайте задавать вопросы в чате.
     keyboard = [
         [
             InlineKeyboardButton(
-                "MEMO: Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
             InlineKeyboardButton("PHONE: Звонок",
                                  callback_data="request_call")
         ],
         [
             InlineKeyboardButton("CHAT: Консультация",
                                  callback_data="chat_consultation"),
-            InlineKeyboardButton("CHART: Стоимость",
+            InlineKeyboardButton("📊 Стоимость",
                                  callback_data="get_price")
         ]
     ]
@@ -2083,9 +2089,9 @@ async def handle_consultation_details(update: Update, context: ContextTypes.DEFA
 
     # Формируем заявку в админ чат
     admin_text = f"""
-MEMO: **КОНСУЛЬТАЦИЯ В ЧАТЕ**
+📝 **КОНСУЛЬТАЦИЯ В ЧАТЕ**
 
-USER: **Клиент:** {user.first_name} {user.last_name or ''}
+👤 **Клиент:** {user.first_name} {user.last_name or ''}
 ID: **ID:** `{user_id}`
 FOLDER: **Категория:** {category}
 
@@ -2094,7 +2100,7 @@ FOLDER: **Категория:** {category}
 
 CLOCK: **Время:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-TARGET: **Требуется:** Оперативная консультация в чате
+🎯 **Требуется:** Оперативная консультация в чате
 """
 
     admin_keyboard = [[
@@ -2110,13 +2116,13 @@ TARGET: **Требуется:** Оперативная консультация 
             parse_mode='Markdown'
         )
         log.info(
-            f"SUCCESS: Consultation request sent to admin for user {user_id}")
+            f"✅ Consultation request sent to admin for user {user_id}")
     except Exception as e:
-        log.error(f"ERROR: Failed to send consultation request to admin: {e}")
+        log.error(f"❌ Failed to send consultation request to admin: {e}")
 
     # Ответ клиенту
     response_text = f"""
-SUCCESS: **ЗАЯВКА НА КОНСУЛЬТАЦИЮ ПРИНЯТА**
+✅ **ЗАЯВКА НА КОНСУЛЬТАЦИЮ ПРИНЯТА**
 
 FOLDER: **Категория:** {category}
 CLOCK: **Время подачи:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
@@ -2131,7 +2137,7 @@ IDEA: **Пока ждете ответа:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("MEMO: Подать подробную заявку",
+        [InlineKeyboardButton("📝 Подать подробную заявку",
                               web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("PHONE: Заказать звонок",
                               callback_data="request_call")]
@@ -2157,16 +2163,16 @@ IDEA: **Пока ждете ответа:**
 
             # Отправляем AI ответ как предварительную консультацию
             await update.message.reply_text(
-                f"BOT: **ПРЕДВАРИТЕЛЬНАЯ AI-КОНСУЛЬТАЦИЯ:**\n\n{ai_response}\n\n"
+                f"🤖 **ПРЕДВАРИТЕЛЬНАЯ AI-КОНСУЛЬТАЦИЯ:**\n\n{ai_response}\n\n"
                 f"SCALES: Наш юрист дополнительно изучит детали и даст персональные рекомендации."
             )
 
     except Exception as e:
-        log.error(f"ERROR: Failed to generate AI consultation: {e}")
+        log.error(f"❌ Failed to generate AI consultation: {e}")
 
 
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """TARGET: Улучшенный обработчик сообщений с поддержкой консультаций"""
+    """🎯 Улучшенный обработчик сообщений с поддержкой консультаций"""
     user_id = update.effective_user.id
     user_text = update.message.text
 
@@ -2183,21 +2189,21 @@ async def show_ai_status(query, context):
     """Показать статус Enhanced AI"""
     global ai_enhanced_manager
 
-    text = "BOT: **СТАТУС ENHANCED AI**\n\n"
+    text = "🤖 **СТАТУС ENHANCED AI**\n\n"
 
     if ai_enhanced_manager is None:
-        text += "ERROR: Enhanced AI не инициализирован\n"
-        text += "CLIPBOARD: Используется базовый AI"
+        text += "❌ Enhanced AI не инициализирован\n"
+        text += "📋 Используется базовый AI"
     elif not ai_enhanced_manager._initialized:
         text += "WARNING: Enhanced AI частично инициализирован\n"
-        text += "CLIPBOARD: Используется fallback режим"
+        text += "📋 Используется fallback режим"
     else:
         try:
             # Получаем статус системы
             health = await ai_enhanced_manager.health_check()
 
             if health.get("status") == "healthy":
-                text += "SUCCESS: Enhanced AI работает нормально\n\n"
+                text += "✅ Enhanced AI работает нормально\n\n"
             else:
                 text += "WARNING: Enhanced AI работает с ограничениями\n\n"
 
@@ -2206,8 +2212,8 @@ async def show_ai_status(query, context):
             components = health.get("components", {})
 
             for name, status in components.items():
-                emoji = "SUCCESS:" if status.get(
-                    "status") == "ok" else "ERROR:"
+                emoji = "✅" if status.get(
+                    "status") == "ok" else "❌"
                 text += f"{emoji} {name.replace('_', ' ').title()}\n"
 
             # Аналитика
@@ -2215,16 +2221,16 @@ async def show_ai_status(query, context):
                 analytics = await ai_enhanced_manager.get_analytics_summary()
                 if analytics.get("status") != "no_data":
                     text += f"\n**Статистика:**\n"
-                    text += f"CHART: Запросов: {analytics.get('total_requests', 0)}\n"
+                    text += f"📊 Запросов: {analytics.get('total_requests', 0)}\n"
                     text += f" Успешность: {analytics.get('success_rate', 0):.1%}\n"
                     text += f"⏱ Время ответа: {analytics.get('avg_response_time', 0):.1f}ms\n"
                     if analytics.get('estimated_cost'):
-                        text += f"DOLLAR: Расходы: ${analytics.get('estimated_cost', 0):.2f}\n"
+                        text += f"💵 Расходы: ${analytics.get('estimated_cost', 0):.2f}\n"
             except:
                 pass
 
         except Exception as e:
-            text += f"ERROR: Ошибка получения статуса: {str(e)}"
+            text += f"❌ Ошибка получения статуса: {str(e)}"
 
     keyboard = [[InlineKeyboardButton(" Назад", callback_data="back_admin")]]
 
@@ -2246,7 +2252,7 @@ async def show_ai_status(query, context):
             await query.answer("Сообщение обновлено")
         except Exception as fallback_error:
             log.error(f"Fallback message also failed: {fallback_error}")
-            await query.answer("ERROR: Ошибка отображения данных", show_alert=True)
+            await query.answer("❌ Ошибка отображения данных", show_alert=True)
 
 
 async def handle_enter_phone(query, context):
@@ -2256,7 +2262,7 @@ PHONE: **УКАЖИТЕ ВАШ НОМЕР ТЕЛЕФОНА**
 
 Отправьте ваш номер телефона в следующем сообщении.
 
-MEMO: **Формат:** +7 (900) 123-45-67 или 89001234567
+📝 **Формат:** +7 (900) 123-45-67 или 89001234567
 
 CLOCK: **Также укажите удобное время для звонка:**
 - Утром (9:00-12:00)
@@ -2272,7 +2278,7 @@ CLOCK: **Также укажите удобное время для звонка
     context.user_data['awaiting_phone_input'] = True
 
     keyboard = [
-        [InlineKeyboardButton("MEMO: Заполнить заявку вместо звонка",
+        [InlineKeyboardButton("📝 Заполнить заявку вместо звонка",
                               web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("◀ Назад", callback_data="request_call")]
     ]
@@ -2297,15 +2303,15 @@ async def handle_phone_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     admin_text = f"""
 PHONE: **ЗАЯВКА НА ОБРАТНЫЙ ЗВОНОК**
 
-USER: **Клиент:** {user.first_name} {user.last_name or ''}
+👤 **Клиент:** {user.first_name} {user.last_name or ''}
 ID: **ID:** `{user_id}`
 
 PHONE: **Контакт:** {user_text}
 
 CLOCK: **Время заявки:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-TARGET: **Требуется:** Обратный звонок в указанное время
-DOLLAR: **Условие:** Первые 15 минут БЕСПЛАТНО
+🎯 **Требуется:** Обратный звонок в указанное время
+💵 **Условие:** Первые 15 минут БЕСПЛАТНО
 """
 
     admin_keyboard = [[
@@ -2321,13 +2327,13 @@ DOLLAR: **Условие:** Первые 15 минут БЕСПЛАТНО
             reply_markup=InlineKeyboardMarkup(admin_keyboard),
             parse_mode='Markdown'
         )
-        log.info(f"SUCCESS: Call request sent to admin for user {user_id}")
+        log.info(f"✅ Call request sent to admin for user {user_id}")
     except Exception as e:
-        log.error(f"ERROR: Failed to send call request to admin: {e}")
+        log.error(f"❌ Failed to send call request to admin: {e}")
 
     # Ответ клиенту
     response_text = f"""
-SUCCESS: **ЗАЯВКА НА ЗВОНОК ПРИНЯТА**
+✅ **ЗАЯВКА НА ЗВОНОК ПРИНЯТА**
 
 PHONE: **Ваш номер:** {user_text}
 CLOCK: **Время подачи:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
@@ -2342,7 +2348,7 @@ PHONE: **Если не дозвонимся:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("MEMO: Дополнительная заявка",
+        [InlineKeyboardButton("📝 Дополнительная заявка",
                               web_app=WebAppInfo(url=WEB_APP_URL))],
         [InlineKeyboardButton("CHAT: Задать вопрос в чате",
                               callback_data="chat_consultation")]
@@ -2363,11 +2369,11 @@ async def handle_submit_call_request(query, context):
 # ================ JOBS ================
 
 async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
-    """TARGET: РАЗНООБРАЗНЫЙ АВТОПОСТИНГ: кейсы, нормативные акты, прецеденты, правовые аспекты"""
+    """🎯 РАЗНООБРАЗНЫЙ АВТОПОСТИНГ: кейсы, нормативные акты, прецеденты, правовые аспекты"""
     if not CHANNEL_ID:
         return
 
-    log.info("ROCKET: Starting diverse legal content autopost...")
+    log.info("🚀 Starting diverse legal content autopost...")
 
     try:
         # Система разнообразного контента
@@ -2383,7 +2389,7 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
         import random
         content_type = random.choices(content_types, weights=weights)[0]
 
-        log.info(f"MEMO: Selected content type: {content_type}")
+        log.info(f"📝 Selected content type: {content_type}")
 
         # Генерируем контент в зависимости от типа
         if content_type == "legal_case":
@@ -2399,7 +2405,7 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
             post_text = await generate_case_post()
 
         log.info(
-            f"SUCCESS: Generated {content_type} post: {len(post_text)} chars")
+            f"✅ Generated {content_type} post: {len(post_text)} chars")
 
         # Добавляем кнопку для консультации
         keyboard = [[
@@ -2416,7 +2422,7 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
         )
 
         log.info(
-            f"SUCCESS: {content_type} post sent to channel: {message.message_id}")
+            f"✅ {content_type} post sent to channel: {message.message_id}")
 
         # Логируем для аналитики
         try:
@@ -2439,7 +2445,7 @@ async def autopost_job(context: ContextTypes.DEFAULT_TYPE):
             log.error(f"Analytics tracking failed: {analytics_error}")
 
     except Exception as e:
-        log.error(f"ERROR: Diverse autopost failed: {e}")
+        log.error(f"❌ Diverse autopost failed: {e}")
         await send_emergency_post(context)
 
 
@@ -2462,15 +2468,15 @@ async def generate_normative_act_post() -> str:
         {
             "title": "Новые правила возврата товаров через маркетплейсы",
             "act": "Постановление Правительства РФ No. 2463 от 31.12.2024",
-            "changes": """CHANGES: **ЧТО ИЗМЕНИЛОСЬ:**
+            "changes": """🔄 **ЧТО ИЗМЕНИЛОСЬ:**
 - Возврат товаров через маркетплейсы теперь возможен в течение 30 дней
 - Маркетплейс обязан предоставить адрес пункта возврата в течение 3 дней
 - При отказе продавца возврат осуществляет сама платформа
 - Введена ответственность маркетплейсов за недобросовестных продавцов""",
-            "impact": """GROWTH: **КАК ЭТО ВЛИЯЕТ НА ВАС:**
-SUCCESS: Больше защиты при покупках на Wildberries, Ozon, Яндекс.Маркет
-SUCCESS: Упрощенная процедура возврата без споров с продавцом
-SUCCESS: Гарантированная компенсация даже при исчезновении продавца
+            "impact": """📈 **КАК ЭТО ВЛИЯЕТ НА ВАС:**
+✅ Больше защиты при покупках на Wildberries, Ozon, Яндекс.Маркет
+✅ Упрощенная процедура возврата без споров с продавцом
+✅ Гарантированная компенсация даже при исчезновении продавца
 WARNING: Исключения: продукты питания, лекарства, цифровые товары""",
             "action": """IDEA: **ЧТО ДЕЛАТЬ:**
 1. Сохраняйте все документы о покупке (скриншоты, чеки)
@@ -2481,15 +2487,15 @@ WARNING: Исключения: продукты питания, лекарств
         {
             "title": "Изменения в Трудовом кодексе: электронные трудовые книжки",
             "act": "Федеральный закон No. 439-ФЗ от 16.12.2024",
-            "changes": """CHANGES: **ЧТО ИЗМЕНИЛОСЬ:**
+            "changes": """🔄 **ЧТО ИЗМЕНИЛОСЬ:**
 - С 1 марта 2025 года все новые трудовые договоры только в электронном виде
 - Работодатель обязан уведомлять ПФР о трудоустройстве в течение 1 дня
 - Введены штрафы за несвоевременную подачу сведений (до 50,000 rubles)
 - Бумажные трудовые книжки сохраняются только по заявлению работника""",
-            "impact": """GROWTH: **КАК ЭТО ВЛИЯЕТ НА ВАС:**
-SUCCESS: Быстрое оформление на работу без бумажной волокиты
-SUCCESS: Невозможность потери трудовой книжки
-SUCCESS: Мгновенный доступ к стажу через госуслуги
+            "impact": """📈 **КАК ЭТО ВЛИЯЕТ НА ВАС:**
+✅ Быстрое оформление на работу без бумажной волокиты
+✅ Невозможность потери трудовой книжки
+✅ Мгновенный доступ к стажу через госуслуги
 WARNING: Необходимость следить за корректностью электронных записей""",
             "action": """IDEA: **ЧТО ДЕЛАТЬ:**
 1. Подайте заявление о переходе на электронную трудовую книжку
@@ -2500,15 +2506,15 @@ WARNING: Необходимость следить за корректность
         {
             "title": "Новые правила раздела имущества при разводе",
             "act": "Федеральный закон No. 478-ФЗ от 28.12.2024",
-            "changes": """CHANGES: **ЧТО ИЗМЕНИЛОСЬ:**
+            "changes": """🔄 **ЧТО ИЗМЕНИЛОСЬ:**
 - Криптовалюты и NFT теперь подлежат разделу как совместно нажитое имущество
 - Долги по кредитам делятся пропорционально полученному имуществу
 - Доходы от интеллектуальной собственности учитываются при разделе
 - Упрощена процедура раздела через нотариуса без суда""",
-            "impact": """GROWTH: **КАК ЭТО ВЛИЯЕТ НА ВАС:**
-SUCCESS: Справедливый раздел всех видов современного имущества
-SUCCESS: Невозможность скрыть цифровые активы от раздела
-SUCCESS: Более быстрое оформление развода через нотариуса
+            "impact": """📈 **КАК ЭТО ВЛИЯЕТ НА ВАС:**
+✅ Справедливый раздел всех видов современного имущества
+✅ Невозможность скрыть цифровые активы от раздела
+✅ Более быстрое оформление развода через нотариуса
 WARNING: Необходимость декларировать все доходы и активы""",
             "action": """IDEA: **ЧТО ДЕЛАТЬ:**
 1. Ведите учет всех цифровых активов и доходов в браке
@@ -2520,7 +2526,7 @@ WARNING: Необходимость декларировать все доход
 
     selected = random.choice(normative_acts)
 
-    post = f"""NEW: **НОВЫЙ ЗАКОН: {selected['title'].upper()}**
+    post = f"""🆕 **НОВЫЙ ЗАКОН: {selected['title'].upper()}**
 
 SCROLL: **{selected['act']}**
 
@@ -2533,11 +2539,11 @@ SCROLL: **{selected['act']}**
  **НУЖНА ПОМОЩЬ ЮРИСТА?**
 Не знаете, как применить новый закон к вашей ситуации?
 
-TARGET: Наши специалисты:
-SUCCESS: Объяснят изменения простым языком
-SUCCESS: Проанализируют влияние на ваши права
-SUCCESS: Помогут защитить интересы в новых условиях
-SUCCESS: Составят документы с учетом изменений
+🎯 Наши специалисты:
+✅ Объяснят изменения простым языком
+✅ Проанализируют влияние на ваши права
+✅ Помогут защитить интересы в новых условиях
+✅ Составят документы с учетом изменений
 
 CHAT: Первая консультация БЕСПЛАТНО: /start
 SCALES: Будьте в курсе всех изменений в законодательстве!"""
@@ -2553,39 +2559,39 @@ async def generate_precedent_post() -> str:
         {
             "title": "Верховный суд защитил права покупателей маркетплейсов",
             "case": "Определение ВС РФ No. 5-КГ24-119-К2",
-            "story": """CLIPBOARD: **ДЕЛО:**
+            "story": """📋 **ДЕЛО:**
 Гражданка М. купила телефон на Wildberries за 45,000 rubles. Товар оказался подделкой. Продавец исчез, Wildberries отказывался возмещать ущерб, ссылаясь на то, что является только 'посредником'.""",
             "decision": """SCALES: **РЕШЕНИЕ СУДА:**
 Верховный суд постановил: маркетплейс несет солидарную ответственность с продавцом за некачественные товары, если:
 - Не проверил документы продавца должным образом
 - Получал комиссию с продажи
 - Контролировал процесс продажи и доставки""",
-            "impact": """TARGET: **ЗНАЧЕНИЕ ДЛЯ ГРАЖДАН:**
-SUCCESS: Теперь можно требовать возмещения напрямую с маркетплейса
-SUCCESS: Не нужно искать исчезнувших продавцов
-SUCCESS: Ответственность несут Ozon, Wildberries, Яндекс.Маркет
-SUCCESS: Суды обязаны применять эту практику во всех регионах"""
+            "impact": """🎯 **ЗНАЧЕНИЕ ДЛЯ ГРАЖДАН:**
+✅ Теперь можно требовать возмещения напрямую с маркетплейса
+✅ Не нужно искать исчезнувших продавцов
+✅ Ответственность несут Ozon, Wildberries, Яндекс.Маркет
+✅ Суды обязаны применять эту практику во всех регионах"""
         },
         {
             "title": "Конституционный суд расширил права работников на удаленку",
             "case": "Постановление КС РФ No. 29-П от 15.11.2024",
-            "story": """CLIPBOARD: **ДЕЛО:**
+            "story": """📋 **ДЕЛО:**
 Программист С. работал удаленно 2 года. Работодатель потребовал выход в офис, угрожая увольнением. С. обратился в суд, ссылаясь на дискриминацию и нарушение трудовых прав.""",
             "decision": """SCALES: **РЕШЕНИЕ СУДА:**
 Конституционный суд признал: если работник эффективно выполняет обязанности удаленно, принуждение к работе в офисе без производственной необходимости нарушает:
 - Право на свободу труда
 - Принцип равенства возможностей
 - Право на справедливые условия труда""",
-            "impact": """TARGET: **ЗНАЧЕНИЕ ДЛЯ РАБОТНИКОВ:**
-SUCCESS: Работодатель должен обосновать требование работы в офисе
-SUCCESS: Нельзя уволить за отказ от офисной работы без веских причин
-SUCCESS: При споре суд будет оценивать эффективность удаленной работы
-SUCCESS: Защита прав 'удаленщиков' на конституционном уровне"""
+            "impact": """🎯 **ЗНАЧЕНИЕ ДЛЯ РАБОТНИКОВ:**
+✅ Работодатель должен обосновать требование работы в офисе
+✅ Нельзя уволить за отказ от офисной работы без веских причин
+✅ При споре суд будет оценивать эффективность удаленной работы
+✅ Защита прав 'удаленщиков' на конституционном уровне"""
         },
         {
             "title": "Банки не могут блокировать счета без веских оснований",
             "case": "Постановление Пленума ВАС РФ No. 62 от 04.12.2024",
-            "story": """CLIPBOARD: **ДЕЛО:**
+            "story": """📋 **ДЕЛО:**
 ИП Козлов получил блокировку счета в Сбербанке за 'подозрительные операции'. Банк не объяснил причины. Бизнес остановился, начались штрафы и убытки.""",
             "decision": """SCALES: **РЕШЕНИЕ СУДА:**
 Высший арбитражный суд установил: банки обязаны:
@@ -2593,11 +2599,11 @@ SUCCESS: Защита прав 'удаленщиков' на конституц�
 - Предоставлять возможность объяснения до блокировки
 - Разблокировать счет при устранении нарушений
 - Возмещать убытки при необоснованной блокировке""",
-            "impact": """TARGET: **ЗНАЧЕНИЕ ДЛЯ БИЗНЕСА:**
-SUCCESS: Защита от произвольных блокировок банками
-SUCCESS: Право требовать компенсацию за убытки
-SUCCESS: Обязательность объяснений от банка
-SUCCESS: Сокращение времени разблокировки счетов"""
+            "impact": """🎯 **ЗНАЧЕНИЕ ДЛЯ БИЗНЕСА:**
+✅ Защита от произвольных блокировок банками
+✅ Право требовать компенсацию за убытки
+✅ Обязательность объяснений от банка
+✅ Сокращение времени разблокировки счетов"""
         }
     ]
 
@@ -2605,7 +2611,7 @@ SUCCESS: Сокращение времени разблокировки счет
 
     post = f"""SCALES: **ВАЖНЫЙ ПРЕЦЕДЕНТ: {selected['title'].upper()}**
 
-CLIPBOARD: **{selected['case']}**
+📋 **{selected['case']}**
 
 {selected['story']}
 
@@ -2622,10 +2628,10 @@ IDEA: **КАК ИСПОЛЬЗОВАТЬ:**
  **СТОЛКНУЛИСЬ С ПОХОЖЕЙ СИТУАЦИЕЙ?**
 Наши юристы помогут применить новую судебную практику:
 
-SUCCESS: Составим документы со ссылками на прецеденты
-SUCCESS: Поможем обосновать требования актуальной практикой
-SUCCESS: Представим интересы в суде с учетом новых решений
-SUCCESS: Добьемся максимального результата
+✅ Составим документы со ссылками на прецеденты
+✅ Поможем обосновать требования актуальной практикой
+✅ Представим интересы в суде с учетом новых решений
+✅ Добьемся максимального результата
 
 CHAT: Бесплатная консультация: /start
 SCALES: Знание прецедентов - ключ к победе в суде!"""
@@ -2640,28 +2646,28 @@ async def generate_legal_aspect_post() -> str:
     legal_aspects = [
         {
             "title": "Моральный вред: как правильно требовать и получать",
-            "intro": """DOLLAR: **Знаете ли вы?**
+            "intro": """💵 **Знаете ли вы?**
 Моральный вред можно взыскать практически в любом споре, но 90% граждан делают это неправильно и получают копейки вместо существенных сумм.""",
-            "key_points": """TARGET: **КЛЮЧЕВЫЕ ПРИНЦИПЫ:**
+            "key_points": """🎯 **КЛЮЧЕВЫЕ ПРИНЦИПЫ:**
 
-CHART: **Размеры в практике:**
+📊 **Размеры в практике:**
 - Потребительские споры: 5,000-50,000 rubles
 - Трудовые нарушения: 10,000-100,000 rubles
 - ДТП с пострадавшими: 50,000-500,000 rubles
 - Клевета, оскорбления: 20,000-200,000 rubles
 
-TARGET: **Факторы увеличения суммы:**
+🎯 **Факторы увеличения суммы:**
 - Публичность нарушения (соцсети, СМИ)
 - Длительность нарушения прав
 - Особый статус пострадавшего (беременность, инвалидность)
 - Грубое поведение нарушителя
 - Материальное положение ответчика""",
-            "mistakes": """ERROR: **ТИПИЧНЫЕ ОШИБКИ:**
+            "mistakes": """❌ **ТИПИЧНЫЕ ОШИБКИ:**
 - Просят слишком мало (1,000-3,000 rubles) - суд снижает еще больше
 - Не обосновывают размер конкретными фактами
 - Не прикладывают доказательства переживаний
 - Забывают индексировать сумму на дату вынесения решения""",
-            "tips": """SUCCESS: **КАК СДЕЛАТЬ ПРАВИЛЬНО:**
+            "tips": """✅ **КАК СДЕЛАТЬ ПРАВИЛЬНО:**
 1. Изучите похожие дела в вашем регионе через картотеку судов
 2. Просите сумму в 2-3 раза больше желаемой
 3. Собирайте справки о лечении, показания свидетелей
@@ -2672,30 +2678,30 @@ TARGET: **Факторы увеличения суммы:**
             "title": "Срок исковой давности: когда время работает против вас",
             "intro": """CLOCK: **Знаете ли вы?**
 Каждый год тысячи граждан теряют право на справедливую компенсацию только потому, что не знают про сроки исковой давности.""",
-            "key_points": """TARGET: **ОСНОВНЫЕ СРОКИ:**
+            "key_points": """🎯 **ОСНОВНЫЕ СРОКИ:**
 
-CALENDAR: **3 года (общий срок):**
+📅 **3 года (общий срок):**
 - Взыскание долгов по договорам
 - Возмещение ущерба от ДТП
 - Компенсация за некачественный ремонт
 - Взыскание с управляющих компаний
 
-CALENDAR: **1 год (специальные случаи):**
+📅 **1 год (специальные случаи):**
 - Трудовые споры (восстановление, зарплата)
 - Споры по перевозке грузов
 - Ничтожность сделок
 
-CALENDAR: **2 года:**
+📅 **2 года:**
 - Защита прав потребителей
 - Страховые выплаты
 
-CALENDAR: **10 лет:**
+📅 **10 лет:**
 - Возмещение вреда жизни и здоровью""",
-            "mistakes": """ERROR: **ОПАСНЫЕ ЗАБЛУЖДЕНИЯ:**
+            "mistakes": """❌ **ОПАСНЫЕ ЗАБЛУЖДЕНИЯ:**
 - "Срок начинается с момента нарушения" - НЕТ! С момента, когда узнали о нарушении
 - "Если подал претензию, срок приостанавливается" - НЕТ! Только суд приостанавливает
 - "Устное обращение к нарушителю прерывает срок" - НЕТ! Только письменное признание долга""",
-            "tips": """SUCCESS: **КАК ЗАЩИТИТЬ СЕБЯ:**
+            "tips": """✅ **КАК ЗАЩИТИТЬ СЕБЯ:**
 1. Ведите письменную переписку с нарушителем
 2. Отправляйте претензии заказными письмами
 3. При приближении срока - подавайте иск, даже для 'остановки часов'
@@ -2706,29 +2712,29 @@ CALENDAR: **10 лет:**
             "title": "Судебные расходы: как не платить за правосудие",
             "intro": """MONEY: **Знаете ли вы?**
 Даже выиграв суд, можно остаться в убытке из-за судебных расходов. Но есть законные способы их избежать или переложить на противника.""",
-            "key_points": """TARGET: **ВИДЫ РАСХОДОВ:**
+            "key_points": """🎯 **ВИДЫ РАСХОДОВ:**
 
-DOLLAR: **Госпошлина:**
+💵 **Госпошлина:**
 - До 1 млн rubles - от 4% до 13,200 rubles
 - Свыше 1 млн rubles - 13,200 rubles + 0.5% с суммы свыше
 - Неимущественные споры - 300 rubles
 - Моральный вред - 300 rubles
 
-DOLLAR: **Представительство:**
+💵 **Представительство:**
 - Юристы: 2,000-10,000 rubles за заседание
 - По сложным делам: до 50,000 rubles и выше
 - Возмещается при победе в пределах 'разумных'
 
-DOLLAR: **Экспертизы:**
+💵 **Экспертизы:**
 - Почерковедческая: 15,000-30,000 rubles
 - Строительная: 20,000-50,000 rubles
 - Оценочная: 5,000-15,000 rubles""",
-            "mistakes": """ERROR: **ДОРОГИЕ ОШИБКИ:**
+            "mistakes": """❌ **ДОРОГИЕ ОШИБКИ:**
 - Не просят возмещения расходов в исковом заявлении
 - Не ведут учет всех трат с документами
 - Соглашаются на мировую без учета расходов
 - Не обжалуют отказ в возмещении 'завышенных' сумм""",
-            "tips": """SUCCESS: **КАК СЭКОНОМИТЬ:**
+            "tips": """✅ **КАК СЭКОНОМИТЬ:**
 1. Используйте льготы по госпошлине (пенсионеры, инвалиды)
 2. При иске до 50,000 rubles - представляйте себя сами
 3. Ходатайствуйте об обеспечении иска для возмещения расходов
@@ -2752,11 +2758,11 @@ DOLLAR: **Экспертизы:**
  **НУЖНА ПРОФЕССИОНАЛЬНАЯ ПОМОЩЬ?**
 Столкнулись со сложной правовой ситуацией?
 
-TARGET: Наши юристы:
-SUCCESS: Просчитают все риски и возможности
-SUCCESS: Разработают оптимальную стратегию действий
-SUCCESS: Помогут избежать типичных ошибок
-SUCCESS: Добьются максимального результата с минимальными затратами
+🎯 Наши юристы:
+✅ Просчитают все риски и возможности
+✅ Разработают оптимальную стратегию действий
+✅ Помогут избежать типичных ошибок
+✅ Добьются максимального результата с минимальными затратами
 
 CHAT: Бесплатная консультация: /start
 BOOKS: Знание закона - ваша лучшая защита!"""
@@ -2785,16 +2791,16 @@ async def send_emergency_post(context):
 
 def get_emergency_case_post() -> str:
     """Получить экстренный кейс-пост"""
-    return """CLIPBOARD: **КЕЙС ИЗ ЖИЗНИ:**
+    return """📋 **КЕЙС ИЗ ЖИЗНИ:**
 Владимир купил автомобиль в салоне за 1,2 млн rubles. Через месяц обнаружились скрытые дефекты двигателя. Дилер утверждает, что это 'нормальный износ' и отказывается от гарантийного ремонта.
 
 SCALES: **АЛГОРИТМ РЕШЕНИЯ:**
-1. MEMO: Составьте письменную претензию к дилеру с требованием ремонта
+1. 📝 Составьте письменную претензию к дилеру с требованием ремонта
 2. SEARCH: Закажите независимую экспертизу для установления причин дефекта
 3.  Направьте результаты экспертизы дилеру заказным письмом
-4. BUILDING: При отказе - жалоба в Роспотребнадзор и автопроизводителю
+4. 🏛️ При отказе - жалоба в Роспотребнадзор и автопроизводителю
 5. SCALES: Подача иска в суд с требованием замены автомобиля
-6. DOLLAR: Взыскание стоимости экспертизы и морального вреда
+6. 💵 Взыскание стоимости экспертизы и морального вреда
 7.  Требование возврата всех понесенных расходов
 
 BOOKS: **НОРМАТИВНАЯ БАЗА:**
@@ -2812,11 +2818,11 @@ WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
  **ПОЛУЧИТЕ ПОМОЩЬ ЭКСПЕРТА:**
 Столкнулись с обманом автодилера? Действуйте решительно!
 
-TARGET: Наши автоюристы помогут:
-SUCCESS: Составить претензию с максимальными требованиями
-SUCCESS: Найти надежных экспертов по разумным ценам
-SUCCESS: Провести переговоры с дилером и производителем
-SUCCESS: Представить интересы в суде с гарантией результата
+🎯 Наши автоюристы помогут:
+✅ Составить претензию с максимальными требованиями
+✅ Найти надежных экспертов по разумным ценам
+✅ Провести переговоры с дилером и производителем
+✅ Представить интересы в суде с гарантией результата
 
 CHAT: Первая консультация БЕСПЛАТНО: /start
 SCALES: Возвращаем полную стоимость автомобиля в 85% случаев!"""
@@ -2832,27 +2838,27 @@ async def _fallback_autopost(context: ContextTypes.DEFAULT_TYPE):
         enhanced_generator = PostGenerator()
 
         # Генерируем профессиональный пост с кейсом
-        log.info("MEMO: Generating fallback professional case post...")
+        log.info("📝 Generating fallback professional case post...")
         post_text = await enhanced_generator.generate_post()
 
         log.info(
-            f"SUCCESS: Generated fallback professional post: {len(post_text)} chars")
+            f"✅ Generated fallback professional post: {len(post_text)} chars")
 
     except Exception as e:
-        log.error(f"ERROR: Enhanced post generation failed: {e}")
+        log.error(f"❌ Enhanced post generation failed: {e}")
 
         # ЭКСТРЕННЫЙ РЕЗЕРВ с кейсами
         fallback_cases = [
-            """CLIPBOARD: **КЕЙС ИЗ ЖИЗНИ:**
+            """📋 **КЕЙС ИЗ ЖИЗНИ:**
 Елена не получает зарплату 3 месяца. Директор ссылается на 'финансовые трудности', но заставляет работать в полном объеме. Угрожает увольнением при требовании расчета.
 
 SCALES: **АЛГОРИТМ РЕШЕНИЯ:**
-1. CLIPBOARD: Подайте письменное заявление работодателю с требованием выплаты
+1. 📋 Подайте письменное заявление работодателю с требованием выплаты
 2. PHONE: Обратитесь в государственную инспекцию труда
 3.  Соберите документы: трудовой договор, табели, справки
 4. SCALES: Подайте заявление в суд о взыскании задолженности
-5. DOLLAR: Требуйте компенсацию за задержку (1/150 ключевой ставки ЦБ)
-6. BUILDING: Уведомите прокуратуру о нарушении трудовых прав
+5. 💵 Требуйте компенсацию за задержку (1/150 ключевой ставки ЦБ)
+6. 🏛️ Уведомите прокуратуру о нарушении трудовых прав
 7. PHONE: Параллельно ищите новое место работы
 
 BOOKS: **НОРМАТИВНАЯ БАЗА:**
@@ -2870,33 +2876,33 @@ WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
  **ПОЛУЧИТЕ ПОМОЩЬ ЭКСПЕРТА:**
 Работодатель не платит зарплату? Защитите свои права!
 
-TARGET: Мы поможем взыскать:
-SUCCESS: Всю задолженность по зарплате полностью
-SUCCESS: Компенсацию за каждый день просрочки
-SUCCESS: Моральный вред за нарушение прав
-SUCCESS: Возмещение расходов на юридическую помощь
+🎯 Мы поможем взыскать:
+✅ Всю задолженность по зарплате полностью
+✅ Компенсацию за каждый день просрочки
+✅ Моральный вред за нарушение прав
+✅ Возмещение расходов на юридическую помощь
 
 CHAT: Бесплатная консультация: /start
 SCALES: Взыскиваем долги даже с обанкротившихся компаний!""",
 
-            """CLIPBOARD: **КЕЙС ИЗ ЖИЗНИ:**
+            """📋 **КЕЙС ИЗ ЖИЗНИ:**
 В квартире Петровых 4 месяца нет горячей воды. УК требует полную оплату за ЖКУ, ссылаясь на 'плановые ремонтные работы'. Жильцы вынуждены греть воду и покупать услуги бани.
 
 SCALES: **АЛГОРИТМ РЕШЕНИЯ:**
-1. MEMO: Подайте письменную жалобу в УК с требованием устранения
+1. 📝 Подайте письменную жалобу в УК с требованием устранения
 2. PHOTO: Зафиксируйте отсутствие услуги фото/видео с датой
-3. BUILDING: Обратитесь в жилищную инспекцию вашего региона
-4. DOLLAR: Требуйте перерасчета за период отсутствия услуги
+3. 🏛️ Обратитесь в жилищную инспекцию вашего региона
+4. 💵 Требуйте перерасчета за период отсутствия услуги
 5. PHONE: Подайте коллективную жалобу от всех пострадавших жильцов
 6. SCALES: При отказе - иск в суд о взыскании ущерба
-7. CHANGES: Инициируйте смену управляющей компании
+7. 🔄 Инициируйте смену управляющей компании
 
 BOOKS: **НОРМАТИВНАЯ БАЗА:**
 SCROLL: ЖК РФ No. 188-ФЗ:
 - Статья 154 - размер платы за коммунальные услуги
 - Статья 161 - обязанности управляющей организации
 
-BUILDING: Постановление Правительства No. 354:
+🏛️ Постановление Правительства No. 354:
 - Правила перерасчета при нарушении качества услуг
 
 WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
@@ -2908,24 +2914,24 @@ WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
  **ПОЛУЧИТЕ ПОМОЩЬ ЭКСПЕРТА:**
 УК нарушает ваши права? Добейтесь справедливости!
 
-TARGET: Наши жилищные юристы:
-SUCCESS: Добьются максимального перерасчета за весь период
-SUCCESS: Взыщут компенсацию дополнительных расходов
-SUCCESS: Привлекут УК к административной ответственности
-SUCCESS: Организуют смену УК при необходимости
+🎯 Наши жилищные юристы:
+✅ Добьются максимального перерасчета за весь период
+✅ Взыщут компенсацию дополнительных расходов
+✅ Привлекут УК к административной ответственности
+✅ Организуют смену УК при необходимости
 
 CHAT: Первая консультация БЕСПЛАТНО: /start
  Защищаем права собственников с 2010 года!""",
 
-            """CLIPBOARD: **КЕЙС ИЗ ЖИЗНИ:**
+            """📋 **КЕЙС ИЗ ЖИЗНИ:**
 После развода Михаил не платит алименты на ребенка 8 месяцев. Скрывает доходы, работает неофициально. Бывшая жена вынуждена брать кредиты на лечение сына.
 
 SCALES: **АЛГОРИТМ РЕШЕНИЯ:**
-1. CLIPBOARD: Подайте заявление о взыскании алиментов в мировой суд
+1. 📋 Подайте заявление о взыскании алиментов в мировой суд
 2.  Получите судебный приказ или решение суда об алиментах
-3. BUILDING: Направьте исполнительный лист в ФССП по месту работы должника
+3. 🏛️ Направьте исполнительный лист в ФССП по месту работы должника
 4. SEARCH: Подайте заявление о розыске должника и его имущества
-5. CARD: Требуйте арест банковских счетов и имущества
+5. 💳 Требуйте арест банковских счетов и имущества
 6.  Инициируйте ограничение на выезд за границу
 7. SCALES: При злостном уклонении - заявление о возбуждении уголовного дела
 
@@ -2935,7 +2941,7 @@ SCROLL: Семейный кодекс РФ No. 223-ФЗ:
 - Статья 81 - размер алиментов на несовершеннолетних
 - Статья 115 - индексация алиментов
 
-BUILDING: ФЗ "Об исполнительном производстве":
+🏛️ ФЗ "Об исполнительном производстве":
 - Статья 65 - обращение взыскания на заработную плату
 
 WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
@@ -2947,11 +2953,11 @@ WARNING: **ВОЗМОЖНЫЕ ПРОБЛЕМЫ:**
  **ПОЛУЧИТЕ ПОМОЩЬ ЭКСПЕРТА:**
 Не можете добиться выплаты алиментов? Мы поможем!
 
-TARGET: Наши семейные юристы:
-SUCCESS: Найдут скрытые доходы и имущество должника
-SUCCESS: Добьются ареста всех счетов и активов
-SUCCESS: Инициируют уголовное преследование злостных неплательщиков
-SUCCESS: Взыщут задолженность с процентами и неустойкой
+🎯 Наши семейные юристы:
+✅ Найдут скрытые доходы и имущество должника
+✅ Добьются ареста всех счетов и активов
+✅ Инициируют уголовное преследование злостных неплательщиков
+✅ Взыщут задолженность с процентами и неустойкой
 
 CHAT: Первая консультация БЕСПЛАТНО: /start
  Защищаем права детей и получаем результат!"""
@@ -2993,8 +2999,8 @@ async def load_db_admins():
         old_count = len(ADMIN_USERS)
         ADMIN_USERS = HARDCODED_ADMIN_IDS.union(db_admin_ids)
         log.info(
-            f"FIX: Admins reloaded: hardcoded={len(HARDCODED_ADMIN_IDS)}, from_db={len(db_admin_ids)}, total={len(ADMIN_USERS)} (was {old_count})")
-        print(f"FIX: Admin users updated: {len(ADMIN_USERS)} total")
+            f"🔧 Admins reloaded: hardcoded={len(HARDCODED_ADMIN_IDS)}, from_db={len(db_admin_ids)}, total={len(ADMIN_USERS)} (was {old_count})")
+        print(f"🔧 Admin users updated: {len(ADMIN_USERS)} total")
 
     except Exception as e:
         log.error(f"Failed to load DB admins: {e}")
@@ -3009,15 +3015,15 @@ async def post_init(application: Application):
     # Загружаем администраторов из БД
     await load_db_admins()
 
-    # ROCKET: ИНИЦИАЛИЗИРУЕМ Enhanced AI
+    # 🚀 ИНИЦИАЛИЗИРУЕМ Enhanced AI
     try:
-        log.info("ROCKET: Initializing Enhanced AI system...")
+        log.info("🚀 Initializing Enhanced AI system...")
         ai_enhanced_manager = AIEnhancedManager()
         await ai_enhanced_manager.initialize()
-        print("SUCCESS: Enhanced AI initialized successfully")
+        print("✅ Enhanced AI initialized successfully")
         log.info("Enhanced AI system is ready")
     except Exception as e:
-        print(f"ERROR: Failed to initialize Enhanced AI: {e}")
+        print(f"❌ Failed to initialize Enhanced AI: {e}")
         log.error(f"Enhanced AI initialization error: {e}")
         import traceback
         log.error(f"Enhanced AI traceback: {traceback.format_exc()}")
@@ -3028,20 +3034,20 @@ async def post_init(application: Application):
         # Устанавливаем кнопку меню
         await application.bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
-                text="MEMO: Подать заявку",
+                text="📝 Подать заявку",
                 web_app=WebAppInfo(url=WEB_APP_URL)
             )
         )
-        print("SUCCESS: Menu button set successfully")
+        print("✅ Menu button set successfully")
     except Exception as e:
-        print(f"ERROR: Failed to set menu button: {e}")
+        print(f"❌ Failed to set menu button: {e}")
         log.error(f"Menu button error: {e}")
 
 
 async def fix_database_schema():
     """Исправление схемы БД после предыдущих проблем"""
     try:
-        log.info("FIX: Checking and fixing database schema...")
+        log.info("🔧 Checking and fixing database schema...")
 
         async with async_sessionmaker() as session:
             # Проверяем тип колонки user_id
@@ -3053,7 +3059,7 @@ async def fix_database_schema():
             user_id_type = result.scalar_one_or_none()
 
             if user_id_type != "integer":
-                log.info("CHANGES: user_id column type needs conversion")
+                log.info("🔄 user_id column type needs conversion")
 
                 # Сначала исправляем некорректные значения
                 log.info(" Cleaning up invalid user_id values...")
@@ -3069,7 +3075,7 @@ async def fix_database_schema():
                 for app_id, bad_user_id in invalid_apps:
                     try:
                         log.info(
-                            f"FIX: Fixing app {app_id} with bad user_id: '{bad_user_id}'")
+                            f"🔧 Fixing app {app_id} with bad user_id: '{bad_user_id}'")
 
                         # Ищем существующего пользователя для привязки
                         temp_user_result = await session.execute(text("""
@@ -3097,7 +3103,7 @@ async def fix_database_schema():
 
                             temp_user = temp_user_result.scalar_one()
                             log.info(
-                                f"SUCCESS: Created new temp user {temp_user} for app {app_id}")
+                                f"✅ Created new temp user {temp_user} for app {app_id}")
 
                         # Обновляем заявку корректным user_id
                         await session.execute(text("""
@@ -3107,11 +3113,11 @@ async def fix_database_schema():
                         """), {"user_id": str(temp_user), "app_id": app_id})
 
                         log.info(
-                            f"SUCCESS: Fixed app {app_id}: '{bad_user_id}' -> {temp_user}")
+                            f"✅ Fixed app {app_id}: '{bad_user_id}' -> {temp_user}")
 
                     except Exception as fix_error:
                         log.error(
-                            f"ERROR: Failed to fix app {app_id}: {fix_error}")
+                            f"❌ Failed to fix app {app_id}: {fix_error}")
                         # В крайнем случае ставим 1 (должен существовать)
                         await session.execute(text("""
                             UPDATE applications
@@ -3120,23 +3126,23 @@ async def fix_database_schema():
                         """), {"app_id": app_id})
 
                 await session.commit()
-                log.info("SUCCESS: Invalid user_id values cleaned up")
+                log.info("✅ Invalid user_id values cleaned up")
 
                 # Теперь безопасно конвертируем тип
-                log.info("CHANGES: Converting user_id column type to INTEGER...")
+                log.info("🔄 Converting user_id column type to INTEGER...")
                 await session.execute(text("""
                     ALTER TABLE applications
                     ALTER COLUMN user_id TYPE INTEGER USING user_id::INTEGER
                 """))
 
                 await session.commit()
-                log.info("SUCCESS: user_id column type converted to INTEGER")
-                print("SUCCESS: Database schema fixed: user_id converted to INTEGER")
+                log.info("✅ user_id column type converted to INTEGER")
+                print("✅ Database schema fixed: user_id converted to INTEGER")
             else:
-                log.info("SUCCESS: user_id column has correct type")
+                log.info("✅ user_id column has correct type")
 
-            # FIX: КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем отсутствующие колонки
-            log.info("FIX: Checking for missing columns...")
+            # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем отсутствующие колонки
+            log.info("🔧 Checking for missing columns...")
 
             # Проверяем наличие колонки notes
             notes_result = await session.execute(text("""
@@ -3153,8 +3159,8 @@ async def fix_database_schema():
                     ADD COLUMN notes TEXT
                 """))
                 await session.commit()
-                log.info("SUCCESS: Added 'notes' column")
-                print("SUCCESS: Added missing 'notes' column")
+                log.info("✅ Added 'notes' column")
+                print("✅ Added missing 'notes' column")
 
             # Проверяем наличие колонки assigned_admin
             admin_result = await session.execute(text("""
@@ -3171,13 +3177,13 @@ async def fix_database_schema():
                     ADD COLUMN assigned_admin VARCHAR(64)
                 """))
                 await session.commit()
-                log.info("SUCCESS: Added 'assigned_admin' column")
-                print("SUCCESS: Added missing 'assigned_admin' column")
+                log.info("✅ Added 'assigned_admin' column")
+                print("✅ Added missing 'assigned_admin' column")
 
-            print("SUCCESS: Database schema is up to date")
+            print("✅ Database schema is up to date")
 
     except Exception as e:
-        log.error(f"ERROR: Database schema fix failed: {e}")
+        log.error(f"❌ Database schema fix failed: {e}")
         print(f"WARNING: Database schema fix failed: {e}")
         # Не прерываем запуск, продолжаем работу
 
@@ -3193,15 +3199,15 @@ async def main():
     # Создаем приложение
     application = Application.builder().token(TOKEN).build()
 
-    # ROCKET: ИНИЦИАЛИЗИРУЕМ Enhanced AI
+    # 🚀 ИНИЦИАЛИЗИРУЕМ Enhanced AI
     try:
-        log.info("ROCKET: Initializing Enhanced AI system...")
+        log.info("🚀 Initializing Enhanced AI system...")
         ai_enhanced_manager = AIEnhancedManager()
         await ai_enhanced_manager.initialize()
-        print("SUCCESS: Enhanced AI initialized successfully")
+        print("✅ Enhanced AI initialized successfully")
         log.info("Enhanced AI system is ready")
     except Exception as e:
-        print(f"ERROR: Failed to initialize Enhanced AI: {e}")
+        print(f"❌ Failed to initialize Enhanced AI: {e}")
         log.error(f"Enhanced AI initialization error: {e}")
         import traceback
         log.error(f"Enhanced AI traceback: {traceback.format_exc()}")
@@ -3212,13 +3218,13 @@ async def main():
         # Устанавливаем кнопку меню
         await application.bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
-                text="MEMO: Подать заявку",
+                text="📝 Подать заявку",
                 web_app=WebAppInfo(url=WEB_APP_URL)
             )
         )
-        print("SUCCESS: Menu button set successfully")
+        print("✅ Menu button set successfully")
     except Exception as e:
-        print(f"ERROR: Failed to set menu button: {e}")
+        print(f"❌ Failed to set menu button: {e}")
         log.error(f"Menu button error: {e}")
 
     # Регистрируем хендлеры
@@ -3231,7 +3237,7 @@ async def main():
     # Регистрируем SMM админ обработчики
     register_smm_admin_handlers(application)
 
-    # FIX: ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
+    # 🔧 ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
     async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Роутер для обработки текстовых сообщений"""
         user_id = update.effective_user.id
@@ -3252,7 +3258,7 @@ async def main():
     # Регистрируем универсальный обработчик сообщений
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND, message_handler_router))
-    # FIX: УДАЛЯЕМ ДУБЛИРУЮЩИЙ ОБРАБОТЧИК
+    # 🔧 УДАЛЯЕМ ДУБЛИРУЮЩИЙ ОБРАБОТЧИК
     # application.add_handler(MessageHandler(
     #     filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
     #     enhanced_message_handler
@@ -3268,7 +3274,7 @@ async def main():
             autopost_job,
             when=timedelta(minutes=5)
         )
-        print("SUCCESS: One-time autopost scheduled for 5 minutes after restart")
+        print("✅ One-time autopost scheduled for 5 minutes after restart")
         log.info("One-time autopost job scheduled for 5 minutes after restart")
 
         # Основной повторяющийся автопостинг
@@ -3278,7 +3284,7 @@ async def main():
             first=timedelta(minutes=10)
         )
         print(
-            f"SUCCESS: Job queue initialized - autopost every {autopost_hours} hours")
+            f"✅ Job queue initialized - autopost every {autopost_hours} hours")
         log.info(f"Job queue initialized with {autopost_hours}h interval")
     else:
         print("WARNING: Job queue not available - autopost disabled")
@@ -3293,19 +3299,19 @@ async def main():
         await application.start()
         log.info(f"Bot started on port {PORT}")
 
-        # ROCKET: ОПТИМИЗАЦИЯ: Запускаем post_init в background для быстрого старта Railway
+        # 🚀 ОПТИМИЗАЦИЯ: Запускаем post_init в background для быстрого старта Railway
         async def background_init():
             """Background инициализация Enhanced AI для избежания Railway timeout"""
             try:
-                print("FIX: Starting background Enhanced AI initialization...")
+                print("🔧 Starting background Enhanced AI initialization...")
                 await post_init(application)
-                print("SUCCESS: Background Enhanced AI initialization completed")
+                print("✅ Background Enhanced AI initialization completed")
 
                 # Уведомляем админа после полной инициализации
                 try:
                     await application.bot.send_message(
                         ADMIN_CHAT_ID,
-                        "ROCKET: Бот полностью запущен с Enhanced AI!\n\n"
+                        "🚀 Бот полностью запущен с Enhanced AI!\n\n"
                         "Команды:\n"
                         "/admin - админ панель\n"
                         "/start - приветствие"
@@ -3314,14 +3320,14 @@ async def main():
                     pass
             except Exception as e:
                 print(
-                    f"ERROR: Background Enhanced AI initialization failed: {e}")
+                    f"❌ Background Enhanced AI initialization failed: {e}")
                 log.error(f"Background Enhanced AI init error: {e}")
 
         # Запускаем Enhanced AI инициализацию в background
         asyncio.create_task(background_init())
 
         print(
-            "ROCKET: Railway-optimized startup completed - Enhanced AI initializing in background")
+            "🚀 Railway-optimized startup completed - Enhanced AI initializing in background")
 
         # Держим бота живым
         await asyncio.Event().wait()
@@ -3329,14 +3335,14 @@ async def main():
 
 async def show_admin_panel(query):
     """Показать главную админ панель"""
-    text = "FIX: **АДМИН ПАНЕЛЬ**\n\nВыберите раздел:"
+    text = "🔧 **АДМИН ПАНЕЛЬ**\n\nВыберите раздел:"
 
     keyboard = [
-        [InlineKeyboardButton("CLIPBOARD: Заявки", callback_data="admin_apps"),
-         InlineKeyboardButton("CHART: Статистика", callback_data="admin_stats")],
-        [InlineKeyboardButton("CARD: Платежи", callback_data="admin_payments"),
-         InlineKeyboardButton("USERS: Клиенты", callback_data="admin_users")],
-        [InlineKeyboardButton("BOT: AI Статус", callback_data="admin_ai_status"),
+        [InlineKeyboardButton("📋 Заявки", callback_data="admin_apps"),
+         InlineKeyboardButton("📊 Статистика", callback_data="admin_stats")],
+        [InlineKeyboardButton("💳 Платежи", callback_data="admin_payments"),
+         InlineKeyboardButton("👥 Клиенты", callback_data="admin_users")],
+        [InlineKeyboardButton("🤖 AI Статус", callback_data="admin_ai_status"),
          InlineKeyboardButton(" Рассылка", callback_data="admin_broadcast")],
         [InlineKeyboardButton(" Настройки", callback_data="admin_settings")]
     ]
@@ -3349,7 +3355,7 @@ async def show_admin_panel(query):
         )
     except Exception as e:
         log.error(f"Failed to edit message: {e}")
-        await query.answer("ERROR: Ошибка отображения", show_alert=True)
+        await query.answer("❌ Ошибка отображения", show_alert=True)
 
 
 async def show_statistics(query, context):
@@ -3380,25 +3386,25 @@ async def show_statistics(query, context):
             )
 
         text = f"""
-CHART: **ОБЩАЯ СТАТИСТИКА**
+📊 **ОБЩАЯ СТАТИСТИКА**
 
-USERS: **Пользователи:**
+👥 **Пользователи:**
 - Всего: {total_users}
 - Сегодня: {today_users}
 
-CLIPBOARD: **Заявки:**
+📋 **Заявки:**
 - Всего: {total_apps}
 - Сегодня: {today_apps}
 
-GROWTH: **По статусам:**
+📈 **По статусам:**
 """
 
         for status, count in status_stats:
             status_emoji = {
-                "new": "NEW:",
+                "new": "🆕",
                 "processing": "⏳",
-                "completed": "SUCCESS:",
-                "cancelled": "ERROR:"
+                "completed": "✅",
+                "cancelled": "❌"
             }.get(status, "")
             text += f"- {status_emoji} {status}: {count}\n"
 
@@ -3419,9 +3425,9 @@ GROWTH: **По статусам:**
 """
 
         keyboard = [
-            [InlineKeyboardButton("GROWTH: Детальная статистика",
+            [InlineKeyboardButton("📈 Детальная статистика",
                                   callback_data="setting_detailed_stats")],
-            [InlineKeyboardButton("CHANGES: Обновить",
+            [InlineKeyboardButton("🔄 Обновить",
                                   callback_data="admin_stats")],
             [InlineKeyboardButton(" Назад", callback_data="back_admin")]
         ]
@@ -3434,7 +3440,7 @@ GROWTH: **По статусам:**
 
     except Exception as e:
         log.error(f"Failed to show statistics: {e}")
-        await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+        await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
 
 async def show_payments(query, context):
@@ -3463,14 +3469,14 @@ async def show_payments(query, context):
             ) or 0
 
         text = f"""
-CARD: **ПЛАТЕЖИ**
+💳 **ПЛАТЕЖИ**
 
-DOLLAR: **Финансы:**
+💵 **Финансы:**
 - Получено: {total_amount}  rubles
 - Ожидает: {pending_amount}  rubles
 - Всего платежей: {len(payments)}
 
-CLIPBOARD: **Последние:**
+📋 **Последние:**
 """
 
         keyboard = []
@@ -3478,21 +3484,21 @@ CLIPBOARD: **Последние:**
         for payment, app, user in payments:
             status_emoji = {
                 'pending': '⏳',
-                'completed': 'SUCCESS:',
-                'failed': 'ERROR:',
+                'completed': '✅',
+                'failed': '❌',
                 'cancelled': ''
             }.get(payment.status, '')
 
             text += f"{status_emoji} {payment.amount}  rubles | {user.first_name}\n"
-            text += f"CALENDAR: {payment.created_at.strftime('%d.%m %H:%M')}\n"
+            text += f"📅 {payment.created_at.strftime('%d.%m %H:%M')}\n"
 
         if not payments:
             text += "Нет платежей\n"
 
         keyboard.append([InlineKeyboardButton(
-            "CHANGES: Обновить", callback_data="admin_payments")])
+            "🔄 Обновить", callback_data="admin_payments")])
         keyboard.append([InlineKeyboardButton(
-            " Назад", callback_data="back_admin")])
+            "◀️ Назад в меню", callback_data="back_admin")])
 
         await query.edit_message_text(
             text,
@@ -3502,7 +3508,7 @@ CLIPBOARD: **Последние:**
 
     except Exception as e:
         log.error(f"Failed to show payments: {e}")
-        await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+        await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
 
 async def show_clients(query, context):
@@ -3519,7 +3525,7 @@ async def show_clients(query, context):
             )
             users = users_result.all()
 
-        text = "USERS: **КЛИЕНТЫ**\n\n"
+        text = "👥 **КЛИЕНТЫ**\n\n"
         keyboard = []
 
         for user, app_count in users:
@@ -3527,17 +3533,17 @@ async def show_clients(query, context):
             if app_count >= 3:
                 client_type = "STAR: VIP"
             elif app_count >= 1:
-                client_type = "MEMO: Активный"
+                client_type = "📝 Активный"
             else:
                 client_type = " Новый"
 
             text += f"{client_type} {user.first_name} {user.last_name or ''}\n"
             text += f"PHONE: {user.phone or 'не указан'} | Заявок: {app_count}\n"
-            text += f"CALENDAR: {user.created_at.strftime('%d.%m.%Y') if hasattr(user, 'created_at') else 'н/д'}\n\n"
+            text += f"📅 {user.created_at.strftime('%d.%m.%Y') if hasattr(user, 'created_at') else 'н/д'}\n\n"
 
             keyboard.append([
                 InlineKeyboardButton(
-                    f"USER: {user.first_name} ({app_count})",
+                    f"👤 {user.first_name} ({app_count})",
                     callback_data=f"client_view_{user.id}"
                 )
             ])
@@ -3546,9 +3552,9 @@ async def show_clients(query, context):
             text += "Нет клиентов"
 
         keyboard.append([InlineKeyboardButton(
-            "CHANGES: Обновить", callback_data="admin_users")])
+            "🔄 Обновить", callback_data="admin_users")])
         keyboard.append([InlineKeyboardButton(
-            " Назад", callback_data="back_admin")])
+            "◀️ Назад в меню", callback_data="back_admin")])
 
         await query.edit_message_text(
             text,
@@ -3558,7 +3564,7 @@ async def show_clients(query, context):
 
     except Exception as e:
         log.error(f"Failed to show clients: {e}")
-        await query.answer(f"ERROR: Ошибка: {e}", show_alert=True)
+        await query.answer(f"❌ Ошибка: {e}", show_alert=True)
 
 
 async def show_broadcast_options(query, context):
@@ -3568,8 +3574,8 @@ async def show_broadcast_options(query, context):
 
 Выберите целевую аудиторию:
 
-USERS: **Все клиенты** - всем зарегистрированным
-MEMO: **Активные** - с текущими заявками
+👥 **Все клиенты** - всем зарегистрированным
+📝 **Активные** - с текущими заявками
  **Неактивные** - без заявок
 STAR: **VIP** - с 3+ заявками
 
@@ -3581,8 +3587,8 @@ WARNING: **Внимание:**
 
     keyboard = [
         [InlineKeyboardButton(
-            "USERS: Всем клиентам", callback_data="broadcast_all")],
-        [InlineKeyboardButton("MEMO: С активными заявками",
+            "👥 Всем клиентам", callback_data="broadcast_all")],
+        [InlineKeyboardButton("📝 С активными заявками",
                               callback_data="broadcast_active")],
         [InlineKeyboardButton(
             " Без заявок", callback_data="broadcast_inactive")],
@@ -3599,7 +3605,7 @@ WARNING: **Внимание:**
         )
     except Exception as e:
         log.error(f"Failed to show broadcast options: {e}")
-        await query.answer("ERROR: Ошибка отображения", show_alert=True)
+        await query.answer("❌ Ошибка отображения", show_alert=True)
 
 
 async def show_admin_settings(query, context):
@@ -3607,33 +3613,33 @@ async def show_admin_settings(query, context):
     text = f"""
  **НАСТРОЙКИ СИСТЕМЫ**
 
-FIX: **Администрирование:**
+🔧 **Администрирование:**
 - Администраторов: {len(ADMIN_USERS)}
 - Хардкодированных: {len(HARDCODED_ADMIN_IDS)}
 
-CHART: **Мониторинг:**
+📊 **Мониторинг:**
 - Время работы: {datetime.now() - system_metrics['start_time']}
 - Запросов: {system_metrics['total_requests']}
 - Блокированных: {len(blocked_users)}
 
-BOT: **AI Система:**
-- Enhanced AI: {'SUCCESS: Активен' if ai_enhanced_manager and ai_enhanced_manager._initialized else 'ERROR: Неактивен'}
+🤖 **AI Система:**
+- Enhanced AI: {'✅ Активен' if ai_enhanced_manager and ai_enhanced_manager._initialized else '❌ Неактивен'}
 - Режим: {'Production' if PRODUCTION_MODE else 'Development'}
 
 LINK: **Интеграции:**
-- OpenRouter: {'SUCCESS:' if OPENROUTER_API_KEY else 'ERROR:'}
-- Канал: {'SUCCESS:' if CHANNEL_ID else 'ERROR:'}
+- OpenRouter: {'✅' if OPENROUTER_API_KEY else '❌'}
+- Канал: {'✅' if CHANNEL_ID else '❌'}
 """
 
     keyboard = [
-        [InlineKeyboardButton("USERS: Управление админами",
+        [InlineKeyboardButton("👥 Управление админами",
                               callback_data="setting_admins")],
-        [InlineKeyboardButton("CHART: Экспорт данных",
+        [InlineKeyboardButton("📊 Экспорт данных",
                               callback_data="setting_export")],
-        [InlineKeyboardButton("GROWTH: Детальная статистика",
+        [InlineKeyboardButton("📈 Детальная статистика",
                               callback_data="setting_detailed_stats")],
         [InlineKeyboardButton(
-            "CHANGES: Перезагрузить", callback_data="setting_reload")],
+            "🔄 Перезагрузить", callback_data="setting_reload")],
         [InlineKeyboardButton(
             " Очистить логи", callback_data="setting_clear_logs")],
         [InlineKeyboardButton(" Назад", callback_data="back_admin")]
@@ -3647,7 +3653,7 @@ LINK: **Интеграции:**
         )
     except Exception as e:
         log.error(f"Failed to show admin settings: {e}")
-        await query.answer("ERROR: Ошибка отображения", show_alert=True)
+        await query.answer("❌ Ошибка отображения", show_alert=True)
 
 
 def detect_category(text: str) -> str:
@@ -3703,7 +3709,7 @@ def detect_category(text: str) -> str:
 
 
 async def show_admin_management_panel(query, context):
-    """USERS: Интерактивная панель управления администраторами"""
+    """👥 Интерактивная панель управления администраторами"""
     try:
         async with async_sessionmaker() as session:
             result = await session.execute(
@@ -3712,10 +3718,10 @@ async def show_admin_management_panel(query, context):
             )
             admins = result.scalars().all()
 
-        text = "USERS: **УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ**\n\n"
+        text = "👥 **УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ**\n\n"
 
         if HARDCODED_ADMIN_IDS:
-            text += "FIX: **Системные администраторы:**\n"
+            text += "🔧 **Системные администраторы:**\n"
             for admin_id in sorted(HARDCODED_ADMIN_IDS):
                 text += f"- `{admin_id}` (системный)\n"
             text += "\n"
@@ -3723,22 +3729,22 @@ async def show_admin_management_panel(query, context):
         if admins:
             text += " **Администраторы из БД:**\n"
             for admin in admins:
-                status_icon = "SUCCESS:" if admin.is_active else "ERROR:"
+                status_icon = "✅" if admin.is_active else "❌"
                 text += f"{status_icon} `{admin.tg_id}` ({admin.role})\n"
         else:
             text += " **Администраторы из БД:** нет\n"
 
-        text += f"\nCHART: **Всего активных:** {len(ADMIN_USERS)}\n\n"
+        text += f"\n📊 **Всего активных:** {len(ADMIN_USERS)}\n\n"
 
         keyboard = [
             [
                 InlineKeyboardButton(" Добавить админа",
                                      callback_data="admin_add_new"),
                 InlineKeyboardButton(
-                    "CLIPBOARD: Полный список", callback_data="admin_list_all")
+                    "📋 Полный список", callback_data="admin_list_all")
             ],
             [
-                InlineKeyboardButton("CHANGES: Обновить из БД",
+                InlineKeyboardButton("🔄 Обновить из БД",
                                      callback_data="admin_reload_db"),
                 InlineKeyboardButton(" Настройки ролей",
                                      callback_data="admin_role_settings")
@@ -3755,11 +3761,11 @@ async def show_admin_management_panel(query, context):
 
     except Exception as e:
         log.error(f"Failed to show admin management panel: {e}")
-        await query.answer("ERROR: Ошибка загрузки панели", show_alert=True)
+        await query.answer("❌ Ошибка загрузки панели", show_alert=True)
 
 
 async def show_detailed_analytics_panel(query, context):
-    """GROWTH: Детальная панель аналитики"""
+    """📈 Детальная панель аналитики"""
     try:
         async with async_sessionmaker() as session:
             # Статистика пользователей
@@ -3791,40 +3797,40 @@ async def show_detailed_analytics_panel(query, context):
         success_rate = (system_metrics['successful_requests'] /
                         max(system_metrics['total_requests'], 1)) * 100
 
-        text = f"""GROWTH: **ДЕТАЛЬНАЯ АНАЛИТИКА СИСТЕМЫ**
+        text = f"""📈 **ДЕТАЛЬНАЯ АНАЛИТИКА СИСТЕМЫ**
 
-USERS: **ПОЛЬЗОВАТЕЛИ:**
+👥 **ПОЛЬЗОВАТЕЛИ:**
 - Всего: {total_users}
 - Сегодня: {users_today}
 - Заблокированных: {len(blocked_users)}
 
-CLIPBOARD: **ЗАЯВКИ:**
+📋 **ЗАЯВКИ:**
 - Всего: {total_apps}
 - Сегодня: {apps_today}
 - В обработке: {pending_apps}
 - Завершены: {completed_apps}
 
-BOT: **СИСТЕМА:**
+🤖 **СИСТЕМА:**
 - Время работы: {uptime}
 - Запросов: {system_metrics['total_requests']}
 - Успешность: {success_rate:.1f}%
 - AI запросов: {system_metrics['ai_requests']}
 
-FIX: **АДМИНИСТРИРОВАНИЕ:**
+🔧 **АДМИНИСТРИРОВАНИЕ:**
 - Админов: {len(ADMIN_USERS)}
-- Enhanced AI: {'SUCCESS: Активен' if ai_enhanced_manager and ai_enhanced_manager._initialized else 'ERROR: Неактивен'}
+- Enhanced AI: {'✅ Активен' if ai_enhanced_manager and ai_enhanced_manager._initialized else '❌ Неактивен'}
 - Режим: {'Production' if PRODUCTION_MODE else 'Development'}"""
 
         keyboard = [
             [
-                InlineKeyboardButton("CHART: Экспорт статистики",
+                InlineKeyboardButton("📊 Экспорт статистики",
                                      callback_data="export_analytics"),
                 InlineKeyboardButton(
-                    "CHANGES: Обновить", callback_data="admin_detailed_analytics")
+                    "🔄 Обновить", callback_data="admin_detailed_analytics")
             ],
             [
                 InlineKeyboardButton(
-                    "GROWTH: Графики", callback_data="analytics_charts"),
+                    "📈 Графики", callback_data="analytics_charts"),
                 InlineKeyboardButton(
                     " Отчеты", callback_data="analytics_reports")
             ],
@@ -3840,11 +3846,11 @@ FIX: **АДМИНИСТРИРОВАНИЕ:**
 
     except Exception as e:
         log.error(f"Failed to show detailed analytics: {e}")
-        await query.answer("ERROR: Ошибка загрузки аналитики", show_alert=True)
+        await query.answer("❌ Ошибка загрузки аналитики", show_alert=True)
 
 
 async def refresh_admin_panel(query, context):
-    """CHANGES: Обновление админ панели"""
+    """🔄 Обновление админ панели"""
     try:
         # Перезагружаем админов из БД
         await load_db_admins()
@@ -3853,26 +3859,26 @@ async def refresh_admin_panel(query, context):
         system_metrics['total_requests'] = system_metrics.get(
             'total_requests', 0)
 
-        await query.answer("SUCCESS: Админ панель обновлена", show_alert=True)
+        await query.answer("✅ Админ панель обновлена", show_alert=True)
 
         # Возвращаемся к главной панели с обновленными данными
         await cmd_admin_callback(query, context)
 
     except Exception as e:
         log.error(f"Failed to refresh admin panel: {e}")
-        await query.answer("ERROR: Ошибка обновления", show_alert=True)
+        await query.answer("❌ Ошибка обновления", show_alert=True)
 
 
 async def show_export_options(query, context):
-    """CHART: Опции экспорта данных"""
-    text = """CHART: **ЭКСПОРТ ДАННЫХ**
+    """📊 Опции экспорта данных"""
+    text = """📊 **ЭКСПОРТ ДАННЫХ**
 
 Выберите данные для экспорта:
 
-CLIPBOARD: **Заявки** - все заявки с деталями
-USERS: **Пользователи** - база пользователей
-CARD: **Платежи** - история платежей
-GROWTH: **Аналитика** - метрики и статистика
+📋 **Заявки** - все заявки с деталями
+👥 **Пользователи** - база пользователей
+💳 **Платежи** - история платежей
+📈 **Аналитика** - метрики и статистика
 
  **Форматы:**
 - CSV для таблиц
@@ -3881,15 +3887,15 @@ GROWTH: **Аналитика** - метрики и статистика
 
     keyboard = [
         [
-            InlineKeyboardButton("CLIPBOARD: Экспорт заявок",
+            InlineKeyboardButton("📋 Экспорт заявок",
                                  callback_data="export_applications"),
-            InlineKeyboardButton("USERS: Экспорт пользователей",
+            InlineKeyboardButton("👥 Экспорт пользователей",
                                  callback_data="export_users")
         ],
         [
-            InlineKeyboardButton("CARD: Экспорт платежей",
+            InlineKeyboardButton("💳 Экспорт платежей",
                                  callback_data="export_payments"),
-            InlineKeyboardButton("GROWTH: Экспорт аналитики",
+            InlineKeyboardButton("📈 Экспорт аналитики",
                                  callback_data="export_analytics")
         ],
         [
@@ -3909,49 +3915,49 @@ GROWTH: **Аналитика** - метрики и статистика
         )
     except Exception as e:
         log.error(f"Failed to show export options: {e}")
-        await query.answer("ERROR: Ошибка загрузки экспорта", show_alert=True)
+        await query.answer("❌ Ошибка загрузки экспорта", show_alert=True)
 
 
 async def show_smm_main_panel(query, context):
-    """ROCKET: Главная панель SMM системы"""
-    text = """ROCKET: **PROFESSIONAL SMM СИСТЕМА**
+    """🚀 Главная панель SMM системы"""
+    text = """🚀 **PROFESSIONAL SMM СИСТЕМА**
 
-TARGET: **Статус системы:**
-- SMM Engine: SUCCESS: Активен
-- Content Generator: SUCCESS: Готов
-- Auto-posting: SUCCESS: Включен
-- Analytics: SUCCESS: Собирается
+🎯 **Статус системы:**
+- SMM Engine: ✅ Активен
+- Content Generator: ✅ Готов
+- Auto-posting: ✅ Включен
+- Analytics: ✅ Собирается
 
-CHART: **Быстрая статистика:**
+📊 **Быстрая статистика:**
 - Постов сегодня: 0
 - Просмотров: 0
 - Вовлеченность: 0%
 
-CONTROL: **Управление:**"""
+🎛️ **Управление:**"""
 
     keyboard = [
         [
             InlineKeyboardButton(
-                "MEMO: Создать пост", callback_data="smm_create_post"),
-            InlineKeyboardButton("CHART: Аналитика",
+                "📝 Создать пост", callback_data="smm_create_post"),
+            InlineKeyboardButton("📊 Аналитика",
                                  callback_data="smm_analytics")
         ],
         [
             InlineKeyboardButton(" Настройки SMM",
                                  callback_data="smm_settings"),
-            InlineKeyboardButton("BOT: Автопостинг",
+            InlineKeyboardButton("🤖 Автопостинг",
                                  callback_data="smm_autopost")
         ],
         [
-            InlineKeyboardButton("GROWTH: Контент-стратегия",
+            InlineKeyboardButton("📈 Контент-стратегия",
                                  callback_data="smm_strategy"),
-            InlineKeyboardButton("TARGET: Таргетинг",
+            InlineKeyboardButton("🎯 Таргетинг",
                                  callback_data="smm_targeting")
         ],
         [
-            InlineKeyboardButton("CLIPBOARD: Очередь постов",
+            InlineKeyboardButton("📋 Очередь постов",
                                  callback_data="smm_queue"),
-            InlineKeyboardButton("CHANGES: Обновить",
+            InlineKeyboardButton("🔄 Обновить",
                                  callback_data="smm_main_panel")
         ],
         [InlineKeyboardButton(" Назад в админ панель",
@@ -3966,7 +3972,7 @@ CONTROL: **Управление:**"""
         )
     except Exception as e:
         log.error(f"Failed to show SMM panel: {e}")
-        await query.answer("ERROR: Ошибка загрузки SMM панели", show_alert=True)
+        await query.answer("❌ Ошибка загрузки SMM панели", show_alert=True)
 
 
 async def cmd_admin_callback(query, context):
@@ -3988,49 +3994,49 @@ async def cmd_admin_callback(query, context):
     except:
         total_users = total_apps = new_apps_today = 0
 
-    admin_text = f"""BUILDING: **ЮРИДИЧЕСКИЙ ЦЕНТР - АДМИН ПАНЕЛЬ**
+    admin_text = f"""🏛️ **ЮРИДИЧЕСКИЙ ЦЕНТР - АДМИН ПАНЕЛЬ**
 
-CHART: **Быстрая статистика:**
+📊 **Быстрая статистика:**
 - Пользователей: {total_users}
 - Заявок: {total_apps}
 - Новых сегодня: {new_apps_today}
 - Админов: {len(ADMIN_USERS)}
 
-CONTROL: **Выберите раздел управления:**"""
+🎛️ **Выберите раздел управления:**"""
 
     keyboard = [
         [
-            InlineKeyboardButton("CLIPBOARD: Заявки",
+            InlineKeyboardButton("📋 Заявки",
                                  callback_data="admin_apps"),
-            InlineKeyboardButton("CHART: Статистика",
+            InlineKeyboardButton("📊 Статистика",
                                  callback_data="admin_stats")
         ],
         [
             InlineKeyboardButton(
-                "CARD: Платежи", callback_data="admin_payments"),
-            InlineKeyboardButton("USERS: Клиенты", callback_data="admin_users")
+                "💳 Платежи", callback_data="admin_payments"),
+            InlineKeyboardButton("👥 Клиенты", callback_data="admin_users")
         ],
         [
             InlineKeyboardButton(
-                "BOT: AI Статус", callback_data="admin_ai_status"),
+                "🤖 AI Статус", callback_data="admin_ai_status"),
             InlineKeyboardButton(" Рассылка", callback_data="admin_broadcast")
         ],
         [
             InlineKeyboardButton(
-                "ROCKET: SMM Система", callback_data="smm_main_panel"),
+                "🚀 SMM Система", callback_data="smm_main_panel"),
             InlineKeyboardButton(
                 " Настройки", callback_data="admin_settings")
         ],
         [
-            InlineKeyboardButton("USERS: Управление админами",
+            InlineKeyboardButton("👥 Управление админами",
                                  callback_data="admin_manage_admins"),
-            InlineKeyboardButton("GROWTH: Детальная аналитика",
+            InlineKeyboardButton("📈 Детальная аналитика",
                                  callback_data="admin_detailed_analytics")
         ],
         [
-            InlineKeyboardButton("CHANGES: Обновить панель",
+            InlineKeyboardButton("🔄 Обновить панель",
                                  callback_data="admin_refresh"),
-            InlineKeyboardButton("CHART: Экспорт данных",
+            InlineKeyboardButton("📊 Экспорт данных",
                                  callback_data="admin_export")
         ]
     ]
@@ -4043,7 +4049,7 @@ CONTROL: **Выберите раздел управления:**"""
         )
     except Exception as e:
         log.error(f"Failed to update admin panel: {e}")
-        await query.answer("ERROR: Ошибка обновления панели", show_alert=True)
+        await query.answer("❌ Ошибка обновления панели", show_alert=True)
 
 
 async def handle_admin_management_actions(query, context):
@@ -4082,10 +4088,10 @@ async def handle_admin_management_actions(query, context):
                 )
                 admins = result.scalars().all()
 
-            text = "CLIPBOARD: **ПОЛНЫЙ СПИСОК АДМИНИСТРАТОРОВ**\n\n"
+            text = "📋 **ПОЛНЫЙ СПИСОК АДМИНИСТРАТОРОВ**\n\n"
 
             if HARDCODED_ADMIN_IDS:
-                text += "FIX: **Системные (хардкодированные):**\n"
+                text += "🔧 **Системные (хардкодированные):**\n"
                 for admin_id in sorted(HARDCODED_ADMIN_IDS):
                     text += f"- `{admin_id}` - суперадмин\n"
                 text += "\n"
@@ -4093,16 +4099,16 @@ async def handle_admin_management_actions(query, context):
             if admins:
                 text += " **Из базы данных:**\n"
                 for admin in admins:
-                    status = "SUCCESS: Активен" if admin.is_active else "ERROR: Неактивен"
+                    status = "✅ Активен" if admin.is_active else "❌ Неактивен"
                     date = admin.created_at.strftime('%d.%m.%Y')
                     text += f"- `{admin.tg_id}` - {admin.role}\n  {status}, добавлен {date}\n\n"
             else:
                 text += " **Из базы данных:** пусто\n"
 
-            text += f"CHART: **Итого активных:** {len(ADMIN_USERS)}"
+            text += f"📊 **Итого активных:** {len(ADMIN_USERS)}"
 
         except Exception as e:
-            text = f"ERROR: Ошибка загрузки списка: {e}"
+            text = f"❌ Ошибка загрузки списка: {e}"
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_manage_admins")]]
@@ -4113,20 +4119,20 @@ async def handle_admin_management_actions(query, context):
             await load_db_admins()
             new_count = len(ADMIN_USERS)
 
-            await query.answer(f"SUCCESS: Обновлено: было {old_count}, стало {new_count}", show_alert=True)
+            await query.answer(f"✅ Обновлено: было {old_count}, стало {new_count}", show_alert=True)
             await show_admin_management_panel(query, context)
             return
 
         except Exception as e:
-            await query.answer(f"ERROR: Ошибка обновления: {e}", show_alert=True)
+            await query.answer(f"❌ Ошибка обновления: {e}", show_alert=True)
             return
 
     elif data == "admin_role_settings":
         text = """ **НАСТРОЙКИ РОЛЕЙ АДМИНИСТРАТОРОВ**
 
-FIX: **Роли и права:**
+🔧 **Роли и права:**
 
-**CLIPBOARD: Operator (Оператор):**
+**📋 Operator (Оператор):**
 - Просмотр заявок
 - Обновление статуса заявок
 - Просмотр клиентов
@@ -4144,14 +4150,14 @@ FIX: **Роли и права:**
 - Настройки системы
 - Рассылки
 
-**FIX: Системные администраторы:**
+**🔧 Системные администраторы:**
 - Имеют все права суперадмина
 - Нельзя удалить или изменить
 - Задаются в коде"""
 
         keyboard = [
             [InlineKeyboardButton(
-                "MEMO: Изменить роль", callback_data="admin_change_role")],
+                "📝 Изменить роль", callback_data="admin_change_role")],
             [InlineKeyboardButton(
                 " Назад", callback_data="admin_manage_admins")]
         ]
@@ -4164,7 +4170,7 @@ FIX: **Роли и права:**
         )
     except Exception as e:
         log.error(f"Failed to handle admin management action: {e}")
-        await query.answer("ERROR: Ошибка обработки", show_alert=True)
+        await query.answer("❌ Ошибка обработки", show_alert=True)
 
 
 async def handle_export_analytics_actions(query, context):
@@ -4172,19 +4178,19 @@ async def handle_export_analytics_actions(query, context):
     data = query.data
 
     if data == "export_applications":
-        await query.answer("CHART: Экспорт заявок запущен...", show_alert=True)
+        await query.answer("📊 Экспорт заявок запущен...", show_alert=True)
         await export_applications_data(query, context)
 
     elif data == "export_users":
-        await query.answer("USERS: Экспорт пользователей запущен...", show_alert=True)
+        await query.answer("👥 Экспорт пользователей запущен...", show_alert=True)
         await export_users_data(query, context)
 
     elif data == "export_payments":
-        await query.answer("CARD: Экспорт платежей запущен...", show_alert=True)
+        await query.answer("💳 Экспорт платежей запущен...", show_alert=True)
         await export_payments_data(query, context)
 
     elif data == "export_analytics":
-        await query.answer("GROWTH: Экспорт аналитики запущен...", show_alert=True)
+        await query.answer("📈 Экспорт аналитики запущен...", show_alert=True)
         await export_analytics_data(query, context)
 
     elif data == "export_full":
@@ -4209,27 +4215,27 @@ async def handle_export_analytics_actions(query, context):
         await export_analytics_csv(query, context)
 
     elif data == "export_period":
-        await query.answer("CALENDAR: Настройка периода...", show_alert=False)
+        await query.answer("📅 Настройка периода...", show_alert=False)
         await export_period_selection(query, context)
 
     elif data == "analytics_charts":
-        text = """GROWTH: **ГРАФИКИ И ДИАГРАММЫ**
+        text = """📈 **ГРАФИКИ И ДИАГРАММЫ**
 
-CHART: **Доступные графики:**
+📊 **Доступные графики:**
 
-- GROWTH: Динамика заявок по дням
-- USERS: Рост пользователей
-- DOLLAR: Финансовая статистика
+- 📈 Динамика заявок по дням
+- 👥 Рост пользователей
+- 💵 Финансовая статистика
 -  Почасовая активность
 - PHONE: Источники трафика
 
-CHANGES: **Обновление:** каждые 15 минут
-CALENDAR: **Период:** последние 30 дней
+🔄 **Обновление:** каждые 15 минут
+📅 **Период:** последние 30 дней
 
 _Графики генерируются автоматически на основе данных системы._"""
 
         keyboard = [
-            [InlineKeyboardButton("GROWTH: Показать графики",
+            [InlineKeyboardButton("📈 Показать графики",
                                   callback_data="show_charts")],
             [InlineKeyboardButton(
                 " Назад", callback_data="admin_detailed_analytics")]
@@ -4244,12 +4250,12 @@ _Графики генерируются автоматически на осн�
     elif data == "analytics_reports":
         text = """ **ОТЧЕТЫ СИСТЕМЫ**
 
-CLIPBOARD: **Доступные отчеты:**
+📋 **Доступные отчеты:**
 
-- CHART: Ежедневный отчет по заявкам
-- USERS: Недельный отчет по пользователям
-- DOLLAR: Месячный финансовый отчет
-- BOT: Отчет по работе AI системы
+- 📊 Ежедневный отчет по заявкам
+- 👥 Недельный отчет по пользователям
+- 💵 Месячный финансовый отчет
+- 🤖 Отчет по работе AI системы
 -  Отчет по производительности
 
 EMAIL: **Автоматическая отправка:**
@@ -4276,17 +4282,17 @@ async def handle_smm_actions(query, context):
     data = query.data
 
     if data == "smm_create_post":
-        text = """MEMO: **СОЗДАНИЕ ПОСТА**
+        text = """📝 **СОЗДАНИЕ ПОСТА**
 
-TARGET: **Типы контента:**
+🎯 **Типы контента:**
 
 -  Новости права
 -  Кейсы из практики
-- CHART: Опросы и голосования
+- 📊 Опросы и голосования
 - GRADUATION: Образовательный контент
 - IDEA: Советы юристов
 
-BOT: **AI генерация:**
+🤖 **AI генерация:**
 - Автоматический подбор темы
 - Создание привлекательного текста
 - Добавление хештегов
@@ -4295,7 +4301,7 @@ BOT: **AI генерация:**
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "BOT: AI генерация", callback_data="smm_ai_generate"),
+                    "🤖 AI генерация", callback_data="smm_ai_generate"),
                 InlineKeyboardButton(" Написать вручную",
                                      callback_data="smm_manual_create")
             ],
@@ -4310,20 +4316,20 @@ BOT: **AI генерация:**
         ]
 
     elif data == "smm_analytics":
-        text = """CHART: **SMM АНАЛИТИКА**
+        text = """📊 **SMM АНАЛИТИКА**
 
-GROWTH: **Статистика постов:**
+📈 **Статистика постов:**
 - Постов сегодня: 0
 - Всего постов: 0
 - Средние просмотры: 0
 - Средняя вовлеченность: 0%
 
-USERS: **Аудитория:**
+👥 **Аудитория:**
 - Подписчиков: 0
 - Прирост за неделю: 0
 - Активных пользователей: 0
 
-TARGET: **Эффективность:**
+🎯 **Эффективность:**
 - CTR: 0%
 - Конверсия в заявки: 0%
 - ROI: 0%"""
@@ -4331,8 +4337,8 @@ TARGET: **Эффективность:**
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "GROWTH: Детальная аналитика", callback_data="smm_detailed_analytics"),
-                InlineKeyboardButton("CHART: Экспорт данных",
+                    "📈 Детальная аналитика", callback_data="smm_detailed_analytics"),
+                InlineKeyboardButton("📊 Экспорт данных",
                                      callback_data="smm_export_analytics")
             ],
             [InlineKeyboardButton(
@@ -4342,26 +4348,26 @@ TARGET: **Эффективность:**
     elif data == "smm_settings":
         text = """ **НАСТРОЙКИ SMM СИСТЕМЫ**
 
-BOT: **Автопостинг:**
-- Статус: SUCCESS: Включен
+🤖 **Автопостинг:**
+- Статус: ✅ Включен
 - Интервал: 2 часа
 - Следующий пост: через 45 мин
 
-TARGET: **Контент-стратегия:**
+🎯 **Контент-стратегия:**
 - Режим: Сбалансированный
 - Тон: Профессиональный
 - Целевая аудитория: Физлица + Бизнес
 
 PHONE: **Каналы публикации:**
-- Telegram канал: SUCCESS: Подключен
-- Instagram: ERROR: Не настроен
-- VK: ERROR: Не настроен"""
+- Telegram канал: ✅ Подключен
+- Instagram: ❌ Не настроен
+- VK: ❌ Не настроен"""
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "CHANGES: Настройки автопостинга", callback_data="smm_autopost_settings"),
-                InlineKeyboardButton("TARGET: Контент-стратегия",
+                    "🔄 Настройки автопостинга", callback_data="smm_autopost_settings"),
+                InlineKeyboardButton("🎯 Контент-стратегия",
                                      callback_data="smm_content_strategy")
             ],
             [
@@ -4375,31 +4381,31 @@ PHONE: **Каналы публикации:**
         ]
 
     elif data == "smm_autopost":
-        text = """BOT: **УПРАВЛЕНИЕ АВТОПОСТИНГОМ**
+        text = """🤖 **УПРАВЛЕНИЕ АВТОПОСТИНГОМ**
 
  **Текущий статус:**
-- Автопостинг: SUCCESS: Активен
+- Автопостинг: ✅ Активен
 - Следующий пост: через 45 минут
 - Интервал: каждые 2 часа
 - Всего запланировано: 0 постов
 
-CONTROL: **Быстрые действия:**"""
+🎛️ **Быстрые действия:**"""
 
         keyboard = [
             [
-                InlineKeyboardButton("ROCKET: Профессиональный автопостинг",
+                InlineKeyboardButton("🚀 Профессиональный автопостинг",
                                      callback_data="smm_enhanced_autopost"),
             ],
             [
                 InlineKeyboardButton("⏸ Приостановить",
                                      callback_data="smm_pause_autopost"),
-                InlineKeyboardButton("ROCKET: Запустить сейчас",
+                InlineKeyboardButton("🚀 Запустить сейчас",
                                      callback_data="smm_force_post")
             ],
             [
                 InlineKeyboardButton(
                     " Настроить интервал", callback_data="smm_interval_settings"),
-                InlineKeyboardButton("CLIPBOARD: Очередь постов",
+                InlineKeyboardButton("📋 Очередь постов",
                                      callback_data="smm_post_queue")
             ],
             [InlineKeyboardButton(
@@ -4584,7 +4590,7 @@ CONTROL: **Быстрые действия:**"""
         await query.answer(" Настройка для физлиц", show_alert=False)
         text = """ **ФИЗИЧЕСКИЕ ЛИЦА**
 
-CHART: **Текущие настройки:** 60% аудитории
+📊 **Текущие настройки:** 60% аудитории
 - Возраст: 25-55 лет
 - Семейное положение: смешанное
 - Доходы: средние и выше
@@ -4599,7 +4605,7 @@ CHART: **Текущие настройки:** 60% аудитории
         await query.answer("OFFICE: Настройка для бизнеса", show_alert=False)
         text = """OFFICE: **БИЗНЕС СЕГМЕНТ**
 
-CHART: **Текущие настройки:** 30% аудитории
+📊 **Текущие настройки:** 30% аудитории
 - Размер: малый и средний бизнес
 - Сферы: услуги, торговля, производство
 - Проблемы: налоги, трудовое право, контракты"""
@@ -4611,12 +4617,12 @@ CHART: **Текущие настройки:** 30% аудитории
 
     # === ГЕОГРАФИЯ ===
     elif data == "smm_geo_moscow":
-        await query.answer("BUILDING: Настройка Москвы", show_alert=False)
-        text = """BUILDING: **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
+        await query.answer("🏛️ Настройка Москвы", show_alert=False)
+        text = """🏛️ **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
 
 LOCATION: **Покрытие:** 40% аудитории
-GROWTH: **Эффективность:** 8.5% engagement
-DOLLAR: **Конверсия:** 2.8% в заявки
+📈 **Эффективность:** 8.5% engagement
+💵 **Конверсия:** 2.8% в заявки
 CLOCK: **Пиковое время:** 19:00-21:00"""
 
         keyboard = [[InlineKeyboardButton(
@@ -4629,8 +4635,8 @@ CLOCK: **Пиковое время:** 19:00-21:00"""
         text = """ **САНКТ-ПЕТЕРБУРГ**
 
 LOCATION: **Покрытие:** 15% аудитории
-GROWTH: **Эффективность:** 7.2% engagement
-DOLLAR: **Конверсия:** 2.1% в заявки
+📈 **Эффективность:** 7.2% engagement
+💵 **Конверсия:** 2.1% в заявки
 CLOCK: **Пиковое время:** 18:30-20:30"""
 
         keyboard = [[InlineKeyboardButton(
@@ -4643,8 +4649,8 @@ CLOCK: **Пиковое время:** 18:30-20:30"""
         await query.answer("SCALES: Основные права", show_alert=False)
         text = """SCALES: **ОСНОВНЫЕ ПРАВА**
 
-TARGET: **Охват:** 85% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 85% аудитории
+📊 **Популярные темы:**
 - Защита прав потребителей
 - Конституционные права
 - Административные нарушения"""
@@ -4658,8 +4664,8 @@ CHART: **Популярные темы:**
         await query.answer(" Семейное право", show_alert=False)
         text = """ **СЕМЕЙНОЕ ПРАВО**
 
-TARGET: **Охват:** 68% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 68% аудитории
+📊 **Популярные темы:**
 - Развод и раздел имущества
 - Алименты
 - Опека и усыновление"""
@@ -4674,9 +4680,9 @@ CHART: **Популярные темы:**
         await query.answer("FIRE: Пиковые часы", show_alert=False)
         text = """FIRE: **ПИКОВЫЕ ЧАСЫ: 18:00-21:00**
 
-CHART: **Активность:** 100%
+📊 **Активность:** 100%
 IDEA: **Рекомендация:** Публиковать важные посты
-TARGET: **Конверсия:** +15% выше средней"""
+🎯 **Конверсия:** +15% выше средней"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_activity_time")]]
@@ -4684,12 +4690,12 @@ TARGET: **Конверсия:** +15% выше средней"""
         return
 
     elif data == "smm_time_work":
-        await query.answer("GROWTH: Рабочее время", show_alert=False)
-        text = """GROWTH: **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
+        await query.answer("📈 Рабочее время", show_alert=False)
+        text = """📈 **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
 
-CHART: **Активность:** 85%
+📊 **Активность:** 85%
 IDEA: **Рекомендация:** Деловой контент
-TARGET: **Аудитория:** В основном бизнес"""
+🎯 **Аудитория:** В основном бизнес"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_activity_time")]]
@@ -4701,9 +4707,9 @@ TARGET: **Аудитория:** В основном бизнес"""
         await query.answer("PHONE: Настройка Telegram", show_alert=False)
         text = """PHONE: **TELEGRAM НАСТРОЙКИ**
 
-SUCCESS: **Статус:** Основная платформа
-CHART: **Охват:** 100% трафика
-TARGET: **Особенности:** Максимальная вовлеченность"""
+✅ **Статус:** Основная платформа
+📊 **Охват:** 100% трафика
+🎯 **Особенности:** Максимальная вовлеченность"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_platform_targeting")]]
@@ -4714,9 +4720,9 @@ TARGET: **Особенности:** Максимальная вовлеченн�
         await query.answer("CAMERA: Instagram", show_alert=False)
         text = """CAMERA: **INSTAGRAM ИНТЕГРАЦИЯ**
 
-ERROR: **Статус:** Не подключен
+❌ **Статус:** Не подключен
 IDEA: **Потенциал:** Визуальный контент
-TARGET: **Аудитория:** Молодая, активная"""
+🎯 **Аудитория:** Молодая, активная"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_platform_targeting")]]
@@ -4728,7 +4734,7 @@ TARGET: **Аудитория:** Молодая, активная"""
         await query.answer(" Новый A/B тест", show_alert=False)
         text = """ **СОЗДАНИЕ НОВОГО A/B ТЕСТА**
 
-CLIPBOARD: **Доступные тесты:**
+📋 **Доступные тесты:**
 - Время публикации
 - Тональность контента
 - Типы заголовков
@@ -4740,10 +4746,10 @@ CLIPBOARD: **Доступные тесты:**
         return
 
     elif data == "smm_current_ab_tests":
-        await query.answer("CHART: Текущие тесты", show_alert=False)
-        text = """CHART: **АКТИВНЫЕ A/B ТЕСТЫ**
+        await query.answer("📊 Текущие тесты", show_alert=False)
+        text = """📊 **АКТИВНЫЕ A/B ТЕСТЫ**
 
-SUCCESS: **Тест #1:** Время (19:00 vs 20:00)
+✅ **Тест #1:** Время (19:00 vs 20:00)
 - Прогресс: 5/14 дней
 - Лидер: 19:00 (+12%)"""
 
@@ -4757,8 +4763,8 @@ SUCCESS: **Тест #1:** Время (19:00 vs 20:00)
         await query.answer("FIRE: Вирусная стратегия", show_alert=False)
         text = """FIRE: **ВИРУСНАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Максимальный охват
-GROWTH: **Ожидаемый результат:**
+🎯 **Цель:** Максимальный охват
+📈 **Ожидаемый результат:**
 - +45% охват
 - -15% конверсия
 - Быстрый рост подписчиков"""
@@ -4769,11 +4775,11 @@ GROWTH: **Ожидаемый результат:**
         return
 
     elif data == "smm_strategy_conversion":
-        await query.answer("DOLLAR: Конверсионная", show_alert=False)
-        text = """DOLLAR: **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
+        await query.answer("💵 Конверсионная", show_alert=False)
+        text = """💵 **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Максимум заявок
-GROWTH: **Ожидаемый результат:**
+🎯 **Цель:** Максимум заявок
+📈 **Ожидаемый результат:**
 - +35% конверсия
 - -20% охват
 - Больше продаж"""
@@ -4788,9 +4794,9 @@ GROWTH: **Ожидаемый результат:**
         await query.answer("SCALES: Профессиональная", show_alert=False)
         text = """SCALES: **ПРОФЕССИОНАЛЬНАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** 70%
-GROWTH: **Эффективность:** 8.2% engagement
-TARGET: **Аудитория:** Бизнес-сегмент"""
+📊 **Использование:** 70%
+📈 **Эффективность:** 8.2% engagement
+🎯 **Аудитория:** Бизнес-сегмент"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_tone_settings")]]
@@ -4801,9 +4807,9 @@ TARGET: **Аудитория:** Бизнес-сегмент"""
         await query.answer(" Дружелюбная", show_alert=False)
         text = """ **ДРУЖЕЛЮБНАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** 20%
-GROWTH: **Эффективность:** 9.1% engagement
-TARGET: **Аудитория:** Физические лица"""
+📊 **Использование:** 20%
+📈 **Эффективность:** 9.1% engagement
+🎯 **Аудитория:** Физические лица"""
 
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_tone_settings")]]
@@ -5021,13 +5027,13 @@ TARGET: **Аудитория:** Физические лица"""
         )
     except Exception as e:
         log.error(f"Failed to handle SMM action: {e}")
-        await query.answer("ERROR: Ошибка обработки SMM", show_alert=True)
+        await query.answer("❌ Ошибка обработки SMM", show_alert=True)
 
 
 # Заглушки для экспорта данных (будут реализованы позже)
 async def export_applications_data(query, context):
-    """CHART: Экспорт данных заявок"""
-    await query.answer("CHART: Экспорт заявок...", show_alert=False)
+    """📊 Экспорт данных заявок"""
+    await query.answer("📊 Экспорт заявок...", show_alert=False)
 
     try:
         async with async_sessionmaker() as session:
@@ -5037,15 +5043,15 @@ async def export_applications_data(query, context):
             apps = applications.scalars().all()
 
             # Создаем отчет
-            report = f"""CHART: **ЭКСПОРТ ЗАЯВОК** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+            report = f"""📊 **ЭКСПОРТ ЗАЯВОК** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-GROWTH: **Общая статистика:**
+📈 **Общая статистика:**
 - Всего заявок: {len(apps)}
 - Новых: {len([a for a in apps if a.status == 'new'])}
 - В обработке: {len([a for a in apps if a.status == 'processing'])}
 - Завершенных: {len([a for a in apps if a.status == 'completed'])}
 
-CLIPBOARD: **Последние 10 заявок:**"""
+📋 **Последние 10 заявок:**"""
 
             for i, app in enumerate(apps[:10], 1):
                 category_name = "Без категории"
@@ -5055,10 +5061,10 @@ CLIPBOARD: **Последние 10 заявок:**"""
                 report += f"""
 
 {i}. ID {app.id} | {app.status.upper()}
-   CALENDAR: {app.created_at.strftime('%d.%m %H:%M')}
+   📅 {app.created_at.strftime('%d.%m %H:%M')}
    FOLDER: {category_name}
-   USER: ID {app.user_id}
-   DOLLAR: {app.price or 'Не указана'} rubles"""
+   👤 ID {app.user_id}
+   💵 {app.price or 'Не указана'} rubles"""
 
             keyboard = [
                 [InlineKeyboardButton(
@@ -5067,7 +5073,7 @@ CLIPBOARD: **Последние 10 заявок:**"""
             ]
 
     except Exception as e:
-        report = f"ERROR: **Ошибка экспорта заявок:** {e}"
+        report = f"❌ **Ошибка экспорта заявок:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -5079,8 +5085,8 @@ CLIPBOARD: **Последние 10 заявок:**"""
 
 
 async def export_users_data(query, context):
-    """USERS: Экспорт данных пользователей"""
-    await query.answer("USERS: Экспорт пользователей...", show_alert=False)
+    """👥 Экспорт данных пользователей"""
+    await query.answer("👥 Экспорт пользователей...", show_alert=False)
 
     try:
         async with async_sessionmaker() as session:
@@ -5101,9 +5107,9 @@ async def export_users_data(query, context):
             month_users = len(
                 [u for u in users_list if u.created_at.date() >= month_ago])
 
-            report = f"""USERS: **ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+            report = f"""👥 **ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-CHART: **Статистика регистраций:**
+📊 **Статистика регистраций:**
 - Всего пользователей: {len(users_list)}
 - Сегодня: +{today_users}
 - За неделю: +{week_users}
@@ -5122,7 +5128,7 @@ PHONE: **Предпочтения связи:**"""
 
             report += f"""
 
-USER: **Последние 5 пользователей:**"""
+👤 **Последние 5 пользователей:**"""
 
             for i, user in enumerate(users_list[:5], 1):
                 name = user.first_name or "Не указано"
@@ -5133,7 +5139,7 @@ USER: **Последние 5 пользователей:**"""
 
 {i}. {name}
    ID: {user.tg_id}
-   CALENDAR: {user.created_at.strftime('%d.%m %H:%M')}
+   📅 {user.created_at.strftime('%d.%m %H:%M')}
    PHONE: {user.preferred_contact}"""
 
             keyboard = [
@@ -5143,7 +5149,7 @@ USER: **Последние 5 пользователей:**"""
             ]
 
     except Exception as e:
-        report = f"ERROR: **Ошибка экспорта пользователей:** {e}"
+        report = f"❌ **Ошибка экспорта пользователей:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -5155,8 +5161,8 @@ USER: **Последние 5 пользователей:**"""
 
 
 async def export_payments_data(query, context):
-    """CARD: Экспорт данных платежей"""
-    await query.answer("CARD: Экспорт платежей...", show_alert=False)
+    """💳 Экспорт данных платежей"""
+    await query.answer("💳 Экспорт платежей...", show_alert=False)
 
     try:
         async with async_sessionmaker() as session:
@@ -5175,16 +5181,16 @@ async def export_payments_data(query, context):
 
             paid_amount = sum(float(p.amount) for p in paid_payments)
 
-            report = f"""CARD: **ЭКСПОРТ ПЛАТЕЖЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+            report = f"""💳 **ЭКСПОРТ ПЛАТЕЖЕЙ** - {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-CHART: **Финансовая статистика:**
+📊 **Финансовая статистика:**
 - Всего платежей: {len(payments_list)}
 - Успешных: {len(paid_payments)} ({paid_amount:,.0f} rubles)
 - Ожидающих: {len(pending_payments)}
 - Неудачных: {len(failed_payments)}
 - Общая сумма: {total_amount:,.0f} rubles
 
-DOLLAR: **Статистика по валютам:**"""
+💵 **Статистика по валютам:**"""
 
             # Группировка по валютам
             currencies = {}
@@ -5201,15 +5207,15 @@ DOLLAR: **Статистика по валютам:**"""
             if paid_payments:
                 report += f"""
 
-CARD: **Последние успешные платежи:**"""
+💳 **Последние успешные платежи:**"""
 
                 for i, payment in enumerate(paid_payments[:5], 1):
                     report += f"""
 
 {i}. Платеж #{payment.id}
-   DOLLAR: {payment.amount} rubles
-   CALENDAR: {payment.created_at.strftime('%d.%m %H:%M')}
-   CLIPBOARD: Заявка #{payment.application_id}"""
+   💵 {payment.amount} rubles
+   📅 {payment.created_at.strftime('%d.%m %H:%M')}
+   📋 Заявка #{payment.application_id}"""
 
             keyboard = [
                 [InlineKeyboardButton(
@@ -5218,7 +5224,7 @@ CARD: **Последние успешные платежи:**"""
             ]
 
     except Exception as e:
-        report = f"ERROR: **Ошибка экспорта платежей:** {e}"
+        report = f"❌ **Ошибка экспорта платежей:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -5230,8 +5236,8 @@ CARD: **Последние успешные платежи:**"""
 
 
 async def export_analytics_data(query, context):
-    """GROWTH: Экспорт аналитических данных"""
-    await query.answer("GROWTH: Экспорт аналитики...", show_alert=False)
+    """📈 Экспорт аналитических данных"""
+    await query.answer("📈 Экспорт аналитики...", show_alert=False)
 
     try:
         # Получаем данные за последние 30 дней
@@ -5295,14 +5301,14 @@ async def export_analytics_data(query, context):
             avg_users = total_users / 30
             avg_revenue = total_revenue / 30
 
-            report = f"""GROWTH: **АНАЛИТИКА** (30 дней) - {datetime.now().strftime('%d.%m.%Y %H:%M')}
+            report = f"""📈 **АНАЛИТИКА** (30 дней) - {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-CHART: **Общие показатели:**
+📊 **Общие показатели:**
 - Заявок: {total_apps} (ср. {avg_apps:.1f}/день)
 - Новых пользователей: {total_users} (ср. {avg_users:.1f}/день)
 - Доход: {total_revenue:,.0f} rubles (ср. {avg_revenue:,.0f} rubles/день)
 
-CALENDAR: **Топ-5 дней по заявкам:**"""
+📅 **Топ-5 дней по заявкам:**"""
 
             # Сортируем дни по количеству заявок
             sorted_days = sorted(daily_stats.items(),
@@ -5312,15 +5318,15 @@ CALENDAR: **Топ-5 дней по заявкам:**"""
                 report += f"""
 
 {i}. {date.strftime('%d.%m')} - {stats['applications']} заявок
-   USERS: +{stats['users']} пользователей
-   DOLLAR: {stats['revenue']:,.0f} rubles дохода"""
+   👥 +{stats['users']} пользователей
+   💵 {stats['revenue']:,.0f} rubles дохода"""
 
             # Конверсия
             if total_users > 0:
                 conversion = (total_apps / total_users) * 100
                 report += f"""
 
-TARGET: **Конверсия:** {conversion:.1f}% (заявки/пользователи)"""
+🎯 **Конверсия:** {conversion:.1f}% (заявки/пользователи)"""
 
             keyboard = [
                 [InlineKeyboardButton(
@@ -5329,7 +5335,7 @@ TARGET: **Конверсия:** {conversion:.1f}% (заявки/пользова
             ]
 
     except Exception as e:
-        report = f"ERROR: **Ошибка экспорта аналитики:** {e}"
+        report = f"❌ **Ошибка экспорта аналитики:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -5368,7 +5374,7 @@ async def export_full_data(query, context):
 - Платежи: {len(payments)}
 - Категории: {len(categories)}
 
-CHART: **Статусы заявок:**"""
+📊 **Статусы заявок:**"""
 
             # Статистика статусов
             status_counts = {}
@@ -5406,7 +5412,7 @@ FIRE: **Топ-5 категорий:**"""
 
             report += f"""
 
-DOLLAR: **Финансы:**
+💵 **Финансы:**
 - Общий оборот: {total_amount:,.0f} rubles
 - Получено: {paid_amount:,.0f} rubles
 - Конверсия платежей: {(paid_amount/total_amount*100):.1f}%"""
@@ -5414,21 +5420,21 @@ DOLLAR: **Финансы:**
             keyboard = [
                 [
                     InlineKeyboardButton(
-                        "USERS: Экспорт пользователей", callback_data="export_users"),
+                        "👥 Экспорт пользователей", callback_data="export_users"),
                     InlineKeyboardButton(
-                        "CLIPBOARD: Экспорт заявок", callback_data="export_applications")
+                        "📋 Экспорт заявок", callback_data="export_applications")
                 ],
                 [
                     InlineKeyboardButton(
-                        "CARD: Экспорт платежей", callback_data="export_payments"),
+                        "💳 Экспорт платежей", callback_data="export_payments"),
                     InlineKeyboardButton(
-                        "GROWTH: Экспорт аналитики", callback_data="export_analytics")
+                        "📈 Экспорт аналитики", callback_data="export_analytics")
                 ],
                 [InlineKeyboardButton(" Назад", callback_data="admin_export")]
             ]
 
     except Exception as e:
-        report = f"ERROR: **Ошибка полного экспорта:** {e}"
+        report = f"❌ **Ошибка полного экспорта:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -5442,8 +5448,8 @@ DOLLAR: **Финансы:**
 # ============ SMM ФУНКЦИИ ПОЛНАЯ РЕАЛИЗАЦИЯ ============
 
 async def handle_smm_ai_generate(query, context):
-    """BOT: AI генерация поста"""
-    await query.answer("BOT: Генерация профессионального поста...", show_alert=False)
+    """🤖 AI генерация поста"""
+    await query.answer("🤖 Генерация профессионального поста...", show_alert=False)
 
     try:
         # Используем улучшенную систему автопостинга
@@ -5454,29 +5460,29 @@ async def handle_smm_ai_generate(query, context):
             # Fallback на старую систему
             post_text = await generate_case_post()
 
-        text = f"""BOT: **AI СГЕНЕРИРОВАЛ ПОСТ**
+        text = f"""🤖 **AI СГЕНЕРИРОВАЛ ПОСТ**
 
 {post_text[:500]}...
 
-CHART: **Статистика:**
+📊 **Статистика:**
 - Длина: {len(post_text)} символов
 - Тип: Юридический кейс
 - Хештеги: автоматически
 
-TARGET: **Действия:**"""
+🎯 **Действия:**"""
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "SUCCESS: Опубликовать сейчас", callback_data="smm_publish_now"),
+                    "✅ Опубликовать сейчас", callback_data="smm_publish_now"),
                 InlineKeyboardButton(
-                    "MEMO: Редактировать", callback_data="smm_edit_post")
+                    "📝 Редактировать", callback_data="smm_edit_post")
             ],
             [
                 InlineKeyboardButton(
-                    "CHANGES: Сгенерировать новый", callback_data="smm_ai_generate"),
+                    "🔄 Сгенерировать новый", callback_data="smm_ai_generate"),
                 InlineKeyboardButton(
-                    "CLIPBOARD: В очередь", callback_data="smm_queue_post")
+                    "📋 В очередь", callback_data="smm_queue_post")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_create_post")]
         ]
@@ -5485,7 +5491,7 @@ TARGET: **Действия:**"""
         context.user_data['generated_post'] = post_text
 
     except Exception as e:
-        text = f"ERROR: **Ошибка генерации:** {e}\n\nПопробуйте еще раз или создайте пост вручную."
+        text = f"❌ **Ошибка генерации:** {e}\n\nПопробуйте еще раз или создайте пост вручную."
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_create_post")]]
 
@@ -5500,7 +5506,7 @@ async def handle_smm_manual_create(query, context):
     """ Ручное создание поста"""
     text = """ **РУЧНОЕ СОЗДАНИЕ ПОСТА**
 
-MEMO: **Для создания поста:**
+📝 **Для создания поста:**
 
 1. Отправьте текст поста следующим сообщением
 2. Можете использовать Markdown разметку
@@ -5516,7 +5522,7 @@ IDEA: **Советы:**
 ⌨ **Напишите ваш пост и отправьте:**"""
 
     keyboard = [
-        [InlineKeyboardButton("ERROR: Отменить", callback_data="smm_create_post")]
+        [InlineKeyboardButton("❌ Отменить", callback_data="smm_create_post")]
     ]
 
     # Устанавливаем флаг ожидания поста
@@ -5540,25 +5546,25 @@ async def handle_smm_news_post(query, context):
 
 {post_text[:500]}...
 
-CHART: **Характеристики:**
+📊 **Характеристики:**
 - Тип: Новости права
-- Актуальность: SUCCESS: Высокая
-- Вовлечение: SUCCESS: Прогнозируется высокое
+- Актуальность: ✅ Высокая
+- Вовлечение: ✅ Прогнозируется высокое
 
-TARGET: **Что делать?**"""
+🎯 **Что делать?**"""
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "SUCCESS: Опубликовать", callback_data="smm_publish_now"),
+                    "✅ Опубликовать", callback_data="smm_publish_now"),
                 InlineKeyboardButton(
-                    "MEMO: Изменить", callback_data="smm_edit_post")
+                    "📝 Изменить", callback_data="smm_edit_post")
             ],
             [
-                InlineKeyboardButton("CHANGES: Другая новость",
+                InlineKeyboardButton("🔄 Другая новость",
                                      callback_data="smm_news_post"),
                 InlineKeyboardButton(
-                    "CLIPBOARD: В очередь", callback_data="smm_queue_post")
+                    "📋 В очередь", callback_data="smm_queue_post")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_create_post")]
         ]
@@ -5566,7 +5572,7 @@ TARGET: **Что делать?**"""
         context.user_data['generated_post'] = post_text
 
     except Exception as e:
-        text = f"ERROR: **Ошибка создания новости:** {e}"
+        text = f"❌ **Ошибка создания новости:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_create_post")]]
 
@@ -5588,25 +5594,25 @@ async def handle_smm_case_post(query, context):
 
 {post_text[:500]}...
 
-CHART: **Анализ поста:**
+📊 **Анализ поста:**
 - Тип: Судебный прецедент
 - Сложность: Средняя
-- Конверсия: SUCCESS: Высокая (кейсы работают лучше всего)
+- Конверсия: ✅ Высокая (кейсы работают лучше всего)
 
-TARGET: **Действия:**"""
+🎯 **Действия:**"""
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "SUCCESS: Опубликовать", callback_data="smm_publish_now"),
+                    "✅ Опубликовать", callback_data="smm_publish_now"),
                 InlineKeyboardButton(
-                    "MEMO: Доработать", callback_data="smm_edit_post")
+                    "📝 Доработать", callback_data="smm_edit_post")
             ],
             [
                 InlineKeyboardButton(
-                    "CHANGES: Другой кейс", callback_data="smm_case_post"),
+                    "🔄 Другой кейс", callback_data="smm_case_post"),
                 InlineKeyboardButton(
-                    "CLIPBOARD: Запланировать", callback_data="smm_queue_post")
+                    "📋 Запланировать", callback_data="smm_queue_post")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_create_post")]
         ]
@@ -5614,7 +5620,7 @@ TARGET: **Действия:**"""
         context.user_data['generated_post'] = post_text
 
     except Exception as e:
-        text = f"ERROR: **Ошибка создания кейса:** {e}"
+        text = f"❌ **Ошибка создания кейса:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_create_post")]]
 
@@ -5626,7 +5632,7 @@ TARGET: **Действия:**"""
 
 
 async def handle_smm_detailed_analytics(query, context):
-    """GROWTH: Детальная аналитика SMM"""
+    """📈 Детальная аналитика SMM"""
     try:
         # Получаем статистику из базы
         async with async_sessionmaker() as session:
@@ -5636,27 +5642,27 @@ async def handle_smm_detailed_analytics(query, context):
         # Примерная статистика постов (в реальности нужна отдельная таблица)
         today = datetime.now().date()
 
-        text = f"""GROWTH: **ДЕТАЛЬНАЯ SMM АНАЛИТИКА**
+        text = f"""📈 **ДЕТАЛЬНАЯ SMM АНАЛИТИКА**
 
-CHART: **ПОСТЫ (за сегодня):**
+📊 **ПОСТЫ (за сегодня):**
 - Опубликовано: 3
 - Просмотры: 1,247
 - Лайки: 89 (7.1%)
 - Репосты: 23 (1.8%)
 - Комментарии: 12 (0.96%)
 
-GROWTH: **ДИНАМИКА (7 дней):**
+📈 **ДИНАМИКА (7 дней):**
 - Подписчиков: +{total_users % 100}
 - Охват: +{(total_users * 3) % 1000}
 - Вовлеченность: 8.5% (+0.7%)
 - Конверсии: {total_apps % 50} заявок
 
-TARGET: **ЛУЧШИЕ ПОСТЫ:**
+🎯 **ЛУЧШИЕ ПОСТЫ:**
 - Кейс "Возврат денег за автомобиль": 2,341 просмотр
 - Новый закон о маркетплейсах: 1,987 просмотров
 - Алименты - пошаговая инструкция: 1,654 просмотра
 
-DOLLAR: **КОНВЕРСИИ:**
+💵 **КОНВЕРСИИ:**
 - Переходы в бот: {(total_users * 2) % 200}
 - Заявки: {total_apps % 30}
 - Консультации: {total_apps % 20}
@@ -5670,23 +5676,23 @@ PHONE: **ИСТОЧНИКИ ТРАФИКА:**
 
         keyboard = [
             [
-                InlineKeyboardButton("CHART: Экспорт отчета",
+                InlineKeyboardButton("📊 Экспорт отчета",
                                      callback_data="smm_export_analytics"),
                 InlineKeyboardButton(
-                    "CHANGES: Обновить", callback_data="smm_detailed_analytics")
+                    "🔄 Обновить", callback_data="smm_detailed_analytics")
             ],
             [
                 InlineKeyboardButton(
-                    "GROWTH: Графики", callback_data="smm_show_charts"),
+                    "📈 Графики", callback_data="smm_show_charts"),
                 InlineKeyboardButton(
-                    "TARGET: Оптимизация", callback_data="smm_optimization")
+                    "🎯 Оптимизация", callback_data="smm_optimization")
             ],
             [InlineKeyboardButton(
                 " Назад в SMM", callback_data="smm_main_panel")]
         ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка загрузки аналитики:** {e}"
+        text = f"❌ **Ошибка загрузки аналитики:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_analytics")]]
 
@@ -5698,17 +5704,17 @@ PHONE: **ИСТОЧНИКИ ТРАФИКА:**
 
 
 async def handle_smm_export_analytics(query, context):
-    """CHART: Экспорт аналитики SMM"""
-    await query.answer("CHART: Подготовка экспорта аналитики...", show_alert=True)
+    """📊 Экспорт аналитики SMM"""
+    await query.answer("📊 Подготовка экспорта аналитики...", show_alert=True)
 
-    text = """CHART: **ЭКСПОРТ SMM АНАЛИТИКИ**
+    text = """📊 **ЭКСПОРТ SMM АНАЛИТИКИ**
 
-SUCCESS: **Отчет сформирован:**
+✅ **Отчет сформирован:**
 - Период: последние 30 дней
 - Формат: CSV + графики
 - Размер: ~2.3 МБ
 
-CLIPBOARD: **Включает:**
+📋 **Включает:**
 - Статистика по постам
 - Динамика подписчиков
 - Конверсии и ROI
@@ -5724,10 +5730,10 @@ IDEA: **Следующий автоматический отчет:** через
 
     keyboard = [
         [
-            InlineKeyboardButton("GROWTH: Просмотреть графики",
+            InlineKeyboardButton("📈 Просмотреть графики",
                                  callback_data="smm_show_charts"),
             InlineKeyboardButton(
-                "CHANGES: Новый экспорт", callback_data="smm_export_analytics")
+                "🔄 Новый экспорт", callback_data="smm_export_analytics")
         ],
         [InlineKeyboardButton(
             " Назад", callback_data="smm_detailed_analytics")]
@@ -5741,10 +5747,10 @@ IDEA: **Следующий автоматический отчет:** через
 
 
 async def handle_smm_autopost_settings(query, context):
-    """CHANGES: Настройки автопостинга"""
+    """🔄 Настройки автопостинга"""
     current_interval = int(os.getenv("POST_INTERVAL_HOURS", "2"))
 
-    text = f"""CHANGES: **НАСТРОЙКИ АВТОПОСТИНГА**
+    text = f"""🔄 **НАСТРОЙКИ АВТОПОСТИНГА**
 
  **Текущие параметры:**
 - Интервал: {current_interval} часа
@@ -5752,13 +5758,13 @@ async def handle_smm_autopost_settings(query, context):
 - Тип контента: Смешанный (40% кейсы, 25% новости, 20% прецеденты, 15% аспекты)
 - Время публикации: 24/7
 
-TARGET: **Настройки контента:**
+🎯 **Настройки контента:**
 - Длина постов: 1000-3000 символов
 - Стиль: Профессиональный с призывами
 - Хештеги: Автоматически
 - CTA кнопки: Включены
 
-CHART: **Производительность:**
+📊 **Производительность:**
 - Успешных публикаций: 98.5%
 - Средняя вовлеченность: 8.2%
 - Конверсия в заявки: 2.1%"""
@@ -5772,15 +5778,15 @@ CHART: **Производительность:**
         ],
         [
             InlineKeyboardButton(
-                "CALENDAR: Расписание", callback_data="smm_schedule_settings"),
+                "📅 Расписание", callback_data="smm_schedule_settings"),
             InlineKeyboardButton(
-                "TARGET: Типы контента", callback_data="smm_content_types")
+                "🎯 Типы контента", callback_data="smm_content_types")
         ],
         [
             InlineKeyboardButton("⏸ Приостановить",
                                  callback_data="smm_pause_autopost"),
             InlineKeyboardButton(
-                "CHANGES: Перезапустить", callback_data="smm_restart_autopost")
+                "🔄 Перезапустить", callback_data="smm_restart_autopost")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_settings")]
     ]
@@ -5793,10 +5799,10 @@ CHART: **Производительность:**
 
 
 async def handle_smm_content_strategy(query, context):
-    """TARGET: Контент-стратегия"""
-    text = """TARGET: **КОНТЕНТ-СТРАТЕГИЯ SMM**
+    """🎯 Контент-стратегия"""
+    text = """🎯 **КОНТЕНТ-СТРАТЕГИЯ SMM**
 
-CHART: **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
+📊 **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
 
 FIRE: **Распределение контента:**
 - 40% - Кейсы из практики (высокая конверсия)
@@ -5809,12 +5815,12 @@ MASKS: **Тональность:**
 - Дружелюбная (20%)
 - Срочная/призывная (10%)
 
-TARGET: **Целевая аудитория:**
+🎯 **Целевая аудитория:**
 - Физические лица с правовыми проблемами (60%)
 - Малый и средний бизнес (30%)
 - Коллеги-юристы (10%)
 
-GROWTH: **KPI стратегии:**
+📈 **KPI стратегии:**
 - Охват: 15,000+ просмотров/неделя
 - Вовлеченность: 8%+
 - Конверсия: 2%+ в заявки
@@ -5822,15 +5828,15 @@ GROWTH: **KPI стратегии:**
 
     keyboard = [
         [
-            InlineKeyboardButton("CHANGES: Изменить стратегию",
+            InlineKeyboardButton("🔄 Изменить стратегию",
                                  callback_data="smm_change_strategy"),
             InlineKeyboardButton("MASKS: Настроить тональность",
                                  callback_data="smm_tone_settings")
         ],
         [
-            InlineKeyboardButton("TARGET: Целевая аудитория",
+            InlineKeyboardButton("🎯 Целевая аудитория",
                                  callback_data="smm_audience_settings"),
-            InlineKeyboardButton("CHART: Анализ эффективности",
+            InlineKeyboardButton("📊 Анализ эффективности",
                                  callback_data="smm_strategy_analytics")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_settings")]
@@ -5845,33 +5851,33 @@ GROWTH: **KPI стратегии:**
 
 async def handle_smm_channels(query, context):
     """PHONE: Каналы публикации"""
-    channel_status = "SUCCESS: Подключен" if CHANNEL_ID else "ERROR: Не настроен"
+    channel_status = "✅ Подключен" if CHANNEL_ID else "❌ Не настроен"
 
     text = f"""PHONE: **КАНАЛЫ ПУБЛИКАЦИИ**
 
 TV: **Telegram:**
 - Канал: {channel_status}
 - ID: {CHANNEL_ID or 'Не установлен'}
-- Автопубликация: SUCCESS: Активна
+- Автопубликация: ✅ Активна
 - Подписчиков: ~1,500
 
 CAMERA: **Instagram:**
-- Статус: ERROR: Не подключен
+- Статус: ❌ Не подключен
 - Возможности: Фото + текст, Stories, Reels
 - Потенциал: +2,000 подписчиков
 
 GLOBE: **VKontakte:**
-- Статус: ERROR: Не подключен
+- Статус: ❌ Не подключен
 - Возможности: Сообщества, таргетинг
 - Потенциал: +1,500 подписчиков
 
-MEMO: **Блог на сайте:**
-- Статус: ERROR: Не настроен
+📝 **Блог на сайте:**
+- Статус: ❌ Не настроен
 - Возможности: SEO, длинные статьи
 - Потенциал: Органический трафик
 
  **LinkedIn:**
-- Статус: ERROR: Не подключен
+- Статус: ❌ Не подключен
 - Целевая аудитория: B2B клиенты
 - Потенциал: Корпоративные клиенты"""
 
@@ -5885,14 +5891,14 @@ MEMO: **Блог на сайте:**
         [
             InlineKeyboardButton(
                 "GLOBE: Настроить VK", callback_data="smm_setup_vk"),
-            InlineKeyboardButton("MEMO: Настроить блог",
+            InlineKeyboardButton("📝 Настроить блог",
                                  callback_data="smm_setup_blog")
         ],
         [
             InlineKeyboardButton(" Подключить LinkedIn",
                                  callback_data="smm_setup_linkedin"),
             InlineKeyboardButton(
-                "CHART: Кросспостинг", callback_data="smm_crossposting")
+                "📊 Кросспостинг", callback_data="smm_crossposting")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_settings")]
     ]
@@ -5910,17 +5916,17 @@ async def handle_smm_design(query, context):
 
  **Текущий стиль:**
 - Шрифт: Стандартный Telegram
-- Эмодзи: SUCCESS: Активное использование
+- Эмодзи: ✅ Активное использование
 - Структура: Заголовок → Содержание → CTA
 - Длина: 1000-3000 символов
 
-MEMO: **Шаблоны постов:**
-- CLIPBOARD: Кейс: Проблема → Решение → Результат
+📝 **Шаблоны постов:**
+- 📋 Кейс: Проблема → Решение → Результат
 -  Новость: Что изменилось → Как влияет → Что делать
 - SCALES: Прецедент: Дело → Решение → Значение
 - IDEA: Совет: Проблема → Инструкция → Выгода
 
-TARGET: **Элементы дизайна:**
+🎯 **Элементы дизайна:**
 - Заголовки: ЗАГЛАВНЫМИ БУКВАМИ
 - Списки: - Маркированные
 - Выделения: **жирным** и *курсивом*
@@ -5935,7 +5941,7 @@ TARGET: **Элементы дизайна:**
         [
             InlineKeyboardButton(" Добавить изображения",
                                  callback_data="smm_add_images"),
-            InlineKeyboardButton("MEMO: Изменить шаблоны",
+            InlineKeyboardButton("📝 Изменить шаблоны",
                                  callback_data="smm_edit_templates")
         ],
         [
@@ -5969,9 +5975,9 @@ async def handle_smm_pause_autopost(query, context):
 
     text = """⏸ **АВТОПОСТИНГ ПРИОСТАНОВЛЕН**
 
-SUCCESS: **Статус изменен:**
-- Автопубликация: ERROR: Приостановлена
-- Планировщик: ERROR: Остановлен
+✅ **Статус изменен:**
+- Автопубликация: ❌ Приостановлена
+- Планировщик: ❌ Остановлен
 - Последний пост: 45 минут назад
 - Следующий пост: ⏸ Не запланирован
 
@@ -5981,20 +5987,20 @@ WARNING: **Важно:**
 - Аналитика продолжает работать
 - Настройки сохранены
 
-CHANGES: **Для возобновления:**
+🔄 **Для возобновления:**
 Нажмите "Возобновить автопостинг" когда будете готовы."""
 
     keyboard = [
         [
             InlineKeyboardButton("▶ Возобновить автопостинг",
                                  callback_data="smm_resume_autopost"),
-            InlineKeyboardButton("MEMO: Опубликовать вручную",
+            InlineKeyboardButton("📝 Опубликовать вручную",
                                  callback_data="smm_create_post")
         ],
         [
             InlineKeyboardButton(" Изменить настройки",
                                  callback_data="smm_autopost_settings"),
-            InlineKeyboardButton("CHART: Статистика", callback_data="smm_analytics")
+            InlineKeyboardButton("📊 Статистика", callback_data="smm_analytics")
         ],
         [InlineKeyboardButton(" Назад в SMM", callback_data="smm_main_panel")]
     ]
@@ -6007,28 +6013,28 @@ CHANGES: **Для возобновления:**
 
 
 async def handle_smm_force_post(query, context):
-    """ROCKET: Принудительная публикация"""
-    await query.answer("ROCKET: Запуск публикации...", show_alert=False)
+    """🚀 Принудительная публикация"""
+    await query.answer("🚀 Запуск публикации...", show_alert=False)
 
     try:
         # Используем существующую функцию автопостинга
         await autopost_job(context)
 
-        text = """ROCKET: **ПОСТ ОПУБЛИКОВАН!**
+        text = """🚀 **ПОСТ ОПУБЛИКОВАН!**
 
-SUCCESS: **Успешно:**
+✅ **Успешно:**
 - Пост создан и опубликован
 - Время публикации: сейчас
 - Канал: Основной Telegram
 - Тип: Автоматически выбранный
 
-CHART: **Детали поста:**
+📊 **Детали поста:**
 - Генерация: AI система
 - Длина: ~2000 символов
 - Кнопка CTA: Добавлена
 - Хештеги: Автоматически
 
-GROWTH: **Ожидаемые показатели:**
+📈 **Ожидаемые показатели:**
 - Охват: 800-1,200 просмотров
 - Вовлеченность: 6-10%
 - Переходы: 15-25
@@ -6038,13 +6044,13 @@ CLOCK: **Следующий автопост:** через 2 часа"""
 
         keyboard = [
             [
-                InlineKeyboardButton("CHART: Статистика поста",
+                InlineKeyboardButton("📊 Статистика поста",
                                      callback_data="smm_post_stats"),
                 InlineKeyboardButton(
-                    "ROCKET: Еще один пост", callback_data="smm_force_post")
+                    "🚀 Еще один пост", callback_data="smm_force_post")
             ],
             [
-                InlineKeyboardButton("MEMO: Создать вручную",
+                InlineKeyboardButton("📝 Создать вручную",
                                      callback_data="smm_create_post"),
                 InlineKeyboardButton(
                     " Настройки", callback_data="smm_autopost_settings")
@@ -6054,11 +6060,11 @@ CLOCK: **Следующий автопост:** через 2 часа"""
         ]
 
     except Exception as e:
-        text = f"""ERROR: **ОШИБКА ПУБЛИКАЦИИ**
+        text = f"""❌ **ОШИБКА ПУБЛИКАЦИИ**
 
 Не удалось опубликовать пост: {e}
 
-FIX: **Возможные причины:**
+🔧 **Возможные причины:**
 - Канал не настроен
 - Нет прав на публикацию
 - Сбой генерации контента
@@ -6072,8 +6078,8 @@ IDEA: **Что делать:**
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "FIX: Проверить настройки", callback_data="smm_channels"),
-                InlineKeyboardButton("MEMO: Создать вручную",
+                    "🔧 Проверить настройки", callback_data="smm_channels"),
+                InlineKeyboardButton("📝 Создать вручную",
                                      callback_data="smm_manual_create")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_autopost")]
@@ -6096,7 +6102,7 @@ async def handle_smm_interval_settings(query, context):
 - Режим: Автоматический
 - Время работы: 9:00 - 21:00
 
-CONTROL: **Доступные интервалы:**"""
+🎛️ **Доступные интервалы:**"""
 
     keyboard = [
         [
@@ -6109,7 +6115,7 @@ CONTROL: **Доступные интервалы:**"""
             InlineKeyboardButton(" 4 часа", callback_data="smm_interval_4h")
         ],
         [
-            InlineKeyboardButton("CALENDAR: 6 часов", callback_data="smm_interval_6h"),
+            InlineKeyboardButton("📅 6 часов", callback_data="smm_interval_6h"),
             InlineKeyboardButton(
                 " 12 часов", callback_data="smm_interval_12h")
         ],
@@ -6117,7 +6123,7 @@ CONTROL: **Доступные интервалы:**"""
             InlineKeyboardButton(
                 "CLOCK: Расписание", callback_data="smm_custom_schedule"),
             InlineKeyboardButton(
-                "CHANGES: Умный режим", callback_data="smm_smart_interval")
+                "🔄 Умный режим", callback_data="smm_smart_interval")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_autopost")]
     ]
@@ -6130,7 +6136,7 @@ CONTROL: **Доступные интервалы:**"""
 
 
 async def handle_smm_post_queue(query, context):
-    """CLIPBOARD: Очередь постов"""
+    """📋 Очередь постов"""
     try:
         # Имитируем получение запланированных постов
         scheduled_posts = [
@@ -6154,7 +6160,7 @@ async def handle_smm_post_queue(query, context):
             }
         ]
 
-        text = f"""CLIPBOARD: **ОЧЕРЕДЬ ПОСТОВ** - {len(scheduled_posts)} запланировано
+        text = f"""📋 **ОЧЕРЕДЬ ПОСТОВ** - {len(scheduled_posts)} запланировано
 
 CLOCK: **Ближайшие публикации:**"""
 
@@ -6168,18 +6174,18 @@ CLOCK: **Ближайшие публикации:**"""
 
             text += f"""
 
-{i}. MEMO: {post['type'].upper()}
+{i}. 📝 {post['type'].upper()}
    CLOCK: Через {hours}ч {minutes}мин
     {post_preview}"""
 
         text += f"""
 
-TARGET: **Управление очередью:**"""
+🎯 **Управление очередью:**"""
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "MEMO: Добавить пост", callback_data="smm_add_to_queue"),
+                    "📝 Добавить пост", callback_data="smm_add_to_queue"),
                 InlineKeyboardButton(" Редактировать",
                                      callback_data="smm_edit_queue")
             ],
@@ -6190,16 +6196,16 @@ TARGET: **Управление очередью:**"""
                                      callback_data="smm_pause_queue")
             ],
             [
-                InlineKeyboardButton("ROCKET: Запустить сейчас",
+                InlineKeyboardButton("🚀 Запустить сейчас",
                                      callback_data="smm_force_next_post"),
                 InlineKeyboardButton(
-                    "CHART: Статистика", callback_data="smm_queue_stats")
+                    "📊 Статистика", callback_data="smm_queue_stats")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_main_panel")]
         ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка загрузки очереди:** {e}"
+        text = f"❌ **Ошибка загрузки очереди:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="smm_main_panel")]]
 
@@ -6211,15 +6217,15 @@ TARGET: **Управление очередью:**"""
 
 
 async def handle_smm_strategy(query, context):
-    """GROWTH: Контент-стратегия"""
+    """📈 Контент-стратегия"""
     await handle_smm_content_strategy(query, context)
 
 
 async def handle_smm_targeting(query, context):
-    """TARGET: Настройки таргетинга"""
-    text = """TARGET: **НАСТРОЙКИ ТАРГЕТИНГА**
+    """🎯 Настройки таргетинга"""
+    text = """🎯 **НАСТРОЙКИ ТАРГЕТИНГА**
 
-CHART: **Текущая аудитория:**
+📊 **Текущая аудитория:**
 - Основная: Физические лица с правовыми проблемами (60%)
 - Вторичная: Малый и средний бизнес (30%)
 - Коллеги-юристы: (10%)
@@ -6229,7 +6235,7 @@ CHART: **Текущая аудитория:**
 - Крупные города: СПб, Екатеринбург, Новосибирск (35%)
 - Регионы: Остальная Россия (25%)
 
-USERS: **Демография:**
+👥 **Демография:**
 - Возраст: 25-55 лет (основная группа)
 - Пол: 45% мужчины, 55% женщины
 - Доход: средний и выше среднего
@@ -6243,7 +6249,7 @@ MASKS: **Интересы аудитории:**
 
     keyboard = [
         [
-            InlineKeyboardButton("USERS: Изменить аудиторию",
+            InlineKeyboardButton("👥 Изменить аудиторию",
                                  callback_data="smm_change_audience"),
             InlineKeyboardButton(
                 " География", callback_data="smm_geo_settings")
@@ -6261,7 +6267,7 @@ MASKS: **Интересы аудитории:**
                                  callback_data="smm_ab_targeting")
         ],
         [
-            InlineKeyboardButton("CHART: Аналитика аудитории",
+            InlineKeyboardButton("📊 Аналитика аудитории",
                                  callback_data="smm_audience_analytics"),
             InlineKeyboardButton(
                 "IDEA: Рекомендации", callback_data="smm_targeting_tips")
@@ -6277,7 +6283,7 @@ MASKS: **Интересы аудитории:**
 
 
 async def handle_smm_queue(query, context):
-    """CLIPBOARD: Очередь постов"""
+    """📋 Очередь постов"""
     await handle_smm_post_queue(query, context)
 
 
@@ -6301,9 +6307,9 @@ async def export_applications_csv(query, context):
             # В реальной системе здесь был бы файл CSV
             text = f""" **CSV ЭКСПОРТ ЗАЯВОК ГОТОВ**
 
-SUCCESS: **Статус:** Сформирован
-CHART: **Записей:** {len(apps)}
-CALENDAR: **Период:** Все время
+✅ **Статус:** Сформирован
+📊 **Записей:** {len(apps)}
+📅 **Период:** Все время
  **Размер:** {len(csv_data)} байт
 
 LINK: **Данные:**
@@ -6318,12 +6324,12 @@ EMAIL: **Файл отправлен:**
 
             keyboard = [
                 [InlineKeyboardButton(
-                    "CHANGES: Новый экспорт", callback_data="export_applications")],
+                    "🔄 Новый экспорт", callback_data="export_applications")],
                 [InlineKeyboardButton(" Назад", callback_data="admin_export")]
             ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка экспорта CSV:** {e}"
+        text = f"❌ **Ошибка экспорта CSV:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -6352,9 +6358,9 @@ async def export_users_csv(query, context):
 
             text = f""" **CSV ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ ГОТОВ**
 
-SUCCESS: **Статус:** Сформирован
-USERS: **Пользователей:** {len(users_list)}
-GROWTH: **Рост за месяц:** +{len([u for u in users_list if (datetime.now() - u.created_at).days <= 30])}
+✅ **Статус:** Сформирован
+👥 **Пользователей:** {len(users_list)}
+📈 **Рост за месяц:** +{len([u for u in users_list if (datetime.now() - u.created_at).days <= 30])}
  **Размер файла:** {len(csv_data)} байт
 
 LINK: **Превью данных:**
@@ -6369,12 +6375,12 @@ EMAIL: **Результат:**
 
             keyboard = [
                 [InlineKeyboardButton(
-                    "CHART: Аналитика пользователей", callback_data="export_users")],
+                    "📊 Аналитика пользователей", callback_data="export_users")],
                 [InlineKeyboardButton(" Назад", callback_data="admin_export")]
             ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка экспорта пользователей:** {e}"
+        text = f"❌ **Ошибка экспорта пользователей:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -6408,11 +6414,11 @@ async def export_payments_csv(query, context):
 
             text = f""" **CSV ЭКСПОРТ ПЛАТЕЖЕЙ ГОТОВ**
 
-SUCCESS: **Статус:** Сформирован
-CARD: **Транзакций:** {len(payments_list)}
-DOLLAR: **Общая сумма:** {total_amount:,.0f} rubles
-GROWTH: **Успешность:** {success_rate:.1f}%
-CHART: **Конверсия:** 87.3%
+✅ **Статус:** Сформирован
+💳 **Транзакций:** {len(payments_list)}
+💵 **Общая сумма:** {total_amount:,.0f} rubles
+📈 **Успешность:** {success_rate:.1f}%
+📊 **Конверсия:** 87.3%
 
 LINK: **Данные платежей:**
 ```
@@ -6426,12 +6432,12 @@ LINK: **Данные платежей:**
 
             keyboard = [
                 [InlineKeyboardButton(
-                    "DOLLAR: Финансовый отчет", callback_data="export_payments")],
+                    "💵 Финансовый отчет", callback_data="export_payments")],
                 [InlineKeyboardButton(" Назад", callback_data="admin_export")]
             ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка экспорта платежей:** {e}"
+        text = f"❌ **Ошибка экспорта платежей:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -6481,10 +6487,10 @@ async def export_analytics_csv(query, context):
 
             text = f""" **ДЕТАЛЬНАЯ АНАЛИТИКА CSV**
 
-SUCCESS: **Экспорт завершен**
-CHART: **Период:** 30 дней
-GROWTH: **Метрик:** 5+ показателей
-CLIPBOARD: **Записей:** 30 (по дням)
+✅ **Экспорт завершен**
+📊 **Период:** 30 дней
+📈 **Метрик:** 5+ показателей
+📋 **Записей:** 30 (по дням)
 
  **Ключевые показатели:**
 - Заявок всего: {total_apps}
@@ -6492,7 +6498,7 @@ CLIPBOARD: **Записей:** 30 (по дням)
 - Среднее в день: {avg_daily_apps:.1f} заявок
 - Рост пользователей: {avg_daily_users:.1f}/день
 
-CHART: **CSV структура:**
+📊 **CSV структура:**
 ```
 {csv_data[:300]}...
 ```
@@ -6505,12 +6511,12 @@ EMAIL: **Файл включает:**
 
             keyboard = [
                 [InlineKeyboardButton(
-                    "GROWTH: Просмотреть графики", callback_data="analytics_charts")],
+                    "📈 Просмотреть графики", callback_data="analytics_charts")],
                 [InlineKeyboardButton(" Назад", callback_data="admin_export")]
             ]
 
     except Exception as e:
-        text = f"ERROR: **Ошибка экспорта аналитики:** {e}"
+        text = f"❌ **Ошибка экспорта аналитики:** {e}"
         keyboard = [[InlineKeyboardButton(
             " Назад", callback_data="admin_export")]]
 
@@ -6522,33 +6528,33 @@ EMAIL: **Файл включает:**
 
 
 async def export_period_selection(query, context):
-    """CALENDAR: Выбор периода для экспорта"""
-    text = """CALENDAR: **ВЫБОР ПЕРИОДА ЭКСПОРТА**
+    """📅 Выбор периода для экспорта"""
+    text = """📅 **ВЫБОР ПЕРИОДА ЭКСПОРТА**
 
  **Быстрые периоды:**
 
-CHART: Выберите нужный период для детального экспорта данных.
+📊 Выберите нужный период для детального экспорта данных.
 Все форматы: CSV, JSON, Excel готовы.
 
  **Рекомендация:** Для больших объемов данных используйте месячные периоды."""
 
     keyboard = [
         [
-            InlineKeyboardButton("CALENDAR: Последние 7 дней",
+            InlineKeyboardButton("📅 Последние 7 дней",
                                  callback_data="export_period_7d"),
             InlineKeyboardButton(" Последний месяц",
                                  callback_data="export_period_30d")
         ],
         [
-            InlineKeyboardButton("CHART: Последние 3 месяца",
+            InlineKeyboardButton("📊 Последние 3 месяца",
                                  callback_data="export_period_90d"),
             InlineKeyboardButton(
-                "GROWTH: Весь год", callback_data="export_period_365d")
+                "📈 Весь год", callback_data="export_period_365d")
         ],
         [
-            InlineKeyboardButton("TARGET: Произвольный период",
+            InlineKeyboardButton("🎯 Произвольный период",
                                  callback_data="export_custom_period"),
-            InlineKeyboardButton("CLIPBOARD: Все данные", callback_data="export_full")
+            InlineKeyboardButton("📋 Все данные", callback_data="export_full")
         ],
         [InlineKeyboardButton(" Назад", callback_data="admin_export")]
     ]
@@ -6569,13 +6575,13 @@ async def handle_smm_interval_change(query, context):
         "smm_interval_30m": (0.5, "30 минут", " Очень активно - для специальных акций"),
         "smm_interval_1h": (1, "1 час", "FIRE: Активно - для горячих периодов"),
         "smm_interval_2h": (2, "2 часа", "SCALES: Сбалансированно - оптимально"),
-        "smm_interval_4h": (4, "4 часа", "CHART: Умеренно - для стабильного роста"),
-        "smm_interval_6h": (6, "6 часов", "TARGET: Спокойно - для качественного контента"),
+        "smm_interval_4h": (4, "4 часа", "📊 Умеренно - для стабильного роста"),
+        "smm_interval_6h": (6, "6 часов", "🎯 Спокойно - для качественного контента"),
         "smm_interval_12h": (12, "12 часов", " Редко - для премиум контента")
     }
 
     if data not in interval_map:
-        await query.answer("ERROR: Неизвестный интервал", show_alert=True)
+        await query.answer("❌ Неизвестный интервал", show_alert=True)
         return
 
     hours, name, description = interval_map[data]
@@ -6583,24 +6589,24 @@ async def handle_smm_interval_change(query, context):
     # В реальной системе здесь было бы изменение переменной окружения
     context.user_data['autopost_interval'] = hours
 
-    await query.answer(f"SUCCESS: Интервал изменен на {name}", show_alert=True)
+    await query.answer(f"✅ Интервал изменен на {name}", show_alert=True)
 
     text = f"""CLOCK: **ИНТЕРВАЛ АВТОПОСТИНГА ИЗМЕНЕН**
 
-SUCCESS: **Новые настройки:**
+✅ **Новые настройки:**
 - Интервал: {name}
 - Описание: {description}
 - Следующий пост: через ~{int(hours * 60)} минут
 - Постов в день: ~{24 / hours:.1f}
 
-CHART: **Прогноз эффективности:**"""
+📊 **Прогноз эффективности:**"""
 
     if hours <= 1:
-        text += "\n- GROWTH: Высокий охват, риск переспама"
+        text += "\n- 📈 Высокий охват, риск переспама"
     elif hours <= 4:
         text += "\n- SCALES: Оптимальная вовлеченность"
     else:
-        text += "\n- TARGET: Высокое качество, меньше охват"
+        text += "\n- 🎯 Высокое качество, меньше охват"
 
     text += f"""
 
@@ -6613,16 +6619,16 @@ IDEA: **Рекомендация:** {description}"""
 
     keyboard = [
         [
-            InlineKeyboardButton("CHANGES: Другой интервал",
+            InlineKeyboardButton("🔄 Другой интервал",
                                  callback_data="smm_interval_settings"),
             InlineKeyboardButton("⏸ Приостановить",
                                  callback_data="smm_pause_autopost")
         ],
         [
-            InlineKeyboardButton("CHART: Статистика эффективности",
+            InlineKeyboardButton("📊 Статистика эффективности",
                                  callback_data="smm_interval_analytics"),
             InlineKeyboardButton(
-                "TARGET: Умный режим", callback_data="smm_smart_interval")
+                "🎯 Умный режим", callback_data="smm_smart_interval")
         ],
         [InlineKeyboardButton(" Назад в SMM", callback_data="smm_main_panel")]
     ]
@@ -6637,12 +6643,12 @@ IDEA: **Рекомендация:** {description}"""
 # ============ SMM ОЧЕРЕДЬ УПРАВЛЕНИЕ ============
 
 async def handle_smm_add_to_queue(query, context):
-    """MEMO: Добавить пост в очередь"""
-    await query.answer("MEMO: Добавляю в очередь...", show_alert=False)
+    """📝 Добавить пост в очередь"""
+    await query.answer("📝 Добавляю в очередь...", show_alert=False)
 
-    text = """MEMO: **ДОБАВЛЕНИЕ ПОСТА В ОЧЕРЕДЬ**
+    text = """📝 **ДОБАВЛЕНИЕ ПОСТА В ОЧЕРЕДЬ**
 
-SUCCESS: **Пост добавлен в очередь**
+✅ **Пост добавлен в очередь**
 
  **Детали поста:**
 - Тип: Юридический кейс
@@ -6650,13 +6656,13 @@ SUCCESS: **Пост добавлен в очередь**
 - Хештеги: #семейноеправо #развод #алименты
 - Планируемое время: через 2 часа
 
-CHART: **Статус очереди:**
+📊 **Статус очереди:**
 - Позиция в очереди: #3
 - Постов впереди: 2
 - Ожидаемое время публикации: 4 часа
-- Автопубликация: SUCCESS: Включена
+- Автопубликация: ✅ Включена
 
-TARGET: **Прогноз эффективности:**
+🎯 **Прогноз эффективности:**
 - Ожидаемый охват: 2,500+ просмотров
 - Вовлеченность: ~8.5%
 - Конверсия в заявки: ~2.1%"""
@@ -6664,14 +6670,14 @@ TARGET: **Прогноз эффективности:**
     keyboard = [
         [
             InlineKeyboardButton(
-                "MEMO: Добавить еще", callback_data="smm_add_to_queue"),
+                "📝 Добавить еще", callback_data="smm_add_to_queue"),
             InlineKeyboardButton(" Редактировать",
                                  callback_data="smm_edit_queue")
         ],
         [
-            InlineKeyboardButton("CLIPBOARD: Просмотреть очередь",
+            InlineKeyboardButton("📋 Просмотреть очередь",
                                  callback_data="smm_post_queue"),
-            InlineKeyboardButton("ROCKET: Опубликовать сейчас",
+            InlineKeyboardButton("🚀 Опубликовать сейчас",
                                  callback_data="smm_publish_from_queue")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_post_queue")]
@@ -6690,19 +6696,19 @@ async def handle_smm_edit_queue(query, context):
 
     text = """ **РЕДАКТОР ОЧЕРЕДИ ПОСТОВ**
 
-CLIPBOARD: **Текущая очередь (3 поста):**
+📋 **Текущая очередь (3 поста):**
 
 1⃣ **[Активен]** Кейс о разводе
    CLOCK: Публикация: через 45 мин
-   CHART: Прогноз: 2,100 просмотров
+   📊 Прогноз: 2,100 просмотров
 
 2⃣ **[В очереди]** Новости законодательства
    CLOCK: Публикация: через 2ч 45мин
-   CHART: Прогноз: 1,800 просмотров
+   📊 Прогноз: 1,800 просмотров
 
 3⃣ **[В очереди]** Судебный прецедент
    CLOCK: Публикация: через 4ч 45мин
-   CHART: Прогноз: 2,400 просмотров
+   📊 Прогноз: 2,400 просмотров
 
  **Доступные действия:**"""
 
@@ -6716,7 +6722,7 @@ CLIPBOARD: **Текущая очередь (3 поста):**
         [
             InlineKeyboardButton("3⃣ Редактировать пост #3",
                                  callback_data="smm_edit_post_3"),
-            InlineKeyboardButton("CHANGES: Изменить порядок",
+            InlineKeyboardButton("🔄 Изменить порядок",
                                  callback_data="smm_reorder_queue")
         ],
         [
@@ -6743,7 +6749,7 @@ async def handle_smm_clear_queue(query, context):
 
 WARNING: **ВНИМАНИЕ!** Вы собираетесь удалить все запланированные посты.
 
-CHART: **Будет удалено:**
+📊 **Будет удалено:**
 - 3 запланированных поста
 - 2 поста в процессе создания
 - 1 пост на модерации
@@ -6753,7 +6759,7 @@ IDEA: **Последствия:**
 - Контент-план сбросится
 - Потребуется создать новые посты
 
-CHANGES: **Альтернативы:**
+🔄 **Альтернативы:**
 - Приостановить очередь вместо удаления
 - Отредактировать отдельные посты
 - Изменить расписание публикации
@@ -6764,7 +6770,7 @@ CHANGES: **Альтернативы:**
         [
             InlineKeyboardButton("WARNING: ДА, ОЧИСТИТЬ ОЧЕРЕДЬ",
                                  callback_data="smm_confirm_clear_queue"),
-            InlineKeyboardButton("ERROR: Отмена", callback_data="smm_post_queue")
+            InlineKeyboardButton("❌ Отмена", callback_data="smm_post_queue")
         ],
         [
             InlineKeyboardButton(
@@ -6789,13 +6795,13 @@ async def handle_smm_pause_queue(query, context):
 
     text = """⏸ **ОЧЕРЕДЬ ПОСТОВ ПРИОСТАНОВЛЕНА**
 
-SUCCESS: **Статус изменен:**
-- Автопубликация: ERROR: Остановлена
+✅ **Статус изменен:**
+- Автопубликация: ❌ Остановлена
 - Запланированные посты: LOCK: Заморожены
-- Ручная публикация: SUCCESS: Доступна
-- Создание контента: SUCCESS: Работает
+- Ручная публикация: ✅ Доступна
+- Создание контента: ✅ Работает
 
-CLIPBOARD: **Сохранено в очереди:**
+📋 **Сохранено в очереди:**
 - 3 готовых поста
 - Все настройки времени
 - Порядок публикации
@@ -6814,13 +6820,13 @@ IDEA: **Совет:** Пауза полезна для:
             InlineKeyboardButton("▶ Возобновить очередь",
                                  callback_data="smm_resume_queue"),
             InlineKeyboardButton(
-                "MEMO: Добавить пост", callback_data="smm_add_to_queue")
+                "📝 Добавить пост", callback_data="smm_add_to_queue")
         ],
         [
             InlineKeyboardButton(" Редактировать очередь",
                                  callback_data="smm_edit_queue"),
             InlineKeyboardButton(
-                "CHART: Статистика", callback_data="smm_queue_stats")
+                "📊 Статистика", callback_data="smm_queue_stats")
         ],
         [InlineKeyboardButton(" Назад в SMM", callback_data="smm_main_panel")]
     ]
@@ -6833,47 +6839,47 @@ IDEA: **Совет:** Пауза полезна для:
 
 
 async def handle_smm_force_next_post(query, context):
-    """ROCKET: Форсировать следующий пост"""
-    await query.answer("ROCKET: Публикую следующий пост...", show_alert=True)
+    """🚀 Форсировать следующий пост"""
+    await query.answer("🚀 Публикую следующий пост...", show_alert=True)
 
     # Имитация публикации
     await asyncio.sleep(1)
 
-    text = """ROCKET: **ПОСТ ОПУБЛИКОВАН ДОСРОЧНО**
+    text = """🚀 **ПОСТ ОПУБЛИКОВАН ДОСРОЧНО**
 
-SUCCESS: **Успешно опубликован:**
+✅ **Успешно опубликован:**
 - Пост: "Развод через суд: 5 важных шагов"
 - Время: сейчас (вместо +45 мин)
 - Канал: Основной юридический канал
 - ID поста: #12847
 
-CHART: **Первые результаты (60 сек):**
+📊 **Первые результаты (60 сек):**
 - Просмотры: 47 (+12 в минуту)
 - Реакции: 3  1 
 - Комментарии: 1 вопрос
 - Переходы: 2 в бот
 
-CALENDAR: **Обновленная очередь:**
+📅 **Обновленная очередь:**
 - Следующий пост: через 2 часа
 - В очереди: 2 поста
-- Автопостинг: SUCCESS: Работает нормально
+- Автопостинг: ✅ Работает нормально
 
-TARGET: **Ожидаемая статистика (24ч):**
+🎯 **Ожидаемая статистика (24ч):**
 - Охват: 2,500+ просмотров
 - Конверсия: ~2.1% в заявки"""
 
     keyboard = [
         [
-            InlineKeyboardButton("CHART: Подробная статистика",
+            InlineKeyboardButton("📊 Подробная статистика",
                                  callback_data="smm_post_analytics"),
-            InlineKeyboardButton("ROCKET: Опубликовать еще",
+            InlineKeyboardButton("🚀 Опубликовать еще",
                                  callback_data="smm_force_next_post")
         ],
         [
-            InlineKeyboardButton("CLIPBOARD: Очередь постов",
+            InlineKeyboardButton("📋 Очередь постов",
                                  callback_data="smm_post_queue"),
             InlineKeyboardButton(
-                "MEMO: Создать новый", callback_data="smm_create_post")
+                "📝 Создать новый", callback_data="smm_create_post")
         ],
         [InlineKeyboardButton(" Назад в SMM", callback_data="smm_main_panel")]
     ]
@@ -6886,12 +6892,12 @@ TARGET: **Ожидаемая статистика (24ч):**
 
 
 async def handle_smm_queue_stats(query, context):
-    """CHART: Статистика очереди постов"""
-    await query.answer("CHART: Загрузка статистики...", show_alert=False)
+    """📊 Статистика очереди постов"""
+    await query.answer("📊 Загрузка статистики...", show_alert=False)
 
-    text = """CHART: **СТАТИСТИКА ОЧЕРЕДИ ПОСТОВ**
+    text = """📊 **СТАТИСТИКА ОЧЕРЕДИ ПОСТОВ**
 
-GROWTH: **Производительность очереди:**
+📈 **Производительность очереди:**
 - Всего постов в очереди: 3
 - Среднее время в очереди: 3.2 часа
 - Успешных публикаций: 98.7%
@@ -6903,13 +6909,13 @@ CLOCK: **Временное распределение:**
 - Следующие 24 часа: 3 поста
 - На неделю: 21 пост запланирован
 
-TARGET: **Эффективность контента:**
+🎯 **Эффективность контента:**
 - Кейсы из практики: 87% успешность
 - Новости права: 73% успешность
 - Образовательные: 81% успешность
 - Прецеденты: 92% успешность
 
-CHART: **Прогноз на неделю:**
+📊 **Прогноз на неделю:**
 - Ожидаемый охват: 49,000+ просмотров
 - Конверсия в заявки: ~35-40 заявок
 - Рост подписчиков: +120-150
@@ -6917,14 +6923,14 @@ CHART: **Прогноз на неделю:**
 
     keyboard = [
         [
-            InlineKeyboardButton("GROWTH: Детальная аналитика",
+            InlineKeyboardButton("📈 Детальная аналитика",
                                  callback_data="smm_detailed_queue_analytics"),
-            InlineKeyboardButton("CHANGES: Оптимизировать",
+            InlineKeyboardButton("🔄 Оптимизировать",
                                  callback_data="smm_optimize_queue")
         ],
         [
             InlineKeyboardButton(
-                "CALENDAR: Планировщик", callback_data="smm_queue_scheduler"),
+                "📅 Планировщик", callback_data="smm_queue_scheduler"),
             InlineKeyboardButton(" A/B тестирование",
                                  callback_data="smm_queue_ab_test")
         ],
@@ -6939,13 +6945,13 @@ CHART: **Прогноз на неделю:**
 
 
 async def handle_smm_publish_now(query, context):
-    """SUCCESS: Публикация поста сейчас"""
+    """✅ Публикация поста сейчас"""
     if 'generated_post' not in context.user_data:
-        await query.answer("ERROR: Нет сгенерированного поста", show_alert=True)
+        await query.answer("❌ Нет сгенерированного поста", show_alert=True)
         await show_smm_main_panel(query, context)
         return
 
-    await query.answer("ROCKET: Публикация поста...", show_alert=False)
+    await query.answer("🚀 Публикация поста...", show_alert=False)
 
     try:
         post_text = context.user_data['generated_post']
@@ -6967,7 +6973,7 @@ async def handle_smm_publish_now(query, context):
             # Очищаем сохраненный пост
             context.user_data.pop('generated_post', None)
 
-            text = f"""SUCCESS: **ПОСТ УСПЕШНО ОПУБЛИКОВАН!**
+            text = f"""✅ **ПОСТ УСПЕШНО ОПУБЛИКОВАН!**
 
 LOCATION: **Детали публикации:**
 - Канал: Основной Telegram
@@ -6975,13 +6981,13 @@ LOCATION: **Детали публикации:**
 - Время: {datetime.now().strftime('%H:%M')}
 - Длина: {len(post_text)} символов
 
-CHART: **Ожидаемая статистика:**
+📊 **Ожидаемая статистика:**
 - Охват: 800-1,500 просмотров
 - Вовлеченность: 6-12%
 - Переходы в бот: 20-40
 - Потенциальные заявки: 1-4
 
-TARGET: **Следующие действия:**
+🎯 **Следующие действия:**
 - Мониторинг статистики
 - Ответы на комментарии
 - Анализ эффективности"""
@@ -6989,24 +6995,24 @@ TARGET: **Следующие действия:**
             keyboard = [
                 [
                     InlineKeyboardButton(
-                        "CHART: Статистика поста", callback_data="smm_post_stats"),
+                        "📊 Статистика поста", callback_data="smm_post_stats"),
                     InlineKeyboardButton(
-                        "MEMO: Создать еще", callback_data="smm_create_post")
+                        "📝 Создать еще", callback_data="smm_create_post")
                 ],
                 [
                     InlineKeyboardButton(
-                        "GROWTH: Аналитика", callback_data="smm_analytics"),
+                        "📈 Аналитика", callback_data="smm_analytics"),
                     InlineKeyboardButton(
                         " Назад в SMM", callback_data="smm_main_panel")
                 ]
             ]
 
         else:
-            text = """ERROR: **ОШИБКА ПУБЛИКАЦИИ**
+            text = """❌ **ОШИБКА ПУБЛИКАЦИИ**
 
 Канал не настроен для публикации.
 
-FIX: **Что нужно сделать:**
+🔧 **Что нужно сделать:**
 1. Настроить CHANNEL_ID в переменных окружения
 2. Добавить бота в канал как администратора
 3. Дать права на публикацию сообщений
@@ -7018,18 +7024,18 @@ IDEA: **Пост сохранен и будет опубликован посл�
                     InlineKeyboardButton(
                         " Настроить канал", callback_data="smm_channels"),
                     InlineKeyboardButton(
-                        "CLIPBOARD: Сохранить в очередь", callback_data="smm_queue_post")
+                        "📋 Сохранить в очередь", callback_data="smm_queue_post")
                 ],
                 [InlineKeyboardButton(
                     " Назад", callback_data="smm_create_post")]
             ]
 
     except Exception as e:
-        text = f"""ERROR: **ОШИБКА ПУБЛИКАЦИИ**
+        text = f"""❌ **ОШИБКА ПУБЛИКАЦИИ**
 
 Не удалось опубликовать пост: {e}
 
-FIX: **Возможные причины:**
+🔧 **Возможные причины:**
 - Нет прав на публикацию в канале
 - Канал заблокирован или удален
 - Превышен лимит сообщений
@@ -7042,9 +7048,9 @@ IDEA: **Рекомендации:**
 
         keyboard = [
             [
-                InlineKeyboardButton("FIX: Настройки канала",
+                InlineKeyboardButton("🔧 Настройки канала",
                                      callback_data="smm_channels"),
-                InlineKeyboardButton("CHANGES: Попробовать снова",
+                InlineKeyboardButton("🔄 Попробовать снова",
                                      callback_data="smm_publish_now")
             ],
             [InlineKeyboardButton(" Назад", callback_data="smm_create_post")]
@@ -7058,20 +7064,20 @@ IDEA: **Рекомендации:**
 
 
 async def handle_smm_edit_post(query, context):
-    """MEMO: Редактирование поста"""
+    """📝 Редактирование поста"""
     if 'generated_post' not in context.user_data:
-        await query.answer("ERROR: Нет поста для редактирования", show_alert=True)
+        await query.answer("❌ Нет поста для редактирования", show_alert=True)
         await show_smm_main_panel(query, context)
         return
 
     post_text = context.user_data['generated_post']
 
-    text = f"""MEMO: **РЕДАКТИРОВАНИЕ ПОСТА**
+    text = f"""📝 **РЕДАКТИРОВАНИЕ ПОСТА**
 
-CLIPBOARD: **Текущий пост:**
+📋 **Текущий пост:**
 {post_text[:1000]}{'...' if len(post_text) > 1000 else ''}
 
-CHART: **Статистика:**
+📊 **Статистика:**
 - Длина: {len(post_text)} символов
 - Слов: {len(post_text.split())}
 - Абзацев: {post_text.count(chr(10)+chr(10)) + 1}
@@ -7081,14 +7087,14 @@ CHART: **Статистика:**
 
     keyboard = [
         [
-            InlineKeyboardButton("SUCCESS: Оставить как есть",
+            InlineKeyboardButton("✅ Оставить как есть",
                                  callback_data="smm_publish_now"),
-            InlineKeyboardButton("CHANGES: Сгенерировать новый",
+            InlineKeyboardButton("🔄 Сгенерировать новый",
                                  callback_data="smm_ai_generate")
         ],
         [
             InlineKeyboardButton(
-                "CLIPBOARD: В очередь", callback_data="smm_queue_post"),
+                "📋 В очередь", callback_data="smm_queue_post"),
             InlineKeyboardButton(" Назад", callback_data="smm_create_post")
         ]
     ]
@@ -7104,7 +7110,7 @@ CHART: **Статистика:**
 
 
 async def handle_manual_post_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """MEMO: Обработка ручного ввода поста"""
+    """📝 Обработка ручного ввода поста"""
     user_text = update.message.text
     user_id = update.effective_user.id
 
@@ -7113,7 +7119,7 @@ async def handle_manual_post_input(update: Update, context: ContextTypes.DEFAULT
 
     if len(user_text) > 4096:
         await update.message.reply_text(
-            f"ERROR: **Пост слишком длинный!**\n\n"
+            f"❌ **Пост слишком длинный!**\n\n"
             f"Максимум: 4096 символов\n"
             f"У вас: {len(user_text)} символов\n\n"
             f"Сократите текст и попробуйте еще раз.",
@@ -7127,32 +7133,32 @@ async def handle_manual_post_input(update: Update, context: ContextTypes.DEFAULT
     # Сохраняем пост
     context.user_data['generated_post'] = user_text
 
-    text = f"""SUCCESS: **ПОСТ СОЗДАН ВРУЧНУЮ**
+    text = f"""✅ **ПОСТ СОЗДАН ВРУЧНУЮ**
 
 {user_text[:500]}{'...' if len(user_text) > 500 else ''}
 
-CHART: **Статистика:**
+📊 **Статистика:**
 - Длина: {len(user_text)} символов
 - Слов: {len(user_text.split())}
 - Абзацев: {user_text.count(chr(10)) + 1}
 
-TARGET: **Что делать с постом?**"""
+🎯 **Что делать с постом?**"""
 
     keyboard = [
         [
-            InlineKeyboardButton("SUCCESS: Опубликовать сейчас",
+            InlineKeyboardButton("✅ Опубликовать сейчас",
                                  callback_data="smm_publish_now"),
             InlineKeyboardButton(
-                "MEMO: Редактировать", callback_data="smm_edit_post")
+                "📝 Редактировать", callback_data="smm_edit_post")
         ],
         [
             InlineKeyboardButton(
-                "CLIPBOARD: В очередь", callback_data="smm_queue_post"),
+                "📋 В очередь", callback_data="smm_queue_post"),
             InlineKeyboardButton(
                 "PHONE: Предпросмотр", callback_data="smm_preview_post")
         ],
         [
-            InlineKeyboardButton("ERROR: Отменить", callback_data="smm_create_post")
+            InlineKeyboardButton("❌ Отменить", callback_data="smm_create_post")
         ]
     ]
 
@@ -7164,7 +7170,7 @@ TARGET: **Что делать с постом?**"""
 
 
 async def handle_edit_post_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """MEMO: Обработка редактирования поста"""
+    """📝 Обработка редактирования поста"""
     user_text = update.message.text
     user_id = update.effective_user.id
 
@@ -7173,7 +7179,7 @@ async def handle_edit_post_input(update: Update, context: ContextTypes.DEFAULT_T
 
     if len(user_text) > 4096:
         await update.message.reply_text(
-            f"ERROR: **Отредактированный пост слишком длинный!**\n\n"
+            f"❌ **Отредактированный пост слишком длинный!**\n\n"
             f"Максимум: 4096 символов\n"
             f"У вас: {len(user_text)} символов\n\n"
             f"Сократите текст и попробуйте еще раз.",
@@ -7188,33 +7194,33 @@ async def handle_edit_post_input(update: Update, context: ContextTypes.DEFAULT_T
     old_post = context.user_data.get('generated_post', '')
     context.user_data['generated_post'] = user_text
 
-    text = f"""SUCCESS: **ПОСТ ОТРЕДАКТИРОВАН**
+    text = f"""✅ **ПОСТ ОТРЕДАКТИРОВАН**
 
-MEMO: **Новая версия:**
+📝 **Новая версия:**
 {user_text[:500]}{'...' if len(user_text) > 500 else ''}
 
-CHART: **Изменения:**
+📊 **Изменения:**
 - Было символов: {len(old_post)}
 - Стало символов: {len(user_text)}
 - Изменение: {len(user_text) - len(old_post):+d}
 
-TARGET: **Действия:**"""
+🎯 **Действия:**"""
 
     keyboard = [
         [
             InlineKeyboardButton(
-                "SUCCESS: Опубликовать", callback_data="smm_publish_now"),
+                "✅ Опубликовать", callback_data="smm_publish_now"),
             InlineKeyboardButton(
-                "MEMO: Ещё править", callback_data="smm_edit_post")
+                "📝 Ещё править", callback_data="smm_edit_post")
         ],
         [
             InlineKeyboardButton(
-                "CLIPBOARD: В очередь", callback_data="smm_queue_post"),
-            InlineKeyboardButton("CHANGES: Вернуть старый",
+                "📋 В очередь", callback_data="smm_queue_post"),
+            InlineKeyboardButton("🔄 Вернуть старый",
                                  callback_data="smm_restore_post")
         ],
         [
-            InlineKeyboardButton("ERROR: Отменить", callback_data="smm_create_post")
+            InlineKeyboardButton("❌ Отменить", callback_data="smm_create_post")
         ]
     ]
 
@@ -7231,18 +7237,18 @@ TARGET: **Действия:**"""
 # ============ ДОПОЛНИТЕЛЬНЫЕ ОБРАБОТЧИКИ ============
 
 async def handle_analytics_reports(query, context):
-    """CHART: Обработчик аналитических отчетов"""
+    """📊 Обработчик аналитических отчетов"""
     data = query.data
 
     if data == "analytics_charts":
-        text = """GROWTH: **ГРАФИКИ И ДИАГРАММЫ**
+        text = """📈 **ГРАФИКИ И ДИАГРАММЫ**
 
-CHART: **Доступные визуализации:**
+📊 **Доступные визуализации:**
 
-- GROWTH: График роста пользователей (30 дней)
-- CLIPBOARD: Динамика заявок по дням
-- DOLLAR: Финансовые показатели
-- TARGET: Конверсионная воронка
+- 📈 График роста пользователей (30 дней)
+- 📋 Динамика заявок по дням
+- 💵 Финансовые показатели
+- 🎯 Конверсионная воронка
 - PHONE: Источники трафика
 
 LINK: **Интерактивные дашборды:**
@@ -7257,22 +7263,22 @@ EMAIL: **Автоматическая отправка:**
 - Критические уведомления"""
 
         keyboard = [
-            [InlineKeyboardButton("GROWTH: Открыть дашборд",
+            [InlineKeyboardButton("📈 Открыть дашборд",
                                   callback_data="open_dashboard")],
             [InlineKeyboardButton(" Назад", callback_data="export_analytics")]
         ]
 
     elif data == "analytics_reports":
-        text = """CLIPBOARD: **АНАЛИТИЧЕСКИЕ ОТЧЕТЫ**
+        text = """📋 **АНАЛИТИЧЕСКИЕ ОТЧЕТЫ**
 
-CHART: **Типы отчетов:**
+📊 **Типы отчетов:**
 
-- CALENDAR: Ежедневные сводки
-- GROWTH: Недельная аналитика
-- CHART: Месячные отчеты
-- TARGET: Квартальные результаты
+- 📅 Ежедневные сводки
+- 📈 Недельная аналитика
+- 📊 Месячные отчеты
+- 🎯 Квартальные результаты
 
-SUCCESS: **Автоматические отчеты:**
+✅ **Автоматические отчеты:**
 - Отправка в админ чат
 - Email уведомления
 - PDF файлы для печати
@@ -7300,19 +7306,19 @@ SUCCESS: **Автоматические отчеты:**
 # ============ SMM ТАРГЕТИНГ ФУНКЦИИ ============
 
 async def handle_smm_change_audience(query, context):
-    """USERS: Изменение целевой аудитории"""
-    await query.answer("USERS: Настройка аудитории...", show_alert=False)
+    """👥 Изменение целевой аудитории"""
+    await query.answer("👥 Настройка аудитории...", show_alert=False)
 
-    text = """USERS: **НАСТРОЙКА ЦЕЛЕВОЙ АУДИТОРИИ**
+    text = """👥 **НАСТРОЙКА ЦЕЛЕВОЙ АУДИТОРИИ**
 
-CHART: **Текущее распределение:**
+📊 **Текущее распределение:**
 - Физические лица с правовыми проблемами: 60%
 - Малый и средний бизнес: 30%
 - Коллеги-юристы: 10%
 
-TARGET: **Выберите основную аудиторию:**
+🎯 **Выберите основную аудиторию:**
 
-CLIPBOARD: **Детальная настройка доступна для каждого сегмента:**
+📋 **Детальная настройка доступна для каждого сегмента:**
 - Возраст, пол, интересы
 - География и время активности
 - Платформы и поведенческие факторы"""
@@ -7328,10 +7334,10 @@ CLIPBOARD: **Детальная настройка доступна для ка�
             InlineKeyboardButton(
                 "SCALES: Юристы", callback_data="smm_audience_lawyers"),
             InlineKeyboardButton(
-                "TARGET: Смешанная", callback_data="smm_audience_mixed")
+                "🎯 Смешанная", callback_data="smm_audience_mixed")
         ],
         [
-            InlineKeyboardButton("CHART: Аналитика аудитории",
+            InlineKeyboardButton("📊 Аналитика аудитории",
                                  callback_data="smm_audience_analytics"),
             InlineKeyboardButton(
                 "IDEA: Автоподбор", callback_data="smm_auto_audience")
@@ -7363,17 +7369,17 @@ LOCATION: **Текущее покрытие:**
 - Исключения: отсутствуют
 - Временные зоны: учитываются
 
-CHART: **Эффективность по регионам:**
+📊 **Эффективность по регионам:**
 - Москва: 8.5% engagement
 - СПб: 7.2% engagement
 - Регионы: 6.8% engagement
 
-TARGET: **Оптимизация:** система автоматически увеличивает показы в более отзывчивых регионах."""
+🎯 **Оптимизация:** система автоматически увеличивает показы в более отзывчивых регионах."""
 
     keyboard = [
         [
             InlineKeyboardButton(
-                "BUILDING: Москва и МО", callback_data="smm_geo_moscow"),
+                "🏛️ Москва и МО", callback_data="smm_geo_moscow"),
             InlineKeyboardButton(" Санкт-Петербург",
                                  callback_data="smm_geo_spb")
         ],
@@ -7383,7 +7389,7 @@ TARGET: **Оптимизация:** система автоматически у
             InlineKeyboardButton(" Все регионы", callback_data="smm_geo_all")
         ],
         [
-            InlineKeyboardButton("CHART: Статистика по регионам",
+            InlineKeyboardButton("📊 Статистика по регионам",
                                  callback_data="smm_geo_stats"),
             InlineKeyboardButton(" Настроить зоны",
                                  callback_data="smm_geo_zones")
@@ -7404,21 +7410,21 @@ async def handle_smm_interests_settings(query, context):
 
     text = """MASKS: **ИНТЕРЕСЫ ЦЕЛЕВОЙ АУДИТОРИИ**
 
-TARGET: **Основные интересы (активные):**
-SUCCESS: Правовая грамотность (85% аудитории)
-SUCCESS: Защита прав потребителей (72% аудитории)
-SUCCESS: Семейное право (68% аудитории)
-SUCCESS: Трудовые отношения (61% аудитории)
-SUCCESS: Налоги и бизнес (45% аудитории)
+🎯 **Основные интересы (активные):**
+✅ Правовая грамотность (85% аудитории)
+✅ Защита прав потребителей (72% аудитории)
+✅ Семейное право (68% аудитории)
+✅ Трудовые отношения (61% аудитории)
+✅ Налоги и бизнес (45% аудитории)
 
 IDEA: **Дополнительные интересы:**
-ERROR: Недвижимость и ипотека
-ERROR: Автомобильное право
-ERROR: Интеллектуальная собственность
-ERROR: Банкротство и долги
-ERROR: Миграционное право
+❌ Недвижимость и ипотека
+❌ Автомобильное право
+❌ Интеллектуальная собственность
+❌ Банкротство и долги
+❌ Миграционное право
 
-CHART: **Эффективность таргетинга:** 87.3%
+📊 **Эффективность таргетинга:** 87.3%
 TENT: **Пересечения интересов:** оптимизированы"""
 
     keyboard = [
@@ -7435,15 +7441,15 @@ TENT: **Пересечения интересов:** оптимизирован�
                 " Недвижимость", callback_data="smm_interests_property")
         ],
         [
-            InlineKeyboardButton("DOLLAR: Финансы и долги",
+            InlineKeyboardButton("💵 Финансы и долги",
                                  callback_data="smm_interests_finance"),
             InlineKeyboardButton(
                 " Автомобильное", callback_data="smm_interests_auto")
         ],
         [
-            InlineKeyboardButton("CHANGES: Автооптимизация",
+            InlineKeyboardButton("🔄 Автооптимизация",
                                  callback_data="smm_interests_auto_optimize"),
-            InlineKeyboardButton("CHART: Аналитика интересов",
+            InlineKeyboardButton("📊 Аналитика интересов",
                                  callback_data="smm_interests_analytics")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
@@ -7462,13 +7468,13 @@ async def handle_smm_activity_time(query, context):
 
     text = """CLOCK: **ВРЕМЯ АКТИВНОСТИ АУДИТОРИИ**
 
-CHART: **Пиковые часы активности:**
+📊 **Пиковые часы активности:**
 FIRE: **18:00-21:00** - Максимальная активность (100%)
-GROWTH: **12:00-14:00** - Обеденный пик (85%)
+📈 **12:00-14:00** - Обеденный пик (85%)
  **08:00-10:00** - Утренний трафик (75%)
  **21:00-23:00** - Вечернее чтение (65%)
 
-CALENDAR: **По дням недели:**
+📅 **По дням недели:**
 - Понедельник-Среда: высокая активность
 - Четверг-Пятница: пиковая активность
 - Суббота: средняя активность
@@ -7479,14 +7485,14 @@ CALENDAR: **По дням недели:**
 - Частота: каждые 2 часа
 - Пропуск: 02:00-07:00 (ночные часы)
 
-TARGET: **Эффективность:** 94.2% попаданий в активные часы"""
+🎯 **Эффективность:** 94.2% попаданий в активные часы"""
 
     keyboard = [
         [
             InlineKeyboardButton(
                 "FIRE: Пиковые часы", callback_data="smm_time_peak"),
             InlineKeyboardButton(
-                "GROWTH: Рабочее время", callback_data="smm_time_work")
+                "📈 Рабочее время", callback_data="smm_time_work")
         ],
         [
             InlineKeyboardButton(" Вечернее время",
@@ -7495,15 +7501,15 @@ TARGET: **Эффективность:** 94.2% попаданий в активн
                 " Утренние часы", callback_data="smm_time_morning")
         ],
         [
-            InlineKeyboardButton("CALENDAR: Настроить расписание",
+            InlineKeyboardButton("📅 Настроить расписание",
                                  callback_data="smm_schedule_custom"),
-            InlineKeyboardButton("BOT: Умное планирование",
+            InlineKeyboardButton("🤖 Умное планирование",
                                  callback_data="smm_smart_scheduling")
         ],
         [
-            InlineKeyboardButton("CHART: Подробная аналитика",
+            InlineKeyboardButton("📊 Подробная аналитика",
                                  callback_data="smm_time_analytics"),
-            InlineKeyboardButton("CHANGES: Оптимизировать",
+            InlineKeyboardButton("🔄 Оптимизировать",
                                  callback_data="smm_optimize_timing")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
@@ -7522,14 +7528,14 @@ async def handle_smm_platform_targeting(query, context):
 
     text = """PHONE: **ПЛАТФОРМЕННОЕ ТАРГЕТИРОВАНИЕ**
 
-TARGET: **Активные платформы:**
-PHONE: **Telegram:** SUCCESS: Основная (100% трафика)
-CAMERA: **Instagram:** ERROR: Не подключен
-GLOBE: **VK:** ERROR: Не подключен
- **LinkedIn:** ERROR: Не подключен
-TV: **YouTube:** ERROR: Не подключен
+🎯 **Активные платформы:**
+PHONE: **Telegram:** ✅ Основная (100% трафика)
+CAMERA: **Instagram:** ❌ Не подключен
+GLOBE: **VK:** ❌ Не подключен
+ **LinkedIn:** ❌ Не подключен
+TV: **YouTube:** ❌ Не подключен
 
-CHART: **Распределение аудитории по устройствам:**
+📊 **Распределение аудитории по устройствам:**
 PHONE: Мобильные: 78% (iOS: 45%, Android: 55%)
  Десктоп: 22% (в основном рабочее время)
 
@@ -7556,12 +7562,12 @@ MASKS: **Особенности по платформам:**
         ],
         [
             InlineKeyboardButton(
-                "CHART: Кросспостинг", callback_data="smm_crossposting"),
-            InlineKeyboardButton("GROWTH: Аналитика платформ",
+                "📊 Кросспостинг", callback_data="smm_crossposting"),
+            InlineKeyboardButton("📈 Аналитика платформ",
                                  callback_data="smm_platform_analytics")
         ],
         [
-            InlineKeyboardButton("TARGET: Оптимизация контента",
+            InlineKeyboardButton("🎯 Оптимизация контента",
                                  callback_data="smm_content_optimization"),
             InlineKeyboardButton(" Синхронизация",
                                  callback_data="smm_sync_platforms")
@@ -7583,20 +7589,20 @@ async def handle_smm_ab_targeting(query, context):
     text = """SEARCH: **A/B ТЕСТИРОВАНИЕ ТАРГЕТИНГА**
 
  **Активные тесты:**
-SUCCESS: **Тест No.1:** Время публикации (19:00 vs 20:00)
+✅ **Тест No.1:** Время публикации (19:00 vs 20:00)
    - Статус: в процессе (день 5/14)
    - Промежуточные результаты: 19:00 лидирует (+12% engagement)
 
-SUCCESS: **Тест No.2:** Географическое распределение
+✅ **Тест No.2:** Географическое распределение
    - Статус: завершен
    - Результат: Москва+СПб показали +23% конверсии
 
  **Запланированные тесты:**
-CHANGES: Тестирование интересов (семейное vs трудовое право)
-CHANGES: Возрастные группы (25-35 vs 35-45)
-CHANGES: Платформы (Telegram vs Instagram)
+🔄 Тестирование интересов (семейное vs трудовое право)
+🔄 Возрастные группы (25-35 vs 35-45)
+🔄 Платформы (Telegram vs Instagram)
 
-CHART: **Статистика A/B тестов:**
+📊 **Статистика A/B тестов:**
 - Проведено тестов: 8
 - Статистически значимых: 6 (75%)
 - Улучшение конверсии: в среднем +18%
@@ -7607,18 +7613,18 @@ CHART: **Статистика A/B тестов:**
             InlineKeyboardButton(" Новый A/B тест",
                                  callback_data="smm_new_ab_test"),
             InlineKeyboardButton(
-                "CHART: Текущие тесты", callback_data="smm_current_ab_tests")
+                "📊 Текущие тесты", callback_data="smm_current_ab_tests")
         ],
         [
-            InlineKeyboardButton("GROWTH: Результаты тестов",
+            InlineKeyboardButton("📈 Результаты тестов",
                                  callback_data="smm_ab_results"),
             InlineKeyboardButton(" Настройки тестов",
                                  callback_data="smm_ab_settings")
         ],
         [
-            InlineKeyboardButton("TARGET: Автотестирование",
+            InlineKeyboardButton("🎯 Автотестирование",
                                  callback_data="smm_auto_ab_testing"),
-            InlineKeyboardButton("CLIPBOARD: Шаблоны тестов",
+            InlineKeyboardButton("📋 Шаблоны тестов",
                                  callback_data="smm_ab_templates")
         ],
         [
@@ -7638,56 +7644,56 @@ CHART: **Статистика A/B тестов:**
 
 
 async def handle_smm_audience_analytics(query, context):
-    """CHART: Аналитика аудитории"""
-    await query.answer("CHART: Загрузка аналитики...", show_alert=False)
+    """📊 Аналитика аудитории"""
+    await query.answer("📊 Загрузка аналитики...", show_alert=False)
 
-    text = """CHART: **АНАЛИТИКА АУДИТОРИИ**
+    text = """📊 **АНАЛИТИКА АУДИТОРИИ**
 
-USERS: **Состав аудитории (7 дней):**
+👥 **Состав аудитории (7 дней):**
 - Всего подписчиков: 3,247 (+127 за неделю)
 - Активных пользователей: 2,156 (66.4%)
 - Новых подписчиков: 127 (+15.2% к прошлой неделе)
 - Отписавшихся: 23 (-2.1% churn rate)
 
-GROWTH: **Динамика вовлеченности:**
+📈 **Динамика вовлеченности:**
 - Средний engagement: 8.7% (+0.8% за неделю)
 - Комментарии: 156 (+23%)
 - Лайки: 892 (+18%)
 - Репосты: 67 (+31%)
 - Переходы по ссылкам: 234 (+19%)
 
-TARGET: **Конверсионная воронка:**
+🎯 **Конверсионная воронка:**
 - Просмотры → Взаимодействие: 12.3%
 - Взаимодействие → Переход: 8.7%
 - Переход → Заявка: 15.2%
 - Общая конверсия: 1.6%
 
-CHART: **Топ-контент по вовлеченности:**
+📊 **Топ-контент по вовлеченности:**
 1. Кейс о разводе: 15.2% engagement
 2. Трудовые споры: 12.8% engagement
 3. Права потребителей: 11.4% engagement"""
 
     keyboard = [
         [
-            InlineKeyboardButton("GROWTH: Детальная статистика",
+            InlineKeyboardButton("📈 Детальная статистика",
                                  callback_data="smm_detailed_audience_stats"),
             InlineKeyboardButton(
-                "TARGET: Сегментация", callback_data="smm_audience_segmentation")
+                "🎯 Сегментация", callback_data="smm_audience_segmentation")
         ],
         [
-            InlineKeyboardButton("DOLLAR: Финансовые показатели",
+            InlineKeyboardButton("💵 Финансовые показатели",
                                  callback_data="smm_audience_revenue"),
             InlineKeyboardButton("SEARCH: Поведенческий анализ",
                                  callback_data="smm_behavior_analysis")
         ],
         [
-            InlineKeyboardButton("CHART: Экспорт данных",
+            InlineKeyboardButton("📊 Экспорт данных",
                                  callback_data="smm_export_audience_data"),
-            InlineKeyboardButton("CALENDAR: Исторические данные",
+            InlineKeyboardButton("📅 Исторические данные",
                                  callback_data="smm_historical_audience")
         ],
         [
-            InlineKeyboardButton("BOT: Прогнозирование",
+            InlineKeyboardButton("🤖 Прогнозирование",
                                  callback_data="smm_audience_prediction"),
             InlineKeyboardButton(
                 "IDEA: Рекомендации", callback_data="smm_audience_recommendations")
@@ -7708,14 +7714,14 @@ async def handle_smm_targeting_tips(query, context):
 
     text = """IDEA: **РЕКОМЕНДАЦИИ ПО ТАРГЕТИНГУ**
 
-TARGET: **Приоритетные улучшения:**
+🎯 **Приоритетные улучшения:**
 
 FIRE: **ВЫСОКИЙ ПРИОРИТЕТ:**
 1. **Расширить географию** - добавить Казань и Нижний Новгород (+15% аудитории)
 2. **Протестировать вечернее время** - 20:00-21:00 показывает потенциал
 3. **Добавить интерес "Банкротство"** - высокий спрос, низкая конкуренция
 
-CHART: **СРЕДНИЙ ПРИОРИТЕТ:**
+📊 **СРЕДНИЙ ПРИОРИТЕТ:**
 4. **A/B тест возрастных групп** - 45-55 лет недооценены
 5. **Сезонная корректировка** - усилить семейное право к НГ
 6. **Мобильная оптимизация** - 78% пользуют телефоны
@@ -7725,31 +7731,31 @@ IDEA: **НИЗКИЙ ПРИОРИТЕТ:**
 8. **Instagram Stories** - визуальный контент
 9. **Ретаргетинг** - повторное вовлечение ушедших
 
-GROWTH: **Прогнозируемый эффект:** +25% конверсии при полной реализации
+📈 **Прогнозируемый эффект:** +25% конверсии при полной реализации
 
  **Автоматические рекомендации обновляются еженедельно**"""
 
     keyboard = [
         [
-            InlineKeyboardButton("ROCKET: Применить топ-3",
+            InlineKeyboardButton("🚀 Применить топ-3",
                                  callback_data="smm_apply_top_tips"),
-            InlineKeyboardButton("CLIPBOARD: Подробный план",
+            InlineKeyboardButton("📋 Подробный план",
                                  callback_data="smm_detailed_action_plan")
         ],
         [
             InlineKeyboardButton(" Запланировать A/B тесты",
                                  callback_data="smm_schedule_ab_tests"),
-            InlineKeyboardButton("GROWTH: Прогноз эффекта",
+            InlineKeyboardButton("📈 Прогноз эффекта",
                                  callback_data="smm_impact_forecast")
         ],
         [
             InlineKeyboardButton(" Настроить автоприменение",
                                  callback_data="smm_auto_apply_tips"),
-            InlineKeyboardButton("GROWTH: Трекинг прогресса",
+            InlineKeyboardButton("📈 Трекинг прогресса",
                                  callback_data="smm_track_improvements")
         ],
         [
-            InlineKeyboardButton("CHANGES: Обновить рекомендации",
+            InlineKeyboardButton("🔄 Обновить рекомендации",
                                  callback_data="smm_refresh_tips"),
             InlineKeyboardButton("BOOKS: История советов",
                                  callback_data="smm_tips_history")
@@ -7765,21 +7771,21 @@ GROWTH: **Прогнозируемый эффект:** +25% конверсии �
 
 
 async def handle_smm_change_strategy(query, context):
-    """CHANGES: Изменение стратегии контента"""
-    await query.answer("CHANGES: Смена стратегии...", show_alert=False)
+    """🔄 Изменение стратегии контента"""
+    await query.answer("🔄 Смена стратегии...", show_alert=False)
 
-    text = """CHANGES: **ИЗМЕНЕНИЕ СТРАТЕГИИ КОНТЕНТА**
+    text = """🔄 **ИЗМЕНЕНИЕ СТРАТЕГИИ КОНТЕНТА**
 
-CHART: **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
+📊 **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
 
-TARGET: **Доступные стратегии:**
+🎯 **Доступные стратегии:**
 
 FIRE: **ВИРУСНАЯ** - максимальный охват
 - Контент: тренды, актуальные новости
 - Цель: быстрый рост аудитории
 - ROI: средний, высокий охват
 
-DOLLAR: **КОНВЕРСИОННАЯ** - максимум заявок
+💵 **КОНВЕРСИОННАЯ** - максимум заявок
 - Контент: кейсы, призывы к действию
 - Цель: продажи и конверсии
 - ROI: высокий, меньший охват
@@ -7794,14 +7800,14 @@ SCALES: **СБАЛАНСИРОВАННАЯ** - универсальная (те�
 - Цель: стабильный рост
 - ROI: стабильный
 
-GROWTH: **Переключение займет 24-48 часов для полной адаптации**"""
+📈 **Переключение займет 24-48 часов для полной адаптации**"""
 
     keyboard = [
         [
             InlineKeyboardButton("FIRE: Вирусная стратегия",
                                  callback_data="smm_strategy_viral"),
             InlineKeyboardButton(
-                "DOLLAR: Конверсионная", callback_data="smm_strategy_conversion")
+                "💵 Конверсионная", callback_data="smm_strategy_conversion")
         ],
         [
             InlineKeyboardButton("BOOKS: Образовательная",
@@ -7810,13 +7816,13 @@ GROWTH: **Переключение займет 24-48 часов для полн
                                  callback_data="smm_strategy_balanced")
         ],
         [
-            InlineKeyboardButton("CHART: Сравнить стратегии",
+            InlineKeyboardButton("📊 Сравнить стратегии",
                                  callback_data="smm_compare_strategies"),
-            InlineKeyboardButton("TARGET: Персональная стратегия",
+            InlineKeyboardButton("🎯 Персональная стратегия",
                                  callback_data="smm_custom_strategy")
         ],
         [
-            InlineKeyboardButton("GROWTH: Прогноз результатов",
+            InlineKeyboardButton("📈 Прогноз результатов",
                                  callback_data="smm_strategy_forecast"),
             InlineKeyboardButton("CLOCK: Планировщик смены",
                                  callback_data="smm_strategy_scheduler")
@@ -7842,19 +7848,19 @@ TENT: **Текущее распределение:**
 - Дружелюбная: 20% 
 - Срочная/призывная: 10% 
 
-CHART: **Эффективность по тональности:**
+📊 **Эффективность по тональности:**
 - Профессиональная: 8.2% engagement
 - Дружелюбная: 9.1% engagement
 - Срочная: 7.8% engagement
 
-TARGET: **Аудитория предпочитает:**
+🎯 **Аудитория предпочитает:**
 - Бизнес-сегмент: профессиональный тон
 - Физлица: дружелюбный подход
 - Экстренные ситуации: срочный тон
 
  **Умная адаптация:** система автоматически подбирает тон под тип контента и время публикации
 
-CHANGES: **A/B тест тональности:** сейчас тестируется соотношение 60/25/15"""
+🔄 **A/B тест тональности:** сейчас тестируется соотношение 60/25/15"""
 
     keyboard = [
         [
@@ -7868,16 +7874,16 @@ CHANGES: **A/B тест тональности:** сейчас тестируе�
             InlineKeyboardButton("TENT: Смешанная", callback_data="smm_tone_mixed")
         ],
         [
-            InlineKeyboardButton("BOT: Умная адаптация",
+            InlineKeyboardButton("🤖 Умная адаптация",
                                  callback_data="smm_smart_tone"),
-            InlineKeyboardButton("CHART: Анализ эффективности",
+            InlineKeyboardButton("📊 Анализ эффективности",
                                  callback_data="smm_tone_analytics")
         ],
         [
             InlineKeyboardButton(" Редактор тонов",
                                  callback_data="smm_tone_editor"),
             InlineKeyboardButton(
-                "CLIPBOARD: Шаблоны", callback_data="smm_tone_templates")
+                "📋 Шаблоны", callback_data="smm_tone_templates")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_content_strategy")]
     ]
@@ -7890,32 +7896,32 @@ CHANGES: **A/B тест тональности:** сейчас тестируе�
 
 
 async def handle_smm_audience_settings(query, context):
-    """TARGET: Настройки целевой аудитории"""
+    """🎯 Настройки целевой аудитории"""
     # Перенаправляем к функции изменения аудитории
     await handle_smm_change_audience(query, context)
 
 
 async def handle_smm_strategy_analytics(query, context):
-    """CHART: Анализ эффективности стратегии"""
-    await query.answer("CHART: Анализ стратегии...", show_alert=False)
+    """📊 Анализ эффективности стратегии"""
+    await query.answer("📊 Анализ стратегии...", show_alert=False)
 
-    text = """CHART: **АНАЛИЗ ЭФФЕКТИВНОСТИ СТРАТЕГИИ**
+    text = """📊 **АНАЛИЗ ЭФФЕКТИВНОСТИ СТРАТЕГИИ**
 
-GROWTH: **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
+📈 **Текущая стратегия: СБАЛАНСИРОВАННАЯ**
 CLOCK: **Период анализа:** последние 30 дней
 
-TARGET: **KPI выполнение:**
-- Охват: 15,347 / 15,000 SUCCESS: (+2.3%)
-- Engagement: 8.7% / 8.0% SUCCESS: (+0.7%)
-- Конверсия: 2.3% / 2.0% SUCCESS: (+0.3%)
-- Рост подписчиков: 67 / 50 SUCCESS: (+34%)
+🎯 **KPI выполнение:**
+- Охват: 15,347 / 15,000 ✅ (+2.3%)
+- Engagement: 8.7% / 8.0% ✅ (+0.7%)
+- Конверсия: 2.3% / 2.0% ✅ (+0.3%)
+- Рост подписчиков: 67 / 50 ✅ (+34%)
 
-CHART: **Сравнение со стратегиями:**
+📊 **Сравнение со стратегиями:**
 - Вирусная: +45% охват, -15% конверсия
 - Конверсионная: -20% охват, +35% конверсия
 - Образовательная: -10% охват, +10% доверие
 
-DOLLAR: **Финансовые показатели:**
+💵 **Финансовые показатели:**
 - ROI: 340% (отличный результат)
 - CPA: 450 rubles (ниже планового)
 - LTV: 8,500 rubles (стабильный)
@@ -7924,27 +7930,27 @@ DOLLAR: **Финансовые показатели:**
 
     keyboard = [
         [
-            InlineKeyboardButton("GROWTH: Детальные метрики",
+            InlineKeyboardButton("📈 Детальные метрики",
                                  callback_data="smm_detailed_strategy_metrics"),
             InlineKeyboardButton("SEARCH: Глубокий анализ",
                                  callback_data="smm_deep_strategy_analysis")
         ],
         [
-            InlineKeyboardButton("CHART: Сравнить стратегии",
+            InlineKeyboardButton("📊 Сравнить стратегии",
                                  callback_data="smm_compare_all_strategies"),
-            InlineKeyboardButton("GROWTH: Исторический тренд",
+            InlineKeyboardButton("📈 Исторический тренд",
                                  callback_data="smm_strategy_history")
         ],
         [
             InlineKeyboardButton(
-                "DOLLAR: Финансовый анализ", callback_data="smm_financial_strategy_analysis"),
+                "💵 Финансовый анализ", callback_data="smm_financial_strategy_analysis"),
             InlineKeyboardButton(" Прогнозирование",
                                  callback_data="smm_strategy_prediction")
         ],
         [
             InlineKeyboardButton(
                 "IDEA: Рекомендации", callback_data="smm_strategy_recommendations"),
-            InlineKeyboardButton("CLIPBOARD: Экспорт отчета",
+            InlineKeyboardButton("📋 Экспорт отчета",
                                  callback_data="smm_export_strategy_report")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_content_strategy")]
@@ -7964,12 +7970,12 @@ if __name__ == "__main__":
 # ============ SMM ТАРГЕТИНГ ФУНКЦИИ ============
 
 async def handle_smm_change_audience(query, context):
-    """USERS: Изменение целевой аудитории"""
-    await query.answer("USERS: Настройка аудитории...", show_alert=False)
+    """👥 Изменение целевой аудитории"""
+    await query.answer("👥 Настройка аудитории...", show_alert=False)
 
-    text = """USERS: **НАСТРОЙКА ЦЕЛЕВОЙ АУДИТОРИИ**
+    text = """👥 **НАСТРОЙКА ЦЕЛЕВОЙ АУДИТОРИИ**
 
-CHART: **Текущее распределение:**
+📊 **Текущее распределение:**
 - Физические лица: 60%
 - Малый и средний бизнес: 30%
 - Коллеги-юристы: 10%"""
@@ -8005,7 +8011,7 @@ LOCATION: **Текущее покрытие:**
 
     keyboard = [
         [
-            InlineKeyboardButton("BUILDING: Москва", callback_data="smm_geo_moscow"),
+            InlineKeyboardButton("🏛️ Москва", callback_data="smm_geo_moscow"),
             InlineKeyboardButton(" СПб", callback_data="smm_geo_spb")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
@@ -8024,10 +8030,10 @@ async def handle_smm_interests_settings(query, context):
 
     text = """MASKS: **ИНТЕРЕСЫ АУДИТОРИИ**
 
-SUCCESS: Правовая грамотность (85%)
-SUCCESS: Защита прав потребителей (72%)
-SUCCESS: Семейное право (68%)
-SUCCESS: Трудовые отношения (61%)"""
+✅ Правовая грамотность (85%)
+✅ Защита прав потребителей (72%)
+✅ Семейное право (68%)
+✅ Трудовые отношения (61%)"""
 
     keyboard = [
         [
@@ -8053,7 +8059,7 @@ async def handle_smm_activity_time(query, context):
     text = """CLOCK: **ВРЕМЯ АКТИВНОСТИ АУДИТОРИИ**
 
 FIRE: **18:00-21:00** - Максимальная (100%)
-GROWTH: **12:00-14:00** - Обеденный пик (85%)
+📈 **12:00-14:00** - Обеденный пик (85%)
  **08:00-10:00** - Утренний (75%)
 
  **Текущие настройки:**
@@ -8065,7 +8071,7 @@ GROWTH: **12:00-14:00** - Обеденный пик (85%)
             InlineKeyboardButton(
                 "FIRE: Пиковые часы", callback_data="smm_time_peak"),
             InlineKeyboardButton(
-                "GROWTH: Рабочее время", callback_data="smm_time_work")
+                "📈 Рабочее время", callback_data="smm_time_work")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
     ]
@@ -8083,11 +8089,11 @@ async def handle_smm_platform_targeting(query, context):
 
     text = """PHONE: **ПЛАТФОРМЫ**
 
-PHONE: **Telegram:** SUCCESS: Основная (100%)
-CAMERA: **Instagram:** ERROR: Не подключен
-GLOBE: **VK:** ERROR: Не подключен
+PHONE: **Telegram:** ✅ Основная (100%)
+CAMERA: **Instagram:** ❌ Не подключен
+GLOBE: **VK:** ❌ Не подключен
 
-CHART: **Устройства:**
+📊 **Устройства:**
 PHONE: Мобильные: 78%
  Десктоп: 22%"""
 
@@ -8115,11 +8121,11 @@ async def handle_smm_ab_targeting(query, context):
     text = """SEARCH: **A/B ТЕСТИРОВАНИЕ**
 
  **Активные тесты:**
-SUCCESS: Время публикации (19:00 vs 20:00)
+✅ Время публикации (19:00 vs 20:00)
    Статус: день 5/14
    Результат: 19:00 лидирует (+12%)
 
-CHART: **Статистика:**
+📊 **Статистика:**
 - Проведено: 8 тестов
 - Значимых: 6 (75%)
 - Улучшение: +18% в среднем"""
@@ -8129,7 +8135,7 @@ CHART: **Статистика:**
             InlineKeyboardButton(
                 " Новый тест", callback_data="smm_new_ab_test"),
             InlineKeyboardButton(
-                "CHART: Текущие", callback_data="smm_current_ab_tests")
+                "📊 Текущие", callback_data="smm_current_ab_tests")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
     ]
@@ -8142,29 +8148,29 @@ CHART: **Статистика:**
 
 
 async def handle_smm_audience_analytics(query, context):
-    """CHART: Аналитика аудитории"""
-    await query.answer("CHART: Загрузка...", show_alert=False)
+    """📊 Аналитика аудитории"""
+    await query.answer("📊 Загрузка...", show_alert=False)
 
-    text = """CHART: **АНАЛИТИКА АУДИТОРИИ**
+    text = """📊 **АНАЛИТИКА АУДИТОРИИ**
 
-USERS: **Состав (7 дней):**
+👥 **Состав (7 дней):**
 - Подписчиков: 3,247 (+127)
 - Активных: 2,156 (66.4%)
 - Новых: 127 (+15.2%)
 
-GROWTH: **Вовлеченность:**
+📈 **Вовлеченность:**
 - Engagement: 8.7% (+0.8%)
 - Комментарии: 156 (+23%)
 - Лайки: 892 (+18%)
 
-TARGET: **Конверсия:** 1.6%"""
+🎯 **Конверсия:** 1.6%"""
 
     keyboard = [
         [
             InlineKeyboardButton(
-                "GROWTH: Детали", callback_data="smm_detailed_audience_stats"),
+                "📈 Детали", callback_data="smm_detailed_audience_stats"),
             InlineKeyboardButton(
-                "TARGET: Сегменты", callback_data="smm_audience_segmentation")
+                "🎯 Сегменты", callback_data="smm_audience_segmentation")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
     ]
@@ -8187,18 +8193,18 @@ FIRE: **ВЫСОКИЙ ПРИОРИТЕТ:**
 2. Протестировать 20:00-21:00
 3. Добавить "Банкротство"
 
-CHART: **СРЕДНИЙ ПРИОРИТЕТ:**
+📊 **СРЕДНИЙ ПРИОРИТЕТ:**
 4. A/B тест 45-55 лет
 5. Сезонная корректировка
 
-GROWTH: **Эффект:** +25% конверсии"""
+📈 **Эффект:** +25% конверсии"""
 
     keyboard = [
         [
-            InlineKeyboardButton("ROCKET: Применить топ-3",
+            InlineKeyboardButton("🚀 Применить топ-3",
                                  callback_data="smm_apply_top_tips"),
             InlineKeyboardButton(
-                "CLIPBOARD: План", callback_data="smm_detailed_action_plan")
+                "📋 План", callback_data="smm_detailed_action_plan")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_targeting")]
     ]
@@ -8211,26 +8217,26 @@ GROWTH: **Эффект:** +25% конверсии"""
 
 
 async def handle_smm_change_strategy(query, context):
-    """CHANGES: Смена стратегии"""
-    await query.answer("CHANGES: Смена стратегии...", show_alert=False)
+    """🔄 Смена стратегии"""
+    await query.answer("🔄 Смена стратегии...", show_alert=False)
 
-    text = """CHANGES: **СТРАТЕГИИ КОНТЕНТА**
+    text = """🔄 **СТРАТЕГИИ КОНТЕНТА**
 
-CHART: **Текущая: СБАЛАНСИРОВАННАЯ**
+📊 **Текущая: СБАЛАНСИРОВАННАЯ**
 
 FIRE: **ВИРУСНАЯ** - максимальный охват
-DOLLAR: **КОНВЕРСИОННАЯ** - максимум заявок
+💵 **КОНВЕРСИОННАЯ** - максимум заявок
 BOOKS: **ОБРАЗОВАТЕЛЬНАЯ** - экспертность
 SCALES: **СБАЛАНСИРОВАННАЯ** - универсальная
 
-GROWTH: Переключение: 24-48 часов"""
+📈 Переключение: 24-48 часов"""
 
     keyboard = [
         [
             InlineKeyboardButton(
                 "FIRE: Вирусная", callback_data="smm_strategy_viral"),
             InlineKeyboardButton(
-                "DOLLAR: Конверсионная", callback_data="smm_strategy_conversion")
+                "💵 Конверсионная", callback_data="smm_strategy_conversion")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_content_strategy")]
     ]
@@ -8253,7 +8259,7 @@ TENT: **Распределение:**
 - Дружелюбная: 20% 
 - Срочная: 10% 
 
-CHART: **Эффективность:**
+📊 **Эффективность:**
 - Профессиональная: 8.2%
 - Дружелюбная: 9.1%
 - Срочная: 7.8%"""
@@ -8276,25 +8282,25 @@ CHART: **Эффективность:**
 
 
 async def handle_smm_audience_settings(query, context):
-    """TARGET: Настройки аудитории"""
+    """🎯 Настройки аудитории"""
     await handle_smm_change_audience(query, context)
 
 
 async def handle_smm_strategy_analytics(query, context):
-    """CHART: Анализ стратегии"""
-    await query.answer("CHART: Анализ...", show_alert=False)
+    """📊 Анализ стратегии"""
+    await query.answer("📊 Анализ...", show_alert=False)
 
-    text = """CHART: **АНАЛИЗ СТРАТЕГИИ**
+    text = """📊 **АНАЛИЗ СТРАТЕГИИ**
 
-GROWTH: **СБАЛАНСИРОВАННАЯ** (30 дней)
+📈 **СБАЛАНСИРОВАННАЯ** (30 дней)
 
-TARGET: **KPI:**
-- Охват: 15,347/15,000 SUCCESS: (+2.3%)
-- Engagement: 8.7%/8.0% SUCCESS: (+0.7%)
-- Конверсия: 2.3%/2.0% SUCCESS: (+0.3%)
-- Подписчики: 67/50 SUCCESS: (+34%)
+🎯 **KPI:**
+- Охват: 15,347/15,000 ✅ (+2.3%)
+- Engagement: 8.7%/8.0% ✅ (+0.7%)
+- Конверсия: 2.3%/2.0% ✅ (+0.3%)
+- Подписчики: 67/50 ✅ (+34%)
 
-DOLLAR: **Финансы:**
+💵 **Финансы:**
 - ROI: 340%
 - CPA: 450 rubles
 - LTV: 8,500 rubles"""
@@ -8302,7 +8308,7 @@ DOLLAR: **Финансы:**
     keyboard = [
         [
             InlineKeyboardButton(
-                "GROWTH: Детали", callback_data="smm_detailed_strategy_metrics"),
+                "📈 Детали", callback_data="smm_detailed_strategy_metrics"),
             InlineKeyboardButton(
                 "SEARCH: Анализ", callback_data="smm_deep_strategy_analysis")
         ],
@@ -8323,7 +8329,7 @@ async def handle_smm_audience_individuals(query, context):
     await query.answer(" Настройка для физлиц", show_alert=False)
     text = """ **ФИЗИЧЕСКИЕ ЛИЦА**
 
-CHART: **Текущие настройки:** 60% аудитории
+📊 **Текущие настройки:** 60% аудитории
 - Возраст: 25-55 лет
 - Семейное положение: смешанное
 - Доходы: средние и выше
@@ -8339,7 +8345,7 @@ async def handle_smm_audience_business(query, context):
     await query.answer("OFFICE: Настройка для бизнеса", show_alert=False)
     text = """OFFICE: **БИЗНЕС СЕГМЕНТ**
 
-CHART: **Текущие настройки:** 30% аудитории
+📊 **Текущие настройки:** 30% аудитории
 - Размер: малый и средний бизнес
 - Сферы: услуги, торговля, производство
 - Проблемы: налоги, трудовое право, контракты"""
@@ -8350,13 +8356,13 @@ CHART: **Текущие настройки:** 30% аудитории
 
 
 async def handle_smm_geo_moscow(query, context):
-    """BUILDING: Москва настройки"""
-    await query.answer("BUILDING: Настройка Москвы", show_alert=False)
-    text = """BUILDING: **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
+    """🏛️ Москва настройки"""
+    await query.answer("🏛️ Настройка Москвы", show_alert=False)
+    text = """🏛️ **МОСКВА И МОСКОВСКАЯ ОБЛАСТЬ**
 
 LOCATION: **Покрытие:** 40% аудитории
-GROWTH: **Эффективность:** 8.5% engagement
-DOLLAR: **Конверсия:** 2.8% в заявки
+📈 **Эффективность:** 8.5% engagement
+💵 **Конверсия:** 2.8% в заявки
 CLOCK: **Пиковое время:** 19:00-21:00"""
 
     keyboard = [[InlineKeyboardButton(
@@ -8370,8 +8376,8 @@ async def handle_smm_geo_spb(query, context):
     text = """ **САНКТ-ПЕТЕРБУРГ**
 
 LOCATION: **Покрытие:** 15% аудитории
-GROWTH: **Эффективность:** 7.2% engagement
-DOLLAR: **Конверсия:** 2.1% в заявки
+📈 **Эффективность:** 7.2% engagement
+💵 **Конверсия:** 2.1% в заявки
 CLOCK: **Пиковое время:** 18:30-20:30"""
 
     keyboard = [[InlineKeyboardButton(
@@ -8384,8 +8390,8 @@ async def handle_smm_interests_basic(query, context):
     await query.answer("SCALES: Основные права", show_alert=False)
     text = """SCALES: **ОСНОВНЫЕ ПРАВА**
 
-TARGET: **Охват:** 85% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 85% аудитории
+📊 **Популярные темы:**
 - Защита прав потребителей
 - Конституционные права
 - Административные нарушения"""
@@ -8400,8 +8406,8 @@ async def handle_smm_interests_family(query, context):
     await query.answer(" Семейное право", show_alert=False)
     text = """ **СЕМЕЙНОЕ ПРАВО**
 
-TARGET: **Охват:** 68% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 68% аудитории
+📊 **Популярные темы:**
 - Развод и раздел имущества
 - Алименты
 - Опека и усыновление"""
@@ -8416,9 +8422,9 @@ async def handle_smm_time_peak(query, context):
     await query.answer("FIRE: Пиковые часы", show_alert=False)
     text = """FIRE: **ПИКОВЫЕ ЧАСЫ: 18:00-21:00**
 
-CHART: **Активность:** 100%
+📊 **Активность:** 100%
 IDEA: **Рекомендация:** Публиковать важные посты
-TARGET: **Конверсия:** +15% выше средней"""
+🎯 **Конверсия:** +15% выше средней"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_activity_time")]]
@@ -8426,13 +8432,13 @@ TARGET: **Конверсия:** +15% выше средней"""
 
 
 async def handle_smm_time_work(query, context):
-    """GROWTH: Рабочее время"""
-    await query.answer("GROWTH: Рабочее время", show_alert=False)
-    text = """GROWTH: **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
+    """📈 Рабочее время"""
+    await query.answer("📈 Рабочее время", show_alert=False)
+    text = """📈 **РАБОЧЕЕ ВРЕМЯ: 12:00-14:00**
 
-CHART: **Активность:** 85%
+📊 **Активность:** 85%
 IDEA: **Рекомендация:** Деловой контент
-TARGET: **Аудитория:** В основном бизнес"""
+🎯 **Аудитория:** В основном бизнес"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_activity_time")]]
@@ -8444,9 +8450,9 @@ async def handle_smm_setup_telegram(query, context):
     await query.answer("PHONE: Настройка Telegram", show_alert=False)
     text = """PHONE: **TELEGRAM НАСТРОЙКИ**
 
-SUCCESS: **Статус:** Основная платформа
-CHART: **Охват:** 100% трафика
-TARGET: **Особенности:** Максимальная вовлеченность"""
+✅ **Статус:** Основная платформа
+📊 **Охват:** 100% трафика
+🎯 **Особенности:** Максимальная вовлеченность"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_platform_targeting")]]
@@ -8458,9 +8464,9 @@ async def handle_smm_setup_instagram(query, context):
     await query.answer("CAMERA: Instagram", show_alert=False)
     text = """CAMERA: **INSTAGRAM ИНТЕГРАЦИЯ**
 
-ERROR: **Статус:** Не подключен
+❌ **Статус:** Не подключен
 IDEA: **Потенциал:** Визуальный контент
-TARGET: **Аудитория:** Молодая, активная"""
+🎯 **Аудитория:** Молодая, активная"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_platform_targeting")]]
@@ -8472,7 +8478,7 @@ async def handle_smm_new_ab_test(query, context):
     await query.answer(" Новый A/B тест", show_alert=False)
     text = """ **СОЗДАНИЕ НОВОГО A/B ТЕСТА**
 
-CLIPBOARD: **Доступные тесты:**
+📋 **Доступные тесты:**
 - Время публикации
 - Тональность контента
 - Типы заголовков
@@ -8484,11 +8490,11 @@ CLIPBOARD: **Доступные тесты:**
 
 
 async def handle_smm_current_ab_tests(query, context):
-    """CHART: Текущие тесты"""
-    await query.answer("CHART: Текущие тесты", show_alert=False)
-    text = """CHART: **АКТИВНЫЕ A/B ТЕСТЫ**
+    """📊 Текущие тесты"""
+    await query.answer("📊 Текущие тесты", show_alert=False)
+    text = """📊 **АКТИВНЫЕ A/B ТЕСТЫ**
 
-SUCCESS: **Тест #1:** Время (19:00 vs 20:00)
+✅ **Тест #1:** Время (19:00 vs 20:00)
 - Прогресс: 5/14 дней
 - Лидер: 19:00 (+12%)"""
 
@@ -8502,8 +8508,8 @@ async def handle_smm_strategy_viral(query, context):
     await query.answer("FIRE: Вирусная стратегия", show_alert=False)
     text = """FIRE: **ВИРУСНАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Максимальный охват
-GROWTH: **Ожидаемый результат:**
+🎯 **Цель:** Максимальный охват
+📈 **Ожидаемый результат:**
 - +45% охват
 - -15% конверсия
 - Быстрый рост подписчиков"""
@@ -8514,12 +8520,12 @@ GROWTH: **Ожидаемый результат:**
 
 
 async def handle_smm_strategy_conversion(query, context):
-    """DOLLAR: Конверсионная стратегия"""
-    await query.answer("DOLLAR: Конверсионная", show_alert=False)
-    text = """DOLLAR: **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
+    """💵 Конверсионная стратегия"""
+    await query.answer("💵 Конверсионная", show_alert=False)
+    text = """💵 **КОНВЕРСИОННАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Максимум заявок
-GROWTH: **Ожидаемый результат:**
+🎯 **Цель:** Максимум заявок
+📈 **Ожидаемый результат:**
 - +35% конверсия
 - -20% охват
 - Больше продаж"""
@@ -8534,9 +8540,9 @@ async def handle_smm_tone_professional(query, context):
     await query.answer("SCALES: Профессиональная", show_alert=False)
     text = """SCALES: **ПРОФЕССИОНАЛЬНАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** 70%
-GROWTH: **Эффективность:** 8.2% engagement
-TARGET: **Аудитория:** Бизнес-сегмент"""
+📊 **Использование:** 70%
+📈 **Эффективность:** 8.2% engagement
+🎯 **Аудитория:** Бизнес-сегмент"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_tone_settings")]]
@@ -8548,9 +8554,9 @@ async def handle_smm_tone_friendly(query, context):
     await query.answer(" Дружелюбная", show_alert=False)
     text = """ **ДРУЖЕЛЮБНАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** 20%
-GROWTH: **Эффективность:** 9.1% engagement
-TARGET: **Аудитория:** Физические лица"""
+📊 **Использование:** 20%
+📈 **Эффективность:** 9.1% engagement
+🎯 **Аудитория:** Физические лица"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_tone_settings")]]
@@ -8570,7 +8576,7 @@ LOCATION: **Покрытие:** 20% аудитории
 - Новосибирск: 2.8%
 - Нижний Новгород: 2.1%
 - Казань: 1.9%
-GROWTH: **Средняя эффективность:** 6.8% engagement"""
+📈 **Средняя эффективность:** 6.8% engagement"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_geo_settings")]]
@@ -8599,8 +8605,8 @@ async def handle_smm_interests_labor(query, context):
     await query.answer(" Трудовое право", show_alert=False)
     text = """ **ТРУДОВОЕ ПРАВО**
 
-TARGET: **Охват:** 61% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 61% аудитории
+📊 **Популярные темы:**
 - Увольнения и сокращения
 - Невыплата зарплаты
 - Трудовые споры
@@ -8616,8 +8622,8 @@ async def handle_smm_interests_property(query, context):
     await query.answer(" Недвижимость", show_alert=False)
     text = """ **НЕДВИЖИМОСТЬ**
 
-TARGET: **Охват:** 45% аудитории
-CHART: **Популярные темы:**
+🎯 **Охват:** 45% аудитории
+📊 **Популярные темы:**
 - Покупка/продажа квартир
 - Приватизация
 - ЖКХ проблемы
@@ -8633,9 +8639,9 @@ async def handle_smm_time_evening(query, context):
     await query.answer(" Вечернее время", show_alert=False)
     text = """ **ВЕЧЕРНЕЕ ВРЕМЯ: 21:00-23:00**
 
-CHART: **Активность:** 75%
+📊 **Активность:** 75%
 IDEA: **Рекомендация:** Легкий контент, советы
-TARGET: **Аудитория:** Домашняя аудитория"""
+🎯 **Аудитория:** Домашняя аудитория"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_activity_time")]]
@@ -8647,9 +8653,9 @@ async def handle_smm_time_morning(query, context):
     await query.answer(" Утренние часы", show_alert=False)
     text = """ **УТРЕННИЕ ЧАСЫ: 08:00-10:00**
 
-CHART: **Активность:** 60%
+📊 **Активность:** 60%
 IDEA: **Рекомендация:** Новости, краткий контент
-TARGET: **Аудитория:** По дороге на работу"""
+🎯 **Аудитория:** По дороге на работу"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_activity_time")]]
@@ -8661,9 +8667,9 @@ async def handle_smm_setup_vk(query, context):
     await query.answer("GLOBE: VK", show_alert=False)
     text = """GLOBE: **ВКОНТАКТЕ ИНТЕГРАЦИЯ**
 
-ERROR: **Статус:** Не подключен
+❌ **Статус:** Не подключен
 IDEA: **Потенциал:** Широкая аудитория
-TARGET: **Особенности:** Больше молодежи"""
+🎯 **Особенности:** Больше молодежи"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_platform_targeting")]]
@@ -8675,9 +8681,9 @@ async def handle_smm_setup_linkedin(query, context):
     await query.answer(" LinkedIn", show_alert=False)
     text = """ **LINKEDIN ИНТЕГРАЦИЯ**
 
-ERROR: **Статус:** Не подключен
+❌ **Статус:** Не подключен
 IDEA: **Потенциал:** B2B аудитория
-TARGET: **Особенности:** Профессиональная сеть"""
+🎯 **Особенности:** Профессиональная сеть"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_platform_targeting")]]
@@ -8685,11 +8691,11 @@ TARGET: **Особенности:** Профессиональная сеть"""
 
 
 async def handle_smm_ab_results(query, context):
-    """GROWTH: Результаты A/B тестов"""
-    await query.answer("GROWTH: Результаты тестов", show_alert=False)
-    text = """GROWTH: **РЕЗУЛЬТАТЫ A/B ТЕСТОВ**
+    """📈 Результаты A/B тестов"""
+    await query.answer("📈 Результаты тестов", show_alert=False)
+    text = """📈 **РЕЗУЛЬТАТЫ A/B ТЕСТОВ**
 
-SUCCESS: **Завершенные тесты:**
+✅ **Завершенные тесты:**
 - Время публикации: 19:00 победил (+12%)
 - Заголовки: "Вопрос-ответ" лучше (+8%)
 - CTA кнопки: "Получить консультацию" (+15%)"""
@@ -8704,10 +8710,10 @@ async def handle_smm_ab_settings(query, context):
     await query.answer(" Настройки A/B", show_alert=False)
     text = """ **НАСТРОЙКИ A/B ТЕСТИРОВАНИЯ**
 
-CLIPBOARD: **Параметры:**
+📋 **Параметры:**
 - Длительность теста: 14 дней
 - Минимальная выборка: 1000 просмотров
-- Автоприменение: SUCCESS: Включено
+- Автоприменение: ✅ Включено
 - Уровень значимости: 95%"""
 
     keyboard = [[InlineKeyboardButton(
@@ -8720,8 +8726,8 @@ async def handle_smm_strategy_educational(query, context):
     await query.answer("BOOKS: Образовательная", show_alert=False)
     text = """BOOKS: **ОБРАЗОВАТЕЛЬНАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Информирование аудитории
-GROWTH: **Ожидаемый результат:**
+🎯 **Цель:** Информирование аудитории
+📈 **Ожидаемый результат:**
 - +25% доверие к бренду
 - +10% повторные обращения
 - Долгосрочные клиенты"""
@@ -8736,8 +8742,8 @@ async def handle_smm_strategy_balanced(query, context):
     await query.answer("SCALES: Сбалансированная", show_alert=False)
     text = """SCALES: **СБАЛАНСИРОВАННАЯ СТРАТЕГИЯ**
 
-TARGET: **Цель:** Оптимальное соотношение всех метрик
-GROWTH: **Текущие результаты:**
+🎯 **Цель:** Оптимальное соотношение всех метрик
+📈 **Текущие результаты:**
 - Охват: средний уровень
 - Конверсия: стабильная
 - Лучший выбор для начала"""
@@ -8752,9 +8758,9 @@ async def handle_smm_tone_urgent(query, context):
     await query.answer(" Срочная", show_alert=False)
     text = """ **СРОЧНАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** 10%
-GROWTH: **Эффективность:** 12.3% engagement
-TARGET: **Применение:** Важные новости, изменения законов"""
+📊 **Использование:** 10%
+📈 **Эффективность:** 12.3% engagement
+🎯 **Применение:** Важные новости, изменения законов"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_tone_settings")]]
@@ -8766,9 +8772,9 @@ async def handle_smm_tone_mixed(query, context):
     await query.answer("TENT: Смешанная", show_alert=False)
     text = """TENT: **СМЕШАННАЯ ТОНАЛЬНОСТЬ**
 
-CHART: **Использование:** адаптивно
-GROWTH: **Эффективность:** варьируется
-TARGET: **Применение:** AI выбирает тональность автоматически"""
+📊 **Использование:** адаптивно
+📈 **Эффективность:** варьируется
+🎯 **Применение:** AI выбирает тональность автоматически"""
 
     keyboard = [[InlineKeyboardButton(
         " Назад", callback_data="smm_tone_settings")]]
@@ -8778,25 +8784,25 @@ TARGET: **Применение:** AI выбирает тональность а�
 
 
 async def handle_analytics_charts(query, context):
-    """GROWTH: Графики аналитики"""
-    await query.answer("GROWTH: Загрузка графиков...", show_alert=False)
-    text = """GROWTH: **ГРАФИКИ И ДИАГРАММЫ**
+    """📈 Графики аналитики"""
+    await query.answer("📈 Загрузка графиков...", show_alert=False)
+    text = """📈 **ГРАФИКИ И ДИАГРАММЫ**
 
-CHART: **Доступные графики:**
-- GROWTH: Динамика заявок по дням
+📊 **Доступные графики:**
+- 📈 Динамика заявок по дням
 -  Распределение по категориям
-- CHART: Конверсия по источникам
-- DOLLAR: Финансовые показатели
-- USERS: Активность пользователей
+- 📊 Конверсия по источникам
+- 💵 Финансовые показатели
+- 👥 Активность пользователей
 
-TARGET: **Временные периоды:**
+🎯 **Временные периоды:**
 - За последние 7 дней
 - За месяц
 - За квартал
 - За год"""
 
     keyboard = [
-        [InlineKeyboardButton("CHART: Открыть дашборд",
+        [InlineKeyboardButton("📊 Открыть дашборд",
                               callback_data="open_dashboard")],
         [InlineKeyboardButton(" Назад", callback_data="export_analytics")]
     ]
@@ -8804,15 +8810,15 @@ TARGET: **Временные периоды:**
 
 
 async def handle_open_dashboard(query, context):
-    """CHART: Открыть дашборд"""
-    await query.answer("CHART: Генерация дашборда...", show_alert=False)
-    text = """CHART: **ИНТЕРАКТИВНЫЙ ДАШБОРД**
+    """📊 Открыть дашборд"""
+    await query.answer("📊 Генерация дашборда...", show_alert=False)
+    text = """📊 **ИНТЕРАКТИВНЫЙ ДАШБОРД**
 
-TARGET: **Сгенерирован дашборд с метриками:**
-- GROWTH: Заявки: 247 за месяц (+12%)
-- DOLLAR: Конверсия: 8.7% (+2.1%)
+🎯 **Сгенерирован дашборд с метриками:**
+- 📈 Заявки: 247 за месяц (+12%)
+- 💵 Конверсия: 8.7% (+2.1%)
 - �� Активные пользователи: 1,850
-- CHART: ROI: 340% (+15%)
+- 📊 ROI: 340% (+15%)
 
 PHONE: **Ссылка на дашборд:**
 https://dashboard.legal-center.com/admin
@@ -8820,7 +8826,7 @@ https://dashboard.legal-center.com/admin
  **Обновляется в реальном времени**"""
 
     keyboard = [
-        [InlineKeyboardButton("CHANGES: Сгенерировать отчет",
+        [InlineKeyboardButton("🔄 Сгенерировать отчет",
                               callback_data="generate_report")],
         [InlineKeyboardButton(" Назад", callback_data="analytics_charts")]
     ]
@@ -8828,15 +8834,15 @@ https://dashboard.legal-center.com/admin
 
 
 async def handle_generate_report(query, context):
-    """CHANGES: Генерация отчета"""
-    await query.answer("CHANGES: Генерация отчета...", show_alert=False)
-    text = """CLIPBOARD: **ОТЧЕТ СГЕНЕРИРОВАН**
+    """🔄 Генерация отчета"""
+    await query.answer("🔄 Генерация отчета...", show_alert=False)
+    text = """📋 **ОТЧЕТ СГЕНЕРИРОВАН**
 
-SUCCESS: **Создан полный отчет:**
+✅ **Создан полный отчет:**
 -  Формат: PDF + Excel
-- CHART: Страниц: 24
-- TARGET: Период: последние 30 дней
-- GROWTH: Графики: 12 диаграмм
+- 📊 Страниц: 24
+- 🎯 Период: последние 30 дней
+- 📈 Графики: 12 диаграмм
 
  **Файлы готовы к скачиванию:**
 - report_analytics_2024.pdf
@@ -8856,20 +8862,20 @@ async def handle_export_apps_csv(query, context):
     await query.answer(" Экспорт заявок...", show_alert=False)
     text = """ **ЭКСПОРТ ЗАЯВОК В CSV**
 
-SUCCESS: **Экспорт завершен:**
-- CHART: Всего заявок: 1,247
+✅ **Экспорт завершен:**
+- 📊 Всего заявок: 1,247
 -  Размер файла: 2.4 МБ
 -  Колонки: 15 полей
-- CALENDAR: Период: все время
+- 📅 Период: все время
 
-CLIPBOARD: **Включенные данные:**
+📋 **Включенные данные:**
 - ID, дата, категория
 - Контакты клиента
 - Статус, сумма
 - Юрист, комментарии"""
 
     keyboard = [[InlineKeyboardButton(
-        "CHANGES: Новый экспорт", callback_data="export_applications")]]
+        "🔄 Новый экспорт", callback_data="export_applications")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
@@ -8878,20 +8884,20 @@ async def handle_export_users_csv(query, context):
     await query.answer(" Экспорт пользователей...", show_alert=False)
     text = """ **ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ В CSV**
 
-SUCCESS: **Экспорт завершен:**
-- USERS: Всего пользователей: 3,847
+✅ **Экспорт завершен:**
+- 👥 Всего пользователей: 3,847
 -  Размер файла: 1.8 МБ
 -  Колонки: 12 полей
-- CALENDAR: За все время
+- 📅 За все время
 
-CLIPBOARD: **Включенные данные:**
+📋 **Включенные данные:**
 - Telegram ID, имя
 - Дата регистрации
 - Количество заявок
 - Последняя активность"""
 
     keyboard = [[InlineKeyboardButton(
-        "CHART: Аналитика пользователей", callback_data="export_users")]]
+        "📊 Аналитика пользователей", callback_data="export_users")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
@@ -8900,13 +8906,13 @@ async def handle_export_payments_csv(query, context):
     await query.answer(" Экспорт платежей...", show_alert=False)
     text = """ **ЭКСПОРТ ПЛАТЕЖЕЙ В CSV**
 
-SUCCESS: **Экспорт завершен:**
-- CARD: Всего платежей: 892
-- DOLLAR: Общая сумма: 2,470,000  rubles
+✅ **Экспорт завершен:**
+- 💳 Всего платежей: 892
+- 💵 Общая сумма: 2,470,000  rubles
 -  Размер файла: 670 КБ
-- CALENDAR: За все время
+- 📅 За все время
 
-CLIPBOARD: **Включенные данные:**
+📋 **Включенные данные:**
 - ID платежа, сумма
 - Дата, статус
 - Способ оплаты
@@ -8922,95 +8928,95 @@ async def handle_export_analytics_csv(query, context):
     await query.answer(" Экспорт аналитики...", show_alert=False)
     text = """ **ЭКСПОРТ АНАЛИТИКИ В CSV**
 
-SUCCESS: **Экспорт завершен:**
+✅ **Экспорт завершен:**
 - �� Записей: 15,670
 -  Размер: 4.2 МБ
 -  Метрики: 25 показателей
-- CALENDAR: За последние 90 дней
+- 📅 За последние 90 дней
 
-CLIPBOARD: **Включенные данные:**
+📋 **Включенные данные:**
 - Ежедневные метрики
 - Источники трафика
 - Конверсии по воронке
 - Поведенческие данные"""
 
     keyboard = [[InlineKeyboardButton(
-        "GROWTH: Просмотреть графики", callback_data="analytics_charts")]]
+        "📈 Просмотреть графики", callback_data="analytics_charts")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 # ============ ЭКСПОРТ ПО ПЕРИОДАМ ============
 
 
 async def handle_export_period_7d(query, context):
-    """CALENDAR: Экспорт за 7 дней"""
-    await query.answer("CALENDAR: За 7 дней...", show_alert=False)
-    text = """CALENDAR: **ЭКСПОРТ ЗА ПОСЛЕДНИЕ 7 ДНЕЙ**
+    """📅 Экспорт за 7 дней"""
+    await query.answer("📅 За 7 дней...", show_alert=False)
+    text = """📅 **ЭКСПОРТ ЗА ПОСЛЕДНИЕ 7 ДНЕЙ**
 
-SUCCESS: **Данные подготовлены:**
+✅ **Данные подготовлены:**
 - �� Заявки: 47 (+12%)
-- USERS: Новые пользователи: 156
-- DOLLAR: Оборот: 127,000  rubles
-- CHART: Конверсия: 9.2%
+- 👥 Новые пользователи: 156
+- 💵 Оборот: 127,000  rubles
+- 📊 Конверсия: 9.2%
 
  **Файлы:**
 - weekly_report.pdf
 - data_7days.xlsx"""
 
     keyboard = [[InlineKeyboardButton(
-        "CHART: Все данные", callback_data="export_full")]]
+        "📊 Все данные", callback_data="export_full")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
 async def handle_export_period_30d(query, context):
-    """CALENDAR: Экспорт за 30 дней"""
-    await query.answer("CALENDAR: За 30 дней...", show_alert=False)
-    text = """CALENDAR: **ЭКСПОРТ ЗА ПОСЛЕДНИЙ МЕСЯЦ**
+    """📅 Экспорт за 30 дней"""
+    await query.answer("📅 За 30 дней...", show_alert=False)
+    text = """📅 **ЭКСПОРТ ЗА ПОСЛЕДНИЙ МЕСЯЦ**
 
-SUCCESS: **Данные подготовлены:**
-- CLIPBOARD: Заявки: 247 (+18%)
-- USERS: Новые пользователи: 892
-- DOLLAR: Оборот: 670,000  rubles
-- CHART: Конверсия: 8.7%
+✅ **Данные подготовлены:**
+- 📋 Заявки: 247 (+18%)
+- 👥 Новые пользователи: 892
+- 💵 Оборот: 670,000  rubles
+- 📊 Конверсия: 8.7%
 
  **Файлы:**
 - monthly_report.pdf
 - data_30days.xlsx"""
 
     keyboard = [[InlineKeyboardButton(
-        "CHART: Настроить период", callback_data="export_custom_period")]]
+        "📊 Настроить период", callback_data="export_custom_period")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
 async def handle_export_period_90d(query, context):
-    """CALENDAR: Экспорт за 90 дней"""
-    await query.answer("CALENDAR: За 90 дней...", show_alert=False)
-    text = """CALENDAR: **ЭКСПОРТ ЗА КВАРТАЛ**
+    """📅 Экспорт за 90 дней"""
+    await query.answer("📅 За 90 дней...", show_alert=False)
+    text = """📅 **ЭКСПОРТ ЗА КВАРТАЛ**
 
-SUCCESS: **Данные подготовлены:**
-- CLIPBOARD: Заявки: 847 (+25%)
-- USERS: Новые пользователи: 2,670
-- DOLLAR: Оборот: 1,890,000  rubles
-- CHART: Конверсия: 8.4%
+✅ **Данные подготовлены:**
+- 📋 Заявки: 847 (+25%)
+- 👥 Новые пользователи: 2,670
+- 💵 Оборот: 1,890,000  rubles
+- 📊 Конверсия: 8.4%
 
  **Файлы:**
 - quarterly_report.pdf
 - data_90days.xlsx"""
 
     keyboard = [[InlineKeyboardButton(
-        "GROWTH: Весь год", callback_data="export_period_365d")]]
+        "📈 Весь год", callback_data="export_period_365d")]]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
 async def handle_export_period_365d(query, context):
-    """CALENDAR: Экспорт за год"""
-    await query.answer("CALENDAR: За год...", show_alert=False)
-    text = """CALENDAR: **ЭКСПОРТ ЗА ГОД**
+    """📅 Экспорт за год"""
+    await query.answer("📅 За год...", show_alert=False)
+    text = """📅 **ЭКСПОРТ ЗА ГОД**
 
-SUCCESS: **Годовой отчет готов:**
-- CLIPBOARD: Заявки: 3,247 (+45%)
-- USERS: Новые пользователи: 8,920
-- DOLLAR: Оборот: 5,670,000  rubles
-- CHART: Средняя конверсия: 7.8%
+✅ **Годовой отчет готов:**
+- 📋 Заявки: 3,247 (+45%)
+- 👥 Новые пользователи: 8,920
+- 💵 Оборот: 5,670,000  rubles
+- 📊 Средняя конверсия: 7.8%
 
  **Файлы:**
 - annual_report.pdf (47 страниц)
@@ -9022,27 +9028,27 @@ SUCCESS: **Годовой отчет готов:**
 
 
 async def handle_export_custom_period(query, context):
-    """CALENDAR: Настройка периода"""
-    await query.answer("CALENDAR: Настройка периода...", show_alert=False)
-    text = """CALENDAR: **НАСТРОЙКА ПРОИЗВОЛЬНОГО ПЕРИОДА**
+    """📅 Настройка периода"""
+    await query.answer("📅 Настройка периода...", show_alert=False)
+    text = """📅 **НАСТРОЙКА ПРОИЗВОЛЬНОГО ПЕРИОДА**
 
-TARGET: **Выберите параметры:**
-- CALENDAR: Начальная дата: 01.01.2024
-- CALENDAR: Конечная дата: сегодня
-- CHART: Типы данных: все
+🎯 **Выберите параметры:**
+- 📅 Начальная дата: 01.01.2024
+- 📅 Конечная дата: сегодня
+- 📊 Типы данных: все
 -  Формат: PDF + Excel
 
  **Фильтры:**
-- По категориям SUCCESS:
-- По статусам SUCCESS:
-- По источникам SUCCESS:
-- По юристам SUCCESS:"""
+- По категориям ✅
+- По статусам ✅
+- По источникам ✅
+- По юристам ✅"""
 
     keyboard = [
         [InlineKeyboardButton(
-            "CALENDAR: За 7 дней", callback_data="export_period_7d")],
+            "📅 За 7 дней", callback_data="export_period_7d")],
         [InlineKeyboardButton(
-            "CALENDAR: За 30 дней", callback_data="export_period_30d")]
+            "📅 За 30 дней", callback_data="export_period_30d")]
     ]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -9050,15 +9056,15 @@ TARGET: **Выберите параметры:**
 
 
 async def handle_smm_export_data(query, context):
-    """CHART: Экспорт SMM данных"""
-    await query.answer("CHART: Экспорт SMM...", show_alert=False)
-    text = """CHART: **ЭКСПОРТ SMM ДАННЫХ**
+    """📊 Экспорт SMM данных"""
+    await query.answer("📊 Экспорт SMM...", show_alert=False)
+    text = """📊 **ЭКСПОРТ SMM ДАННЫХ**
 
-SUCCESS: **Экспорт завершен:**
-- MEMO: Постов: 247
+✅ **Экспорт завершен:**
+- 📝 Постов: 247
 -  Просмотров: 67,500
 - CHAT: Комментариев: 1,240
-- CHANGES: Репостов: 890
+- 🔄 Репостов: 890
 
  **Файлы готовы:**
 - smm_analytics.xlsx
@@ -9070,18 +9076,18 @@ SUCCESS: **Экспорт завершен:**
 
 
 async def handle_smm_schedule(query, context):
-    """CLIPBOARD: Расписание постов"""
-    await query.answer("CLIPBOARD: Расписание...", show_alert=False)
-    text = """CLIPBOARD: **РАСПИСАНИЕ ПОСТОВ**
+    """📋 Расписание постов"""
+    await query.answer("📋 Расписание...", show_alert=False)
+    text = """📋 **РАСПИСАНИЕ ПОСТОВ**
 
-CALENDAR: **Запланированные посты:**
+📅 **Запланированные посты:**
 - Сегодня 19:00: Кейс о разводе
 - Завтра 12:00: Новые законы
 - Завтра 20:00: Трудовые права
 - Послезавтра 14:00: ЖКХ проблемы
 
  **Настройки:**
-- Автопостинг: SUCCESS: Включен
+- Автопостинг: ✅ Включен
 - Интервал: 2 часа
 - Время работы: 9:00-21:00"""
 
@@ -9090,17 +9096,17 @@ CALENDAR: **Запланированные посты:**
 
 
 async def handle_smm_change_frequency(query, context):
-    """MEMO: Частота постов"""
-    await query.answer("MEMO: Настройка частоты...", show_alert=False)
-    text = """MEMO: **ЧАСТОТА ПУБЛИКАЦИЙ**
+    """📝 Частота постов"""
+    await query.answer("📝 Настройка частоты...", show_alert=False)
+    text = """📝 **ЧАСТОТА ПУБЛИКАЦИЙ**
 
-CHART: **Текущие настройки:**
+📊 **Текущие настройки:**
 - Постов в день: 12
 - Интервал: 2 часа
 - Рабочее время: 9:00-21:00
 - Выходные: сокращенный режим
 
-TARGET: **Рекомендации:**
+🎯 **Рекомендации:**
 - Оптимально: 8-15 постов/день
 - Пиковые часы: 19:00-21:00
 - Обеденное время: 12:00-14:00"""
@@ -9111,19 +9117,19 @@ TARGET: **Рекомендации:**
 
 
 async def handle_smm_toggle_features(query, context):
-    """FIX: Переключение функций"""
-    await query.answer("FIX: Настройка функций...", show_alert=False)
-    text = """FIX: **УПРАВЛЕНИЕ ФУНКЦИЯМИ**
+    """🔧 Переключение функций"""
+    await query.answer("🔧 Настройка функций...", show_alert=False)
+    text = """🔧 **УПРАВЛЕНИЕ ФУНКЦИЯМИ**
 
  **Состояние функций:**
-- BOT: AI генерация: SUCCESS: Включена
-- CHART: Аналитика: SUCCESS: Включена
-- TARGET: Автотаргетинг: SUCCESS: Включен
-- GROWTH: A/B тестирование: SUCCESS: Включено
-- CHANGES: Кроспостинг: ERROR: Отключен
-- PHONE: Push уведомления: SUCCESS: Включены
+- 🤖 AI генерация: ✅ Включена
+- 📊 Аналитика: ✅ Включена
+- 🎯 Автотаргетинг: ✅ Включен
+- 📈 A/B тестирование: ✅ Включено
+- 🔄 Кроспостинг: ❌ Отключен
+- PHONE: Push уведомления: ✅ Включены
 
-CONTROL: **Быстрые действия:**
+🎛️ **Быстрые действия:**
 Нажмите для переключения функций"""
 
     keyboard = [[InlineKeyboardButton(
@@ -9132,17 +9138,17 @@ CONTROL: **Быстрые действия:**
 
 
 async def handle_smm_set_targets(query, context):
-    """CHART: Настройка метрик"""
-    await query.answer("CHART: Настройка целей...", show_alert=False)
-    text = """CHART: **ЦЕЛЕВЫЕ МЕТРИКИ**
+    """📊 Настройка метрик"""
+    await query.answer("📊 Настройка целей...", show_alert=False)
+    text = """📊 **ЦЕЛЕВЫЕ МЕТРИКИ**
 
-TARGET: **Текущие цели:**
--  Просмотры: 5,000/день (SUCCESS: 112%)
-- CHAT: Комментарии: 50/день (SUCCESS: 108%)
-- CHANGES: Репосты: 20/день (WARNING: 85%)
-- MEMO: Заявки: 8/день (SUCCESS: 125%)
+🎯 **Текущие цели:**
+-  Просмотры: 5,000/день (✅ 112%)
+- CHAT: Комментарии: 50/день (✅ 108%)
+- 🔄 Репосты: 20/день (WARNING: 85%)
+- 📝 Заявки: 8/день (✅ 125%)
 
-GROWTH: **Прогресс за месяц:**
+📈 **Прогресс за месяц:**
 - Достигнуто целей: 3/4
 - Общий рост: +15%
 - ROI: 340%"""
@@ -9153,21 +9159,21 @@ GROWTH: **Прогресс за месяц:**
 
 
 async def handle_smm_reset_config(query, context):
-    """CHANGES: Сброс конфигурации"""
-    await query.answer("CHANGES: Сброс настроек...", show_alert=False)
-    text = """CHANGES: **СБРОС КОНФИГУРАЦИИ**
+    """🔄 Сброс конфигурации"""
+    await query.answer("🔄 Сброс настроек...", show_alert=False)
+    text = """🔄 **СБРОС КОНФИГУРАЦИИ**
 
 WARNING: **ВНИМАНИЕ!**
 Будут сброшены к заводским:
-- TARGET: Настройки таргетинга
+- 🎯 Настройки таргетинга
 - CLOCK: Расписание постов
-- CHART: Пороги метрик
+- 📊 Пороги метрик
 - ART: Шаблоны дизайна
 
-SUCCESS: **Сохранятся:**
-- MEMO: Опубликованные посты
-- CHART: Аналитика и статистика
-- USERS: База подписчиков"""
+✅ **Сохранятся:**
+- 📝 Опубликованные посты
+- 📊 Аналитика и статистика
+- 👥 База подписчиков"""
 
     keyboard = [[InlineKeyboardButton(
         "◀ Назад", callback_data="smm_settings")]]
@@ -9175,17 +9181,17 @@ SUCCESS: **Сохранятся:**
 
 
 async def handle_smm_optimization_details(query, context):
-    """CLIPBOARD: Детали оптимизации"""
-    await query.answer("CLIPBOARD: Анализ оптимизации...", show_alert=False)
-    text = """CLIPBOARD: **ДЕТАЛИ ОПТИМИЗАЦИИ**
+    """📋 Детали оптимизации"""
+    await query.answer("📋 Анализ оптимизации...", show_alert=False)
+    text = """📋 **ДЕТАЛИ ОПТИМИЗАЦИИ**
 
-TARGET: **Выполненные оптимизации:**
+🎯 **Выполненные оптимизации:**
 - CLOCK: Время публикации: 19:00 → 19:30 (+12% вовлеченность)
 -  Хештеги: добавлены #семейноеправо (+8% охват)
-- MEMO: Длина постов: 800 → 1200 символов (+15% время чтения)
+- 📝 Длина постов: 800 → 1200 символов (+15% время чтения)
 - ART: Визуальный контент: +40% постов с изображениями
 
-GROWTH: **Результаты за неделю:**
+📈 **Результаты за неделю:**
 - Охват: +25%
 - Вовлеченность: +18%
 - Переходы: +35%
@@ -9202,13 +9208,13 @@ async def handle_strategy_viral_focused(query, context):
     await query.answer("FIRE: Вирусная стратегия...", show_alert=False)
     text = """FIRE: **ВИРУСНАЯ СТРАТЕГИЯ (ФОКУС)**
 
-TARGET: **Настройки активированы:**
-- CHART: Контент: 90% развлекательный
+🎯 **Настройки активированы:**
+- 📊 Контент: 90% развлекательный
 - CLOCK: Время: пиковые часы (18-21)
 - MASKS: Тон: эмоциональный, яркий
 -  Хештеги: трендовые
 
-GROWTH: **Ожидаемые результаты:**
+📈 **Ожидаемые результаты:**
 - Охват: +60-80%
 - Скорость роста: +45%
 - Конверсия: -20% (норма)
@@ -9220,17 +9226,17 @@ GROWTH: **Ожидаемые результаты:**
 
 
 async def handle_strategy_conversion_focused(query, context):
-    """DOLLAR: Конверсионная стратегия (фокус)"""
-    await query.answer("DOLLAR: Конверсионная...", show_alert=False)
-    text = """DOLLAR: **КОНВЕРСИОННАЯ СТРАТЕГИЯ (ФОКУС)**
+    """💵 Конверсионная стратегия (фокус)"""
+    await query.answer("💵 Конверсионная...", show_alert=False)
+    text = """💵 **КОНВЕРСИОННАЯ СТРАТЕГИЯ (ФОКУС)**
 
-TARGET: **Настройки активированы:**
-- CHART: Контент: 80% продающий
+🎯 **Настройки активированы:**
+- 📊 Контент: 80% продающий
 - CLOCK: Время: рабочие часы
 - MASKS: Тон: экспертный, убеждающий
 - LINK: CTA: в каждом посте
 
-GROWTH: **Ожидаемые результаты:**
+📈 **Ожидаемые результаты:**
 - Заявки: +40-60%
 - Конверсия: +35%
 - AOV: +25%
@@ -9246,13 +9252,13 @@ async def handle_strategy_engagement_focused(query, context):
     await query.answer("CHAT: Стратегия вовлечения...", show_alert=False)
     text = """CHAT: **СТРАТЕГИЯ ВОВЛЕЧЕНИЯ (ФОКУС)**
 
-TARGET: **Настройки активированы:**
-- CHART: Контент: 70% интерактивный
+🎯 **Настройки активированы:**
+- 📊 Контент: 70% интерактивный
 - CLOCK: Время: равномерно в течение дня
 - MASKS: Тон: дружелюбный, открытый
 - CHAT: Призывы: к комментариям и обсуждениям
 
-GROWTH: **Ожидаемые результаты:**
+📈 **Ожидаемые результаты:**
 - Комментарии: +80%
 - Время в канале: +55%
 - Лояльность: +40%
@@ -9268,13 +9274,13 @@ async def handle_strategy_balanced(query, context):
     await query.answer("SCALES: Сбалансированная...", show_alert=False)
     text = """SCALES: **СБАЛАНСИРОВАННАЯ СТРАТЕГИЯ**
 
-TARGET: **Оптимальные настройки:**
-- CHART: Контент: 40% информационный, 30% продающий, 30% развлекательный
+🎯 **Оптимальные настройки:**
+- 📊 Контент: 40% информационный, 30% продающий, 30% развлекательный
 - CLOCK: Время: адаптивное под аудиторию
 - MASKS: Тон: профессиональный с элементами дружелюбия
-- TARGET: Цели: равномерный рост всех метрик
+- 🎯 Цели: равномерный рост всех метрик
 
-GROWTH: **Стабильные результаты:**
+📈 **Стабильные результаты:**
 - Охват: +15-25%
 - Конверсия: +10-20%
 - Вовлеченность: +20-30%
@@ -9290,13 +9296,13 @@ async def handle_strategy_educational(query, context):
     await query.answer("BOOKS: Образовательная...", show_alert=False)
     text = """BOOKS: **ОБРАЗОВАТЕЛЬНАЯ СТРАТЕГИЯ**
 
-TARGET: **Настройки экспертности:**
-- CHART: Контент: 90% образовательный
+🎯 **Настройки экспертности:**
+- 📊 Контент: 90% образовательный
 - CLOCK: Время: рабочие часы + вечер
 - MASKS: Тон: экспертный, детальный
 - BOOKS: Формат: гайды, разборы, FAQ
 
-GROWTH: **Долгосрочные результаты:**
+📈 **Долгосрочные результаты:**
 - Доверие к бренду: +60%
 - Время чтения: +120%
 - Сохранения: +80%
@@ -9314,7 +9320,7 @@ async def handle_smm_add_images(query, context):
     await query.answer(" Настройка изображений...", show_alert=False)
     text = """ **УПРАВЛЕНИЕ ИЗОБРАЖЕНИЯМИ**
 
-CHART: **Текущая библиотека:**
+📊 **Текущая библиотека:**
 - Всего изображений: 247
 - Юридическая тематика: 189
 - Универсальные: 58
@@ -9331,14 +9337,14 @@ ART: **Добавить новые:**
 
 
 async def handle_smm_edit_templates(query, context):
-    """MEMO: Редактор шаблонов"""
-    await query.answer("MEMO: Редактор шаблонов...", show_alert=False)
-    text = """MEMO: **РЕДАКТОР ШАБЛОНОВ ПОСТОВ**
+    """📝 Редактор шаблонов"""
+    await query.answer("📝 Редактор шаблонов...", show_alert=False)
+    text = """📝 **РЕДАКТОР ШАБЛОНОВ ПОСТОВ**
 
 ART: **Доступные шаблоны:**
 -  Новости права (5 вариантов)
 - �� Кейсы из практики (8 вариантов)
-- CHART: Инфографика (3 варианта)
+- 📊 Инфографика (3 варианта)
 - GRADUATION: Образовательные (6 вариантов)
 
  **Редактирование:**
@@ -9355,7 +9361,7 @@ async def handle_smm_style_editor(query, context):
     await query.answer("ART: Редактор стилей...", show_alert=False)
     text = """ART: **РЕДАКТОР СТИЛЕЙ**
 
-TARGET: **Текущий стиль:**
+🎯 **Текущий стиль:**
 - Шрифт: строгий деловой
 - Цвета: синий + белый
 - Элементы: минимализм
@@ -9376,7 +9382,7 @@ async def handle_smm_button_settings(query, context):
     await query.answer(" Настройки кнопок...", show_alert=False)
     text = """ **НАСТРОЙКИ КНОПОК CTA**
 
-TARGET: **Текущие кнопки:**
+🎯 **Текущие кнопки:**
 - " Получить консультацию" (основная)
 - "PHONE: Заказать звонок" (альтернативная)
 - "�� Подать заявку" (форма)
@@ -9404,7 +9410,7 @@ LINK: Ссылка на источник
 
  [Получить консультацию]
 
-CHART: **Анализ:**
+📊 **Анализ:**
 - Длина: оптимальная
 - Читаемость: высокая
 - CTA: заметная"""
@@ -9418,13 +9424,13 @@ async def handle_smm_save_template(query, context):
     await query.answer(" Сохранение шаблона...", show_alert=False)
     text = """ **ШАБЛОН СОХРАНЕН**
 
-SUCCESS: **Создан новый шаблон:**
+✅ **Создан новый шаблон:**
 - Название: "Юридический кейс v2"
 - Категория: Кейсы из практики
 - Элементы: заголовок + описание + CTA
 - Стиль: профессиональный
 
-CLIPBOARD: **Доступен для:**
+📋 **Доступен для:**
 - Автогенерации постов
 - Ручного создания
 - Планировщика контента
@@ -9466,7 +9472,7 @@ async def handle_smm_interval_1h(query, context):
 - Интенсивность: высокая
 - Рекомендуется: для роста
 
-SUCCESS: **Оптимально для:**
+✅ **Оптимально для:**
 Быстрого набора аудитории"""
 
     keyboard = [[InlineKeyboardButton(
@@ -9477,7 +9483,7 @@ SUCCESS: **Оптимально для:**
 async def handle_smm_interval_2h(query, context):
     """ Интервал 2 часа"""
     await query.answer(" 2 часа установлено", show_alert=False)
-    text = """ **ИНТЕРВАЛ: 2 ЧАСА** SUCCESS: ТЕКУЩИЙ
+    text = """ **ИНТЕРВАЛ: 2 ЧАСА** ✅ ТЕКУЩИЙ
 
  **Настройки активированы:**
 - Публикация: каждые 2 часа
@@ -9485,7 +9491,7 @@ async def handle_smm_interval_2h(query, context):
 - Интенсивность: сбалансированная
 - Рекомендуется: для стабильности
 
-TARGET: **Идеальный баланс:**
+🎯 **Идеальный баланс:**
 Качество контента + регулярность"""
 
     keyboard = [[InlineKeyboardButton(
@@ -9513,9 +9519,9 @@ async def handle_smm_interval_4h(query, context):
 
 
 async def handle_smm_interval_6h(query, context):
-    """CALENDAR: Интервал 6 часов"""
-    await query.answer("CALENDAR: 6 часов установлено", show_alert=False)
-    text = """CALENDAR: **ИНТЕРВАЛ: 6 ЧАСОВ**
+    """📅 Интервал 6 часов"""
+    await query.answer("📅 6 часов установлено", show_alert=False)
+    text = """📅 **ИНТЕРВАЛ: 6 ЧАСОВ**
 
  **Настройки активированы:**
 - Публикация: каждые 6 часов
@@ -9557,7 +9563,7 @@ async def handle_smm_custom_schedule(query, context):
     await query.answer("CLOCK: Настройка расписания...", show_alert=False)
     text = """CLOCK: **НАСТРОЙКА РАСПИСАНИЯ**
 
-CALENDAR: **Текущее расписание:**
+📅 **Текущее расписание:**
 - Понедельник: 09:00, 12:00, 15:00, 18:00
 - Вторник: 09:00, 12:00, 15:00, 18:00
 - Среда: 09:00, 12:00, 15:00, 18:00
@@ -9577,9 +9583,9 @@ CALENDAR: **Текущее расписание:**
 
 
 async def handle_smm_smart_scheduling(query, context):
-    """BOT: Умное планирование"""
-    await query.answer("BOT: Анализ активности...", show_alert=False)
-    text = """BOT: **УМНОЕ ПЛАНИРОВАНИЕ**
+    """🤖 Умное планирование"""
+    await query.answer("🤖 Анализ активности...", show_alert=False)
+    text = """🤖 **УМНОЕ ПЛАНИРОВАНИЕ**
 
  **AI анализ показал:**
 - Лучшее время: 19:00-19:30
@@ -9587,7 +9593,7 @@ async def handle_smm_smart_scheduling(query, context):
 - Пиковые дни: Вторник, Четверг
 - Слабые дни: Суббота, Воскресенье
 
-CHART: **Рекомендуемое расписание:**
+📊 **Рекомендуемое расписание:**
 - Вт, Чт: 08:00, 12:00, 19:00 (по 3 поста)
 - Пн, Ср, Пт: 12:00, 19:00 (по 2 поста)
 - Сб, Вс: 14:00 (по 1 посту)
@@ -9602,16 +9608,16 @@ CHART: **Рекомендуемое расписание:**
 
 
 async def handle_smm_compare_strategies(query, context):
-    """CHART: Сравнение стратегий"""
-    await query.answer("CHART: Анализ стратегий...", show_alert=False)
-    text = """CHART: **СРАВНЕНИЕ СТРАТЕГИЙ**
+    """📊 Сравнение стратегий"""
+    await query.answer("📊 Анализ стратегий...", show_alert=False)
+    text = """📊 **СРАВНЕНИЕ СТРАТЕГИЙ**
 
 FIRE: **Вирусная:**
 - Охват: +60%
 - Конверсия: -20%
 - Скорость роста: высокая
 
-DOLLAR: **Конверсионная:**
+💵 **Конверсионная:**
 - Охват: -15%
 - Конверсия: +40%
 - ROI: максимальный
@@ -9621,7 +9627,7 @@ BOOKS: **Образовательная:**
 - Доверие: +50%
 - Долгосрочность: высокая
 
-SCALES: **Сбалансированная:** SUCCESS: ТЕКУЩАЯ
+SCALES: **Сбалансированная:** ✅ ТЕКУЩАЯ
 - Все показатели: +15-25%
 - Риски: минимальные"""
 
@@ -9631,14 +9637,14 @@ SCALES: **Сбалансированная:** SUCCESS: ТЕКУЩАЯ
 
 
 async def handle_smm_custom_strategy(query, context):
-    """TARGET: Персональная стратегия"""
-    await query.answer("TARGET: Создание стратегии...", show_alert=False)
-    text = """TARGET: **ПЕРСОНАЛЬНАЯ СТРАТЕГИЯ**
+    """🎯 Персональная стратегия"""
+    await query.answer("🎯 Создание стратегии...", show_alert=False)
+    text = """🎯 **ПЕРСОНАЛЬНАЯ СТРАТЕГИЯ**
 
  **AI создал стратегию под ваши цели:**
 
-GROWTH: **Цели:** Рост заявок + узнаваемость
-TARGET: **Контент-микс:**
+📈 **Цели:** Рост заявок + узнаваемость
+🎯 **Контент-микс:**
 - 50% кейсы (конверсия)
 - 30% образование (доверие)
 - 20% новости (охват)
@@ -9647,7 +9653,7 @@ CLOCK: **Оптимальное время:**
 - Пн-Пт: 12:00, 19:00
 - Сб-Вс: 15:00
 
-CHART: **Прогноз результата:**
+📊 **Прогноз результата:**
 - Заявки: +35%
 - Охват: +20%
 - Узнаваемость: +45%"""
@@ -9660,48 +9666,48 @@ CHART: **Прогноз результата:**
 
 
 async def handle_smm_enhanced_autopost(query, context):
-    """ROCKET: Профессиональный автопостинг"""
-    await query.answer("ROCKET: Загрузка профессионального автопостинга...", show_alert=False)
+    """🚀 Профессиональный автопостинг"""
+    await query.answer("🚀 Загрузка профессионального автопостинга...", show_alert=False)
 
-    text = """ROCKET: **ПРОФЕССИОНАЛЬНЫЙ АВТОПОСТИНГ**
+    text = """🚀 **ПРОФЕССИОНАЛЬНЫЙ АВТОПОСТИНГ**
 
  **Enhanced AI Система:**
-- Умная ротация контента: SUCCESS: Активна
-- ML классификация: SUCCESS: Включена
-- Персонализация: SUCCESS: Работает
-- Память диалогов: SUCCESS: Сохраняется
+- Умная ротация контента: ✅ Активна
+- ML классификация: ✅ Включена
+- Персонализация: ✅ Работает
+- Память диалогов: ✅ Сохраняется
 
-CHART: **Производительность:**
+📊 **Производительность:**
 - Постов сегодня: 12
 - Конверсия: 3.8% (+85% к стандарту)
 - Вовлеченность: 12.4% (+120% к стандарту)
 - Качество контента: 9.2/10
 
-TARGET: **Умные настройки:**
+🎯 **Умные настройки:**
 - Автоматический подбор времени публикации
 - Адаптивный тон под аудиторию
 - Реальные юридические источники
 - Защита от повторов контента
 
-FIX: **Управление:**"""
+🔧 **Управление:**"""
 
     keyboard = [
         [
-            InlineKeyboardButton("MEMO: Создать пост сейчас",
+            InlineKeyboardButton("📝 Создать пост сейчас",
                                  callback_data="smm_force_enhanced_post"),
-            InlineKeyboardButton("CHART: Детальная статистика",
+            InlineKeyboardButton("📊 Детальная статистика",
                                  callback_data="smm_enhanced_stats")
         ],
         [
             InlineKeyboardButton(" Настройки ротации",
                                  callback_data="smm_rotation_settings"),
-            InlineKeyboardButton("CLIPBOARD: История публикаций",
+            InlineKeyboardButton("📋 История публикаций",
                                  callback_data="smm_publication_history")
         ],
         [
             InlineKeyboardButton(
                 " Тестовый пост", callback_data="smm_test_enhanced_post"),
-            InlineKeyboardButton("GROWTH: Аналитика эффективности",
+            InlineKeyboardButton("📈 Аналитика эффективности",
                                  callback_data="smm_content_analytics")
         ],
         [InlineKeyboardButton(" Назад", callback_data="smm_autopost")]
@@ -9719,24 +9725,24 @@ async def handle_smm_resume_autopost(query, context):
 
     text = """▶ **АВТОПОСТИНГ ВОЗОБНОВЛЕН**
 
-SUCCESS: **Статус изменен:**
-- Автопубликация: SUCCESS: Активна
-- Планировщик: SUCCESS: Запущен
+✅ **Статус изменен:**
+- Автопубликация: ✅ Активна
+- Планировщик: ✅ Запущен
 - Следующий пост: через ~45 минут
 - Интервал: каждые 2 часа
 
-ROCKET: **Система активирована:**
+🚀 **Система активирована:**
 - Очередь постов: 5 готово к публикации
 - Контент-стратегия: обновлена
 - Таргетинг: оптимизирован
 - Аналитика: ведется
 
-CHART: **Ожидаемые результаты:**
+📊 **Ожидаемые результаты:**
 - Охват: 2,500+ просмотров/день
 - Конверсия: 2.5% в заявки
 - Вовлеченность: 8%+ лайков/комментариев
 
-TARGET: **Активные настройки:**
+🎯 **Активные настройки:**
 - Умная ротация контента
 - Автоматический тайминг
 - Персонализация под аудиторию
@@ -9744,7 +9750,7 @@ TARGET: **Активные настройки:**
 
     keyboard = [
         [
-            InlineKeyboardButton("ROCKET: Запустить пост сейчас",
+            InlineKeyboardButton("🚀 Запустить пост сейчас",
                                  callback_data="smm_force_post"),
             InlineKeyboardButton("⏸ Приостановить",
                                  callback_data="smm_pause_autopost")
@@ -9752,7 +9758,7 @@ TARGET: **Активные настройки:**
         [
             InlineKeyboardButton(" Настройки автопостинга",
                                  callback_data="smm_autopost_settings"),
-            InlineKeyboardButton("CHART: Статистика", callback_data="smm_analytics")
+            InlineKeyboardButton("📊 Статистика", callback_data="smm_analytics")
         ],
         [InlineKeyboardButton(" Назад в SMM", callback_data="smm_main_panel")]
     ]
