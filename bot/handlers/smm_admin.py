@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Список админов (добавьте свой Telegram ID)
 ADMIN_IDS = [
-    # 123456789,  # Замените на ваш Telegram ID
+    343688708,  # Egor D. - Администратор бота
+    439952839,  # Дмитрий Носов - Администратор бота
 ]
 
 
@@ -65,7 +66,7 @@ async def smm_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             ],
             [
                 InlineKeyboardButton(
-                    "⚙️ Настройки", callback_data="smm_settings"),
+                    "⚙️⚙️ Настройки", callback_data="smm_settings"),
                 InlineKeyboardButton(
                     "🔄 Оптимизация", callback_data="smm_optimize")
             ],
@@ -159,7 +160,7 @@ async def smm_analytics_command(update: Update, context: ContextTypes.DEFAULT_TY
             [
                 InlineKeyboardButton(
                     "🔄 Обновить", callback_data="smm_analytics"),
-                InlineKeyboardButton("◀️ Назад", callback_data="smm_status")
+                InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
             ]
         ]
 
@@ -213,7 +214,7 @@ async def smm_create_post_command(update: Update, context: ContextTypes.DEFAULT_
                     "📋 Расписание", callback_data="smm_schedule")
             ],
             [
-                InlineKeyboardButton("◀️ Назад", callback_data="smm_status")
+                InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
             ]
         ]
 
@@ -280,7 +281,7 @@ async def smm_settings_command(update: Update, context: ContextTypes.DEFAULT_TYP
             [
                 InlineKeyboardButton("🔄 Сброс к умолчаниям",
                                      callback_data="smm_reset_config"),
-                InlineKeyboardButton("◀️ Назад", callback_data="smm_status")
+                InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
             ]
         ]
 
@@ -341,7 +342,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 ],
                 [
                     InlineKeyboardButton(
-                        "⚙️ Настройки", callback_data="smm_settings"),
+                        "⚙️⚙️ Настройки", callback_data="smm_settings"),
                     InlineKeyboardButton(
                         "🔄 Оптимизация", callback_data="smm_optimize")
                 ],
@@ -383,7 +384,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 ],
                 [
                     InlineKeyboardButton(
-                        "◀️ Назад", callback_data="smm_status")
+                        "◀️◀️ Назад", callback_data="smm_status")
                 ]
             ]
 
@@ -412,7 +413,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                     InlineKeyboardButton(
                         "📝 Создать еще", callback_data="smm_create_post"),
                     InlineKeyboardButton(
-                        "◀️ Назад", callback_data="smm_status")
+                        "◀️◀️ Назад", callback_data="smm_status")
                 ]
             ]
 
@@ -451,7 +452,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                     InlineKeyboardButton(
                         "📚 Образовательная", callback_data="strategy_educational"),
                     InlineKeyboardButton(
-                        "◀️ Назад", callback_data="smm_settings")
+                        "◀️◀️ Назад", callback_data="smm_settings")
                 ]
             ]
 
@@ -516,7 +517,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                         InlineKeyboardButton(
                             "📋 Подробности", callback_data="smm_optimization_details"),
                         InlineKeyboardButton(
-                            "◀️ Назад", callback_data="smm_status")
+                            "◀️◀️ Назад", callback_data="smm_status")
                     ]
                 ]
 
