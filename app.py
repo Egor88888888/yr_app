@@ -212,11 +212,7 @@ try:
             return fastapi.Response(status_code=500, content="Error")
 
     # Also handle the exact webhook URL format used
-    @app.post("/{token}")
-    async def handle_telegram_webhook_direct(token: str, request: fastapi.Request):
-        return await handle_telegram_webhook(token, request)
-
-    # ===== MINI APP SUBMIT ENDPOINT =====
+    # ===== MINI APP SUBMIT ENDPOINT (MUST BE BEFORE /{token}) =====
     
     @app.options("/submit")
     async def submit_options():
@@ -536,6 +532,11 @@ ID заявки: #{application.id}
             except Exception as e2:
                 print(f"❌ Failed to send simple admin notification: {e2}")
                 raise e2
+
+    # ===== TELEGRAM WEBHOOK WILDCARD (AFTER ALL SPECIFIC ROUTES) =====
+    @app.post("/{token}")
+    async def handle_telegram_webhook_direct(token: str, request: fastapi.Request):
+        return await handle_telegram_webhook(token, request)
 
     # ===== STATIC MOUNTS LAST =====
     app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
