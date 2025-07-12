@@ -188,29 +188,70 @@ async function submitForm() {
     console.log('📤 Submitting form:', window.formData);
     
     const nextBtn = document.getElementById('next-btn');
+    const originalText = nextBtn.textContent;
     nextBtn.textContent = 'Отправляем...';
     nextBtn.disabled = true;
     
     try {
+        console.log('🔄 Making request to /submit');
         const response = await fetch('/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(window.formData)
         });
         
+        console.log('📡 Response status:', response.status);
+        
         if (response.ok) {
             const result = await response.json();
             console.log('✅ Submit successful:', result);
-            showSuccess(result);
+            
+            // Принудительно показываем успех
+            setTimeout(() => {
+                showSuccess(result);
+                
+                // Дополнительный fallback - показать alert если что-то пошло не так
+                setTimeout(() => {
+                    if (!document.getElementById('emergency-success') && 
+                        document.getElementById('success').style.cssText.indexOf('display: block') === -1) {
+                        alert(`✅ ЗАЯВКА #${result?.application_id || 'unknown'} ОТПРАВЛЕНА!\n\nМы свяжемся с вами в течение 15 минут.`);
+                    }
+                }, 1000);
+            }, 300); // Небольшая задержка для UX
+            
+        } else if (response.status === 200) {
+            // Иногда status может быть проблемным, но response.ok false
+            try {
+                const result = await response.json();
+                console.log('⚠️ Partial success (status issue):', result);
+                setTimeout(() => {
+                    showSuccess(result);
+                }, 300);
+            } catch (e) {
+                throw new Error('Ошибка обработки ответа сервера');
+            }
         } else {
             const errorText = await response.text();
+            console.error('❌ Submit failed:', response.status, errorText);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
     } catch (error) {
         console.error('❌ Submit error:', error);
-        alert(`Ошибка отправки: ${error.message}`);
+        
+        // Восстанавливаем кнопку
         nextBtn.textContent = 'Повторить';
         nextBtn.disabled = false;
+        
+        // Показываем ошибку
+        const errorMessage = `Ошибка отправки: ${error.message}`;
+        alert(errorMessage);
+        
+        // Также логируем в консоль для отладки
+        console.log('🔍 Full error details:', {
+            error: error,
+            formData: window.formData,
+            currentStep: window.currentStep
+        });
     }
 }
 
@@ -219,15 +260,29 @@ function showSuccess(result) {
     console.log('🎉 Showing success page with result:', result);
     
     // Скрыть все шаги
-    document.querySelectorAll('.ultra-step').forEach(step => step.classList.add('hidden'));
+    document.querySelectorAll('.ultra-step').forEach(step => {
+        step.classList.add('hidden');
+        step.classList.remove('active');
+    });
     
     // Показать страницу успеха
     const successStep = document.getElementById('success');
     if (successStep) {
+        console.log('✅ Success element found, showing it');
         successStep.classList.remove('hidden');
+        successStep.classList.add('active');
+        
+        // Принудительно показываем элемент с !important стилями
+        successStep.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important;';
         
         // Обновить содержимое страницы успеха
         updateSuccessContent(result);
+        console.log('✅ Success content updated');
+    } else {
+        console.error('❌ Success element not found!');
+        
+        // Критический fallback - создаем страницу успеха на лету
+        createEmergencySuccessPage(result);
     }
     
     // Скрыть навигацию
@@ -238,10 +293,74 @@ function showSuccess(result) {
     
     // Отправить уведомление клиенту в Telegram
     sendClientNotification(result);
+    
+    console.log('🎯 Success page setup completed');
+}
+
+// Экстренное создание страницы успеха если основная не найдена
+function createEmergencySuccessPage(result) {
+    console.log('🚨 Creating emergency success page');
+    
+    const appContainer = document.getElementById('ultra-app');
+    if (!appContainer) return;
+    
+    const applicationId = result?.application_id || 'не определен';
+    
+    // Скрыть весь основной контент
+    const allSteps = document.querySelectorAll('.ultra-step');
+    allSteps.forEach(step => step.style.display = 'none');
+    
+    const navigation = document.querySelector('.ultra-navigation');
+    if (navigation) navigation.style.display = 'none';
+    
+    // Создать экстренную страницу успеха
+    const emergencySuccess = document.createElement('div');
+    emergencySuccess.id = 'emergency-success';
+    emergencySuccess.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        z-index: 9999;
+    `;
+    
+    emergencySuccess.innerHTML = `
+        <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px; max-width: 400px; width: 100%;">
+            <div style="font-size: 60px; margin-bottom: 20px;">🎉</div>
+            <h1 style="font-size: 28px; margin-bottom: 16px; font-weight: 700;">Заявка отправлена!</h1>
+            <div style="background: rgba(255,255,255,0.2); padding: 16px; border-radius: 12px; margin: 20px 0;">
+                <div style="font-weight: 600; margin-bottom: 8px;">📋 ID заявки: #${applicationId}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Категория: ${window.formData.category_name || 'Выбрано'}</div>
+            </div>
+            <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px; opacity: 0.9;">
+                Ваша заявка успешно отправлена юристу.<br>
+                Мы свяжемся с вами в течение 15 минут.
+            </p>
+            <button onclick="window.close ? window.close() : (Telegram.WebApp ? Telegram.WebApp.close() : location.reload())" 
+                    style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px 24px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                Закрыть приложение
+            </button>
+        </div>
+    `;
+    
+    appContainer.appendChild(emergencySuccess);
+    console.log('🚨 Emergency success page created and shown');
 }
 
 // Обновить содержимое страницы успеха
 function updateSuccessContent(result) {
+    console.log('🔄 Updating success content with:', result);
+    
     const applicationId = result?.application_id || 'не определен';
     const payUrl = result?.pay_url;
     
@@ -250,6 +369,13 @@ function updateSuccessContent(result) {
     const successText = document.querySelector('.ultra-success-text');
     const paymentSection = document.getElementById('payment-section');
     const payButton = document.getElementById('pay-button');
+    
+    console.log('📊 Elements found:', {
+        successTitle: !!successTitle,
+        successText: !!successText,
+        paymentSection: !!paymentSection,
+        payButton: !!payButton
+    });
     
     // Обновить заголовок с ID заявки
     if (successTitle) {
