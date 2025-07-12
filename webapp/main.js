@@ -448,7 +448,58 @@ function showReview() {
     document.getElementById('review-content').innerHTML = reviewHtml;
 }
 
-// Submit form
+// Централизованная система уведомлений
+function showNotification(type, message) {
+    // type: 'success' | 'error' | 'info'
+    let color = '#3b82f6';
+    if (type === 'success') color = '#10b981';
+    if (type === 'error') color = '#ef4444';
+    let notif = document.createElement('div');
+    notif.className = 'pro-card-compact';
+    notif.style.position = 'fixed';
+    notif.style.top = '24px';
+    notif.style.left = '50%';
+    notif.style.transform = 'translateX(-50%)';
+    notif.style.background = '#fff';
+    notif.style.color = color;
+    notif.style.border = `1.5px solid ${color}`;
+    notif.style.zIndex = 9999;
+    notif.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    notif.style.fontWeight = '600';
+    notif.style.padding = '14px 24px';
+    notif.style.transition = 'opacity 0.3s';
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 300);
+    }, 2200);
+}
+
+// Micro-interaction: shake input on error
+function shakeInput(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    el.style.animation = 'shake 0.3s';
+    el.style.borderColor = '#ef4444';
+    setTimeout(() => {
+        el.style.animation = '';
+        el.style.borderColor = '';
+    }, 350);
+}
+
+// Вызов анимации при успешной отправке
+function showSuccessPulse() {
+    const successIcon = document.querySelector('.pro-success-icon');
+    if (successIcon) {
+        successIcon.style.animation = 'pulse 0.7s';
+        setTimeout(() => {
+            successIcon.style.animation = '';
+        }, 700);
+    }
+}
+
+// Вызов onFormSuccess после успешной отправки формы
 async function submitForm() {
     tg.MainButton.showProgress();
     
@@ -509,4 +560,5 @@ async function submitForm() {
     } finally {
         tg.MainButton.hideProgress();
     }
+    onFormSuccess();
 } 

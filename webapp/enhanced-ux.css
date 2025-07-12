@@ -1,0 +1,738 @@
+/*
+=======================================================
+🎯 ENHANCED UX COMPONENTS & MICRO-INTERACTIONS
+=======================================================
+Дополнительные компоненты для профессионального UX
+*/
+
+/* =========================
+   LOADING STATES
+   ========================= */
+
+.pro-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.7;
+}
+
+.pro-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.pro-skeleton {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.pro-skeleton-text {
+    height: 16px;
+    margin-bottom: 8px;
+}
+
+.pro-skeleton-text:last-child {
+    width: 60%;
+}
+
+/* =========================
+   TOAST NOTIFICATIONS
+   ========================= */
+
+.pro-toast {
+    position: fixed;
+    top: 20px;
+    left: 16px;
+    right: 16px;
+    z-index: 1000;
+    border-radius: 12px;
+    padding: 16px;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(20px);
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pro-toast.show {
+    transform: translateY(0);
+}
+
+.pro-toast-success {
+    background: rgba(236, 253, 245, 0.95);
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.pro-toast-error {
+    background: rgba(254, 242, 242, 0.95);
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.pro-toast-warning {
+    background: rgba(255, 251, 235, 0.95);
+    color: #d97706;
+    border: 1px solid #fed7aa;
+}
+
+.pro-toast-info {
+    background: rgba(240, 249, 255, 0.95);
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+}
+
+/* =========================
+   FORM ENHANCEMENTS
+   ========================= */
+
+.pro-input-group {
+    position: relative;
+}
+
+.pro-input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.pro-input-group .pro-input {
+    padding-left: 40px;
+}
+
+.pro-input-group .pro-input:focus + .pro-input-icon {
+    color: #3b82f6;
+}
+
+.pro-floating-label {
+    position: relative;
+}
+
+.pro-floating-label input {
+    padding-top: 20px;
+    padding-bottom: 4px;
+}
+
+.pro-floating-label label {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    color: #9ca3af;
+    font-size: 16px;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    transform-origin: left top;
+}
+
+.pro-floating-label input:focus + label,
+.pro-floating-label input:not(:placeholder-shown) + label {
+    transform: translateY(-8px) scale(0.8);
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.pro-input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.pro-error-message {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pro-success-message {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* =========================
+   INTERACTIVE ELEMENTS
+   ========================= */
+
+.pro-toggle {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.pro-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pro-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+}
+
+.pro-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pro-toggle input:checked + .pro-toggle-slider {
+    background-color: #3b82f6;
+}
+
+.pro-toggle input:checked + .pro-toggle-slider:before {
+    transform: translateX(24px);
+}
+
+/* =========================
+   PROGRESS INDICATORS
+   ========================= */
+
+.pro-step-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.pro-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d1d5db;
+    transition: all 0.3s ease;
+}
+
+.pro-step-dot.active {
+    background: #3b82f6;
+    transform: scale(1.25);
+}
+
+.pro-step-dot.completed {
+    background: #10b981;
+}
+
+.pro-circular-progress {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.pro-circular-progress svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.pro-circular-progress circle {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.pro-circular-progress .background {
+    stroke: #e5e7eb;
+}
+
+.pro-circular-progress .progress {
+    stroke: #3b82f6;
+    stroke-dasharray: 125.6;
+    stroke-dashoffset: 125.6;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+/* =========================
+   MODAL & OVERLAYS
+   ========================= */
+
+.pro-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.pro-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.pro-modal {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px;
+    max-width: 400px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.pro-modal-overlay.show .pro-modal {
+    transform: scale(1) translateY(0);
+}
+
+.pro-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.pro-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.pro-modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.pro-modal-close:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* =========================
+   CARD VARIANTS
+   ========================= */
+
+.pro-card-hover {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.pro-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+
+.pro-card-interactive {
+    position: relative;
+    overflow: hidden;
+}
+
+.pro-card-interactive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.pro-card-interactive:hover::before {
+    left: 100%;
+}
+
+.pro-card-success {
+    border: 1px solid #a7f3d0;
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.95), rgba(167, 243, 208, 0.1));
+}
+
+.pro-card-warning {
+    border: 1px solid #fed7aa;
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.95), rgba(254, 215, 170, 0.1));
+}
+
+.pro-card-error {
+    border: 1px solid #fecaca;
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.95), rgba(254, 202, 202, 0.1));
+}
+
+/* =========================
+   BUTTON VARIANTS
+   ========================= */
+
+.pro-btn-ghost {
+    background: transparent;
+    color: #3b82f6;
+    border: 2px solid #3b82f6;
+}
+
+.pro-btn-ghost:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.pro-btn-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.pro-btn-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.pro-btn-gradient:hover::before {
+    opacity: 1;
+}
+
+.pro-btn-gradient > * {
+    position: relative;
+    z-index: 1;
+}
+
+.pro-btn-floating {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    z-index: 100;
+}
+
+/* =========================
+   UTILITY ANIMATIONS
+   ========================= */
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.fade-out {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+.slide-in-up {
+    animation: slideInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-in-down {
+    animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bounce-in {
+    animation: bounceIn 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-4px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(4px);
+    }
+}
+
+/* =========================
+   FOCUS MANAGEMENT
+   ========================= */
+
+.focus-trap {
+    position: relative;
+}
+
+.focus-trap::before,
+.focus-trap::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Improve focus visibility */
+*:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.pro-btn:focus,
+.pro-input:focus,
+.pro-category:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+/* =========================
+   ACCESSIBILITY
+   ========================= */
+
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.pro-skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: #3b82f6;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 1000;
+    transition: top 0.3s ease;
+}
+
+.pro-skip-link:focus {
+    top: 6px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .pro-btn-primary {
+        background: #000000;
+        border: 2px solid #000000;
+        color: #ffffff;
+    }
+
+    .pro-input {
+        border: 2px solid #000000;
+    }
+
+    .pro-category {
+        border: 2px solid #000000;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .pro-progress-fill::after {
+        animation: none;
+    }
+}
+
+/* =========================
+   DARK MODE ENHANCEMENTS
+   ========================= */
+
+@media (prefers-color-scheme: dark) {
+    .pro-toast-success {
+        background: rgba(6, 78, 59, 0.95);
+        color: #34d399;
+        border-color: rgba(52, 211, 153, 0.3);
+    }
+
+    .pro-toast-error {
+        background: rgba(127, 29, 29, 0.95);
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.3);
+    }
+
+    .pro-toast-warning {
+        background: rgba(120, 53, 15, 0.95);
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .pro-toast-info {
+        background: rgba(12, 74, 110, 0.95);
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .pro-modal {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+
+    .pro-modal-close {
+        background: #374151;
+        color: #d1d5db;
+    }
+
+    .pro-modal-close:hover {
+        background: #4b5563;
+        color: #f3f4f6;
+    }
+}

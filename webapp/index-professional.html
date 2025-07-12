@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="Юридический центр - профессиональные юридические услуги онлайн. 12 категорий услуг, AI консультант, онлайн оплата.">
+    <meta name="description" content="Профессиональные юридические услуги онлайн. Быстрая подача заявки через Telegram Mini App.">
     <meta name="keywords" content="юридические услуги, юрист онлайн, правовая помощь, консультация юриста">
     <meta name="author" content="Юридический Центр">
     <meta name="robots" content="index, follow">
     
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Юридический Центр">
-    
-    <!-- Подключение единого стиля -->
-    <link rel="stylesheet" href="/webapp/unified-styles.css" media="all">
     
     <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -27,22 +24,21 @@
     
     <title>Юридический Центр - Подача заявки</title>
     
-    <!-- Preload Critical Resources -->
+    <!-- Professional Design System -->
+    <link rel="stylesheet" href="/webapp/professional-design.css">
+    
+    <!-- Preload critical resources -->
     <link rel="preload" href="/webapp/professional-main.js" as="script">
     
-    <!-- Performance Monitoring -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+    
+    <!-- Performance monitoring -->
     <script>
-        // Simple performance monitoring
         window.perfData = {
-            startTime: performance.now(),
-            loadTime: null,
+            start: Date.now(),
             errors: []
         };
-        
-        window.addEventListener('load', () => {
-            window.perfData.loadTime = performance.now() - window.perfData.startTime;
-            console.log(`Page loaded in ${window.perfData.loadTime.toFixed(2)}ms`);
-        });
         
         window.addEventListener('error', (e) => {
             window.perfData.errors.push({
@@ -56,8 +52,8 @@
 </head>
 <body class="telegram-webapp">
 
-<div id="app">
-    <!-- Header -->
+<div id="app" class="pro-app">
+    <!-- Professional Header -->
     <header class="pro-header">
         <div class="pro-container">
             <div class="pro-header-content">
@@ -65,7 +61,7 @@
                     <div class="pro-brand-icon">⚖️</div>
                     <h1 class="pro-brand-text">Юридический центр</h1>
                 </div>
-                <div id="step-indicator">Шаг 1 из 4</div>
+                <div id="step-indicator" class="pro-step-indicator">Шаг 1 из 4</div>
             </div>
             <div class="pro-progress">
                 <div id="progress-bar" class="pro-progress-fill" style="width: 25%"></div>
@@ -79,9 +75,14 @@
             <div class="pro-card">
                 <h2 class="pro-title">Выберите категорию услуг</h2>
                 <p class="pro-subtitle">В какой области вам нужна юридическая помощь?</p>
-                <div id="categories" class="pro-categories"></div>
+                
+                <div id="categories" class="pro-categories">
+                    <!-- Categories will be inserted here -->
+                </div>
+                
+                <!-- Selected category feedback -->
                 <div id="selected-category" class="hidden">
-                    <div class="pro-card-compact" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                    <div class="pro-card pro-card-compact" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></div>
                             <span style="font-weight: 600; color: #374151;">Выбрано: </span>
@@ -99,22 +100,29 @@
             <div class="pro-card">
                 <h2 class="pro-title">Опишите проблему</h2>
                 <p class="pro-subtitle">Расскажите подробнее о вашей ситуации</p>
+                
                 <div class="space-y-6">
                     <div class="pro-form-group">
                         <label class="pro-label" for="subcategory">Уточните проблему</label>
-                        <input type="text" id="subcategory" class="pro-input" placeholder="Например: Раздел имущества при разводе">
+                        <input type="text" id="subcategory" class="pro-input" 
+                               placeholder="Например: Раздел имущества при разводе">
                     </div>
+                    
                     <div class="pro-form-group">
                         <label class="pro-label" for="description">Подробное описание</label>
-                        <textarea id="description" class="pro-input pro-textarea" rows="4" placeholder="Опишите вашу ситуацию максимально подробно. Это поможет юристу лучше понять вашу проблему и подготовить качественную консультацию."></textarea>
+                        <textarea id="description" class="pro-input pro-textarea" rows="4" 
+                                placeholder="Опишите вашу ситуацию максимально подробно. Это поможет юристу лучше понять вашу проблему и подготовить качественную консультацию."></textarea>
                         <div class="pro-text-xs" style="margin-top: 8px; text-align: right;">
                             <span id="description-counter">0</span> / 1000 символов
                         </div>
                     </div>
+
                     <div class="pro-form-group">
                         <label class="pro-label">Документы (необязательно)</label>
                         <div class="pro-file-upload">
-                            <input type="file" id="files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="pro-file-input">
+                            <input type="file" id="files" multiple 
+                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+                                   class="pro-file-input">
                             <div class="pro-file-trigger" onclick="document.getElementById('files').click()">
                                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
@@ -125,7 +133,9 @@
                         <div class="pro-text-xs" style="margin-top: 8px; color: #6b7280;">
                             PDF, DOC, JPG до 10MB каждый. Максимум 5 файлов.
                         </div>
-                        <div id="file-list" class="space-y-4" style="margin-top: 16px;"></div>
+                        <div id="file-list" class="space-y-4" style="margin-top: 16px;">
+                            <!-- File previews will appear here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,20 +148,29 @@
             <div class="pro-card">
                 <h2 class="pro-title">Контактные данные</h2>
                 <p class="pro-subtitle">Как с вами связаться для консультации?</p>
+                
                 <div class="space-y-6">
                     <div class="pro-form-group">
                         <label class="pro-label" for="name">Ваше имя *</label>
-                        <input type="text" id="name" class="pro-input" placeholder="Иван Иванов" required>
+                        <input type="text" id="name" class="pro-input" 
+                               placeholder="Иван Иванов" required>
                     </div>
+                    
                     <div class="pro-form-group">
                         <label class="pro-label" for="phone">Телефон *</label>
-                        <input type="tel" id="phone" class="pro-input" placeholder="+7 (999) 123-45-67" required>
+                        <input type="tel" id="phone" class="pro-input" 
+                               placeholder="+7 (999) 123-45-67" required>
                     </div>
+                    
                     <div class="pro-form-group">
                         <label class="pro-label" for="email">Email</label>
-                        <input type="email" id="email" class="pro-input" placeholder="example@mail.ru">
-                        <div class="pro-text-xs" style="margin-top: 8px; color: #6b7280;">Необязательно. Используется для отправки документов.</div>
+                        <input type="email" id="email" class="pro-input" 
+                               placeholder="example@mail.ru">
+                        <div class="pro-text-xs" style="margin-top: 8px; color: #6b7280;">
+                            Необязательно. Используется для отправки документов.
+                        </div>
                     </div>
+                    
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div class="pro-form-group">
                             <label class="pro-label" for="contact-method">Способ связи *</label>
@@ -163,6 +182,7 @@
                                 <option value="email">Email</option>
                             </select>
                         </div>
+                        
                         <div class="pro-form-group">
                             <label class="pro-label" for="contact-time">Время связи</label>
                             <select id="contact-time" class="pro-input pro-select">
@@ -184,7 +204,11 @@
             <div class="pro-card">
                 <h2 class="pro-title">Проверьте данные</h2>
                 <p class="pro-subtitle">Убедитесь, что вся информация указана верно</p>
-                <div id="review-content"></div>
+                
+                <div id="review-content">
+                    <!-- Review content will be inserted here -->
+                </div>
+                
                 <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 16px; margin-top: 24px;">
                     <div style="display: flex; align-items: start; gap: 12px;">
                         <div style="color: #3b82f6; margin-top: 2px;">
@@ -193,7 +217,9 @@
                             </svg>
                         </div>
                         <div>
-                            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">Что происходит после отправки?</div>
+                            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+                                Что происходит после отправки?
+                            </div>
                             <div style="font-size: 14px; color: #374151; line-height: 1.5;">
                                 1. Мы получим вашу заявку<br>
                                 2. Юрист изучит вашу ситуацию<br>
@@ -216,14 +242,71 @@
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                     </svg>
                 </div>
-                <h2 class="pro-title">Заявка отправлена!</h2>
-                <p class="pro-subtitle">Спасибо за обращение. Мы свяжемся с вами в ближайшее время.</p>
+                
+                <h2 class="pro-success-title">Заявка отправлена!</h2>
+                <p class="pro-success-text">
+                    Спасибо! Мы получили вашу заявку и скоро свяжемся с вами. 
+                    Среднее время ответа — 15 минут.
+                </p>
+                
+                <!-- Payment Section -->
+                <div id="payment-section" class="hidden">
+                    <div class="pro-card" style="margin-top: 24px;">
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #1f2937;">
+                            Оплата консультации
+                        </h3>
+                        <p style="color: #6b7280; margin-bottom: 20px; font-size: 14px;">
+                            Для получения детальной консультации необходимо произвести оплату.
+                        </p>
+                        <a id="pay-button" href="#" class="pro-btn pro-btn-success pro-btn-full pro-btn-lg">
+                            💳 Оплатить консультацию
+                        </a>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 32px;">
+                    <button onclick="window.close ? window.close() : Telegram.WebApp.close()" 
+                            class="pro-btn pro-btn-secondary pro-btn-lg">
+                        Закрыть
+                    </button>
+                </div>
             </div>
         </div>
     </section>
+
+    <!-- Professional Navigation -->
+    <nav class="pro-navigation">
+        <div class="pro-nav-content">
+            <button id="back-btn" class="pro-btn pro-btn-secondary pro-nav-btn" style="display: none;">
+                ← Назад
+            </button>
+            <button id="next-btn" class="pro-btn pro-btn-primary pro-nav-btn">
+                Продолжить →
+            </button>
+        </div>
+    </nav>
 </div>
 
-<script src="/webapp/main.js"></script>
+<!-- Professional JavaScript -->
+<script src="/webapp/professional-main.js"></script>
+
+<!-- Analytics and Performance -->
+<script>
+    // Performance monitoring
+    window.addEventListener('load', () => {
+        window.perfData.loadTime = Date.now() - window.perfData.start;
+        console.log('Professional Mini App loaded in:', window.perfData.loadTime, 'ms');
+    });
+    
+    // Error tracking
+    window.addEventListener('unhandledrejection', (e) => {
+        window.perfData.errors.push({
+            type: 'promise_rejection',
+            message: e.reason,
+            timestamp: Date.now()
+        });
+    });
+</script>
 
 </body>
-</html> 
+</html>
