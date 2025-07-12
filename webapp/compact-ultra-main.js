@@ -335,24 +335,35 @@ class CompactApp {
         nextBtn.disabled = true;
         
         try {
+            console.log('Submitting form data:', this.formData);
+            
             const response = await fetch('/submit', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
                     ...this.formData,
-                    tg_user_id: tg.initDataUnsafe?.user?.id,
-                    tg_username: tg.initDataUnsafe?.user?.username
+                    tg_user_id: tg.initDataUnsafe?.user?.id || null,
+                    tg_username: tg.initDataUnsafe?.user?.username || null,
+                    tg_init_data: tg.initData || null
                 })
             });
             
+            console.log('Response status:', response.status);
+            
             if (response.ok) {
+                console.log('Form submitted successfully');
                 this.showSuccess();
                 tg.HapticFeedback?.notificationOccurred('success');
             } else {
-                throw new Error('Ошибка отправки');
+                const errorText = await response.text();
+                console.error('Submit failed:', response.status, errorText);
+                throw new Error(`Ошибка ${response.status}: ${errorText}`);
             }
         } catch (error) {
             console.error('Submit error:', error);
+            alert(`Ошибка отправки: ${error.message}`);
             nextBtn.textContent = 'Повторить';
             nextBtn.disabled = false;
             tg.HapticFeedback?.notificationOccurred('error');
