@@ -280,12 +280,12 @@ try:
                         user = result.scalar_one_or_none()
                     
                     if not user:
-                        # Create new user
+                        # Create new user with fallback tg_id
+                        fallback_tg_id = tg_user_id if tg_user_id else hash(phone + name) % 2147483647
                         user = User(
-                            tg_id=tg_user_id,
+                            tg_id=fallback_tg_id,
                             first_name=name.split()[0] if name else "Unknown",
                             last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
-                            username=None,
                             phone=phone,
                             email=email
                         )
@@ -307,8 +307,9 @@ try:
                     # Create application
                     application = AppModel(
                         user_id=user.id,
-                        category=category_name,
+                        category_id=category_id,
                         subcategory=f"{subcategory}: {description}" if subcategory and description else (subcategory or description),
+                        description=description,
                         contact_method=contact_method,
                         contact_time=contact_time,
                         utm_source=utm_source,
