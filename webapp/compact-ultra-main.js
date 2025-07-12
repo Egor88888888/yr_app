@@ -67,13 +67,10 @@ class CompactApp {
         this.setupEvents();
         this.updateUI();
         
-        // Изначально разблокируем кнопку на первом шаге, если категория не выбрана
+        // Изначальная настройка кнопки для каждого шага
         setTimeout(() => {
-            const nextBtn = document.getElementById('next-btn');
-            if (nextBtn && this.currentStep === 1) {
-                nextBtn.disabled = !this.formData.category_id;
-                nextBtn.style.opacity = this.formData.category_id ? '1' : '0.5';
-            }
+            this.validate(); // Проверим валидацию для текущего шага
+            console.log('Initial validation completed');
         }, 100);
         
         console.log('App initialized with formData:', this.formData);
@@ -84,8 +81,8 @@ class CompactApp {
         document.getElementById('back-btn')?.addEventListener('click', () => this.prevStep());
         document.getElementById('next-btn')?.addEventListener('click', () => this.nextStep());
         
-        // Обработка всех форм - более надежная
-        const formFields = ['name', 'phone', 'email', 'subcategory', 'description', 'contact-method', 'contact-time'];
+        // Обработка всех форм кроме description (у него своя логика)
+        const formFields = ['name', 'phone', 'email', 'subcategory', 'contact-method', 'contact-time'];
         
         formFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
@@ -107,11 +104,19 @@ class CompactApp {
         const descField = document.getElementById('description');
         if (descField) {
             descField.addEventListener('input', (e) => {
-                this.formData.description = e.target.value.trim();
+                const value = e.target.value;
+                this.formData.description = value.trim();
                 
                 const counter = document.getElementById('description-counter');
-                if (counter) counter.textContent = e.target.value.length;
+                if (counter) counter.textContent = value.length;
                 
+                this.validate();
+                console.log(`Updated description: "${value}" (trimmed: "${value.trim()}", length: ${value.length})`);
+            });
+            
+            descField.addEventListener('change', (e) => {
+                const value = e.target.value;
+                this.formData.description = value.trim();
                 this.validate();
             });
         }
@@ -202,25 +207,36 @@ class CompactApp {
         switch (this.currentStep) {
             case 1:
                 isValid = !!this.formData.category_id;
+                console.log(`Step 1 validation: category_id = ${this.formData.category_id}, isValid = ${isValid}`);
                 break;
             case 2:
-                isValid = (this.formData.description && this.formData.description.trim().length >= 5);
+                const desc = this.formData.description || '';
+                const descLength = desc.trim().length;
+                isValid = descLength >= 5;
+                console.log(`Step 2 validation: description = "${desc}", trimmed length = ${descLength}, isValid = ${isValid}`);
                 break;
             case 3:
-                isValid = this.formData.name && this.formData.name.trim() && 
-                         this.formData.phone && this.formData.phone.trim() && 
-                         this.formData.contact_method;
+                const hasName = this.formData.name && this.formData.name.trim();
+                const hasPhone = this.formData.phone && this.formData.phone.trim();
+                const hasContact = this.formData.contact_method;
+                isValid = hasName && hasPhone && hasContact;
+                console.log(`Step 3 validation: name = ${hasName}, phone = ${hasPhone}, contact = ${hasContact}, isValid = ${isValid}`);
                 break;
             case 4:
                 isValid = true;
                 break;
         }
         
-        nextBtn.disabled = !isValid;
-        nextBtn.style.opacity = isValid ? '1' : '0.5';
-        nextBtn.style.pointerEvents = isValid ? 'auto' : 'none';
+        if (nextBtn) {
+            nextBtn.disabled = !isValid;
+            nextBtn.style.opacity = isValid ? '1' : '0.5';
+            nextBtn.style.pointerEvents = isValid ? 'auto' : 'none';
+            console.log(`Button state: disabled = ${nextBtn.disabled}, opacity = ${nextBtn.style.opacity}`);
+        } else {
+            console.error('Next button not found!');
+        }
         
-        console.log(`Step ${this.currentStep} validation:`, { isValid, formData: this.formData });
+        console.log(`Step ${this.currentStep} validation result:`, { isValid, formData: this.formData });
     }
 
     prevStep() {
