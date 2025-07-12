@@ -876,3 +876,12 @@ class AudienceActivityPredictor:
         }.get(content_type, 1.0)
 
         return base_performance * hour_boost * weekday_boost * content_boost
+
+    async def set_autopost_interval(self, interval_minutes: int):
+        """Установка интервала автопостинга"""
+        try:
+            self.autopost_interval_minutes = interval_minutes
+            logger.info(f"Autopost interval set to {interval_minutes} minutes")
+        except Exception as e:
+            logger.error(f"Failed to set autopost interval: {e}")
+            raise

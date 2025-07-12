@@ -3422,6 +3422,21 @@ async def post_init(application: Application):
         print(f"❌ Failed to set menu button: {e}")
         log.error(f"Menu button error: {e}")
 
+    # 🚀 ИНИЦИАЛИЗИРУЕМ АВТОПОСТИНГ ПОСЛЕ ДЕПЛОЯ
+    try:
+        from .services.deploy_autopost import init_deploy_autopost
+        from .services.smm_integration import get_smm_integration
+        
+        smm_integration = get_smm_integration()
+        if smm_integration:
+            await init_deploy_autopost(smm_integration)
+            print("🚀 Deploy autopost initialized successfully")
+        else:
+            print("⚠️ SMM integration not available, skipping deploy autopost")
+    except Exception as e:
+        print(f"❌ Failed to initialize deploy autopost: {e}")
+        log.error(f"Deploy autopost error: {e}")
+
 
 async def fix_database_schema():
     """Исправление схемы БД после предыдущих проблем"""
