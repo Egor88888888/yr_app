@@ -628,10 +628,30 @@ class ProfessionalSMMSystem:
     async def get_autopost_status(self) -> Dict[str, Any]:
         """Получение статуса автопостинга"""
         try:
+            scheduler = self.scheduler
+            enabled = scheduler.autopost_enabled if hasattr(scheduler, 'autopost_enabled') else False
+            interval_minutes = scheduler.autopost_interval_minutes if hasattr(scheduler, 'autopost_interval_minutes') else 60
+            
+            # Конвертируем интервал в читаемый формат
+            if interval_minutes < 60:
+                interval_text = f"{interval_minutes} минут"
+            elif interval_minutes == 60:
+                interval_text = "1 час"
+            elif interval_minutes < 1440:
+                hours = interval_minutes // 60
+                interval_text = f"{hours} часов"
+            else:
+                days = interval_minutes // 1440
+                interval_text = f"{days} дней"
+            
+            next_post_time = "Не запланирован"
+            if enabled:
+                next_post_time = f"Через {interval_text}"
+            
             return {
-                "enabled": self.is_running,
-                "interval": "1 час",
-                "next_post_time": "Через 45 минут",
+                "enabled": enabled,
+                "interval": interval_text,
+                "next_post_time": next_post_time,
                 "total_autoposts": 127,
                 "posts_last_24h": 3,
                 "success_rate": 0.943

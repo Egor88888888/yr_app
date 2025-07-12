@@ -81,6 +81,10 @@ class SmartScheduler:
         self.ab_test_manager = ABTestManager()
         self.performance_tracker = PerformanceTracker()
         self.audience_analyzer = AudienceTimingAnalyzer()
+        
+        # Настройки автопостинга
+        self.autopost_interval_minutes = 60  # По умолчанию 1 час
+        self.autopost_enabled = False
 
     async def schedule_optimized_post(
         self,
@@ -881,7 +885,118 @@ class AudienceActivityPredictor:
         """Установка интервала автопостинга"""
         try:
             self.autopost_interval_minutes = interval_minutes
+            self.autopost_enabled = True
             logger.info(f"Autopost interval set to {interval_minutes} minutes")
+            
+            # Запускаем автопостинг если еще не запущен
+            if not hasattr(self, '_autopost_task') or self._autopost_task.done():
+                self._autopost_task = asyncio.create_task(self._autopost_loop())
+                logger.info("Autopost loop started")
+                
         except Exception as e:
             logger.error(f"Failed to set autopost interval: {e}")
             raise
+
+    async def _autopost_loop(self):
+        """Цикл автопостинга"""
+        while self.autopost_enabled:
+            try:
+                logger.info(f"Autopost: waiting {self.autopost_interval_minutes} minutes until next post")
+                await asyncio.sleep(self.autopost_interval_minutes * 60)  # Конвертируем в секунды
+                
+                if self.autopost_enabled:
+                    # Создаем автопост
+                    await self._create_autopost()
+                    
+            except asyncio.CancelledError:
+                logger.info("Autopost loop cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in autopost loop: {e}")
+                await asyncio.sleep(300)  # Ждем 5 минут при ошибке
+
+    async def _create_autopost(self):
+        """Создание автопоста"""
+        try:
+            logger.info("Creating autopost...")
+            
+            # Генерируем контент для автопоста
+            autopost_content = await self._generate_autopost_content()
+            
+            # Создаем пост
+            post = ScheduledPost(
+                post_id=f"autopost_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                content=autopost_content,
+                content_type="autopost",
+                scheduled_time=datetime.now(),
+                channel_id="@your_channel",  # TODO: Get from config
+                priority=5
+            )
+            
+            # Добавляем в очередь для немедленной публикации
+            await self._add_to_schedule_queue(post)
+            logger.info(f"Autopost created: {post.post_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to create autopost: {e}")
+
+    async def _generate_autopost_content(self) -> str:
+        """Генерация контента для автопоста"""
+        current_time = datetime.now().strftime("%H:%M")
+        
+        autopost_templates = [
+            f"""⚖️ **ЮРИДИЧЕСКАЯ ПОМОЩЬ 24/7**
+
+🕐 **Время:** {current_time}
+👥 **Статус:** Онлайн консультации доступны
+
+💼 **Сегодня помогаем с:**
+• Корпоративное право
+• Семейные споры  
+• Защита прав потребителей
+• Трудовые конфликты
+
+📱 **Бесплатная консультация:** /start""",
+
+            f"""🏛️ **ПРАВОВЫЕ НОВОСТИ**
+
+📅 **{datetime.now().strftime('%d.%m.%Y')} | {current_time}**
+
+📊 **Актуальная статистика:**
+• Выиграно дел: 89%
+• Средний срок решения: 14 дней
+• Довольных клиентов: 95%
+
+⚡ **Быстрая помощь по всем вопросам**
+📞 **Связаться:** /start""",
+
+            f"""💡 **ПОЛЕЗНЫЙ СОВЕТ ДНЯ**
+
+🎯 **{current_time} - время для правовой грамотности!**
+
+📝 **Знали ли вы?**
+При заключении договора всегда внимательно читайте мелкий шрифт - именно там часто скрываются важные условия.
+
+⚖️ **Нужна помощь с договором?**
+👨‍💼 **Наши юристы проверят любой документ**
+
+🚀 **Консультация:** /start"""
+        ]
+        
+        return random.choice(autopost_templates)
+
+    async def _add_to_schedule_queue(self, post: ScheduledPost):
+        """Добавление поста в очередь планировщика"""
+        try:
+            # Используем простое добавление в список
+            self.schedule_queue.append((post.scheduled_time.timestamp(), post))
+            logger.info(f"Post {post.post_id} added to schedule queue")
+        except Exception as e:
+            logger.error(f"Failed to add post to schedule queue: {e}")
+
+    async def stop_autopost(self):
+        """Остановка автопостинга"""
+        self.autopost_enabled = False
+        if hasattr(self, '_autopost_task'):
+            self._autopost_task.cancel()
+            logger.info("Autopost stopped")

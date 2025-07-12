@@ -446,7 +446,15 @@ class SMMIntegration:
     async def enable_autopost(self):
         """Включение автопостинга"""
         try:
-            await self.smm_system.start_autoposting()
+            # Включаем автопостинг в scheduler
+            self.smm_system.scheduler.autopost_enabled = True
+            
+            # Запускаем с текущим интервалом если он установлен
+            if not hasattr(self.smm_system.scheduler, '_autopost_task') or self.smm_system.scheduler._autopost_task.done():
+                self.smm_system.scheduler._autopost_task = asyncio.create_task(
+                    self.smm_system.scheduler._autopost_loop()
+                )
+            
             logger.info("Autoposting enabled")
         except Exception as e:
             logger.error(f"Failed to enable autopost: {e}")
@@ -455,7 +463,7 @@ class SMMIntegration:
     async def disable_autopost(self):
         """Выключение автопостинга"""
         try:
-            await self.smm_system.stop_autoposting()
+            await self.smm_system.scheduler.stop_autopost()
             logger.info("Autoposting disabled")
         except Exception as e:
             logger.error(f"Failed to disable autopost: {e}")
