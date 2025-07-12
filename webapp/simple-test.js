@@ -199,9 +199,12 @@ async function submitForm() {
         });
         
         if (response.ok) {
-            showSuccess();
+            const result = await response.json();
+            console.log('✅ Submit successful:', result);
+            showSuccess(result);
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
     } catch (error) {
         console.error('❌ Submit error:', error);
@@ -212,10 +215,117 @@ async function submitForm() {
 }
 
 // Показать успех
-function showSuccess() {
+function showSuccess(result) {
+    console.log('🎉 Showing success page with result:', result);
+    
+    // Скрыть все шаги
     document.querySelectorAll('.ultra-step').forEach(step => step.classList.add('hidden'));
-    document.getElementById('success')?.classList.remove('hidden');
-    document.querySelector('.ultra-navigation').style.display = 'none';
+    
+    // Показать страницу успеха
+    const successStep = document.getElementById('success');
+    if (successStep) {
+        successStep.classList.remove('hidden');
+        
+        // Обновить содержимое страницы успеха
+        updateSuccessContent(result);
+    }
+    
+    // Скрыть навигацию
+    const navigation = document.querySelector('.ultra-navigation');
+    if (navigation) {
+        navigation.style.display = 'none';
+    }
+    
+    // Отправить уведомление клиенту в Telegram
+    sendClientNotification(result);
+}
+
+// Обновить содержимое страницы успеха
+function updateSuccessContent(result) {
+    const applicationId = result?.application_id || 'не определен';
+    const payUrl = result?.pay_url;
+    
+    // Найти элементы для обновления
+    const successTitle = document.querySelector('.ultra-success-title');
+    const successText = document.querySelector('.ultra-success-text');
+    const paymentSection = document.getElementById('payment-section');
+    const payButton = document.getElementById('pay-button');
+    
+    // Обновить заголовок с ID заявки
+    if (successTitle) {
+        successTitle.innerHTML = `Заявка #${applicationId} отправлена! 🎉`;
+    }
+    
+    // Обновить текст с детальной информацией
+    if (successText) {
+        const contactMethod = {
+            'telegram': '💬 Telegram',
+            'phone': '📞 телефонному звонку',
+            'whatsapp': '💚 WhatsApp',
+            'email': '📧 Email'
+        }[window.formData.contact_method] || 'выбранному способу связи';
+        
+        const contactTime = {
+            'any': 'в удобное для вас время',
+            'morning': 'утром (9:00-12:00)',
+            'afternoon': 'днём (12:00-17:00)',
+            'evening': 'вечером (17:00-21:00)'
+        }[window.formData.contact_time] || 'в удобное время';
+        
+        successText.innerHTML = `
+            <div style="text-align: left; background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <div style="font-weight: 600; margin-bottom: 12px; color: #2d3748;">📋 Детали вашей заявки:</div>
+                <div style="margin-bottom: 8px;"><strong>Категория:</strong> ${window.formData.category_name}</div>
+                <div style="margin-bottom: 8px;"><strong>Способ связи:</strong> ${contactMethod}</div>
+                <div style="margin-bottom: 8px;"><strong>Время:</strong> ${contactTime}</div>
+                <div><strong>ID заявки:</strong> #${applicationId}</div>
+            </div>
+            
+            <div style="background: rgba(17, 153, 142, 0.1); padding: 20px; border-radius: 12px; margin: 20px 0;">
+                <div style="font-weight: 600; margin-bottom: 12px; color: #2d3748;">⏱️ Что дальше:</div>
+                <div style="margin-bottom: 8px;">✅ <strong>Сейчас:</strong> Ваша заявка поступила юристу</div>
+                <div style="margin-bottom: 8px;">📞 <strong>В течение 15 минут:</strong> Мы свяжемся с вами ${contactMethod.toLowerCase()}</div>
+                <div style="margin-bottom: 8px;">⚖️ <strong>После консультации:</strong> Получите план решения проблемы</div>
+                <div>💎 <strong>Опционально:</strong> Расширенная консультация с документами</div>
+            </div>
+        `;
+    }
+    
+    // Настроить кнопку оплаты если есть ссылка
+    if (paymentSection && payButton && payUrl && payUrl !== "# Платежная система не настроена") {
+        paymentSection.classList.remove('hidden');
+        payButton.href = payUrl;
+        payButton.onclick = () => {
+            console.log('💳 Payment button clicked:', payUrl);
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.openLink(payUrl);
+            } else {
+                window.open(payUrl, '_blank');
+            }
+        };
+    }
+}
+
+// Отправить уведомление клиенту в Telegram (через бота)
+async function sendClientNotification(result) {
+    try {
+        const response = await fetch('/notify-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                application_id: result?.application_id,
+                user_data: window.formData
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Client notification sent');
+        } else {
+            console.log('⚠️ Client notification failed, but that\'s okay');
+        }
+    } catch (error) {
+        console.log('⚠️ Client notification error (non-critical):', error);
+    }
 }
 
 // Инициализация

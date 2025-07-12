@@ -442,6 +442,85 @@ try:
                 media_type="application/json"
             )
 
+    # ===== CLIENT NOTIFICATION ENDPOINT =====
+    @app.post("/notify-client")
+    async def notify_client_telegram(request: fastapi.Request):
+        """Send Telegram notification to client about application status"""
+        try:
+            data = await request.json()
+            application_id = data.get('application_id')
+            user_data = data.get('user_data', {})
+            
+            if not bot_application:
+                print("⚠️ Bot application not initialized, cannot send client notification")
+                return {"status": "error", "message": "Bot not ready"}
+            
+            # Get user from database to find their Telegram ID
+            async with async_sessionmaker() as session:
+                try:
+                    # Try to find user by phone or name
+                    phone = user_data.get('phone', '')
+                    name = user_data.get('name', '')
+                    
+                    # Look for user by phone first
+                    user = None
+                    if phone:
+                        result = await session.execute(
+                            select(User).where(User.phone.like(f"%{phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')}%"))
+                        )
+                        user = result.scalar_one_or_none()
+                    
+                    if not user and name:
+                        # Look for user by name
+                        result = await session.execute(
+                            select(User).where(User.first_name.like(f"%{name.split()[0]}%"))
+                        )
+                        user = result.scalar_one_or_none()
+                    
+                    if user and user.tg_id:
+                        # Send Telegram message to user
+                        contact_method = {
+                            'telegram': '💬 Telegram',
+                            'phone': '📞 телефонному звонку', 
+                            'whatsapp': '💚 WhatsApp',
+                            'email': '📧 Email'
+                        }.get(user_data.get('contact_method', ''), 'выбранному способу связи')
+                        
+                        message = f"""
+🎉 **ЗАЯВКА УСПЕШНО ОТПРАВЛЕНА!**
+
+📋 **Заявка:** #{application_id}
+📞 **Способ связи:** {contact_method}
+⏰ **Время обработки:** до 15 минут
+
+**Что дальше:**
+✅ Ваша заявка поступила юристу
+📞 Мы свяжемся с вами в ближайшее время
+⚖️ Получите профессиональную консультацию
+
+Спасибо за обращение! 🙏
+"""
+
+                        await bot_application.bot.send_message(
+                            chat_id=user.tg_id,
+                            text=message,
+                            parse_mode='Markdown'
+                        )
+                        
+                        print(f"✅ Sent Telegram notification to user {user.tg_id} for application #{application_id}")
+                        return {"status": "ok", "message": "Notification sent"}
+                    else:
+                        print(f"⚠️ User not found or no Telegram ID for application #{application_id}")
+                        return {"status": "warning", "message": "User not found"}
+                        
+                except Exception as e:
+                    print(f"❌ Database error in client notification: {e}")
+                    return {"status": "error", "message": "Database error"}
+                    
+        except Exception as e:
+            print(f"❌ Client notification error: {e}")
+            return {"status": "error", "message": "Notification failed"}
+
     # ===== ADMIN NOTIFICATION FUNCTION =====
     async def notify_admins_new_application(user, application, form_data):
         """Send notification to admins about new Mini App application"""
