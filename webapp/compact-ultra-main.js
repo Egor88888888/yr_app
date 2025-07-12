@@ -66,6 +66,17 @@ class CompactApp {
         this.renderCategories();
         this.setupEvents();
         this.updateUI();
+        
+        // Изначально разблокируем кнопку на первом шаге, если категория не выбрана
+        setTimeout(() => {
+            const nextBtn = document.getElementById('next-btn');
+            if (nextBtn && this.currentStep === 1) {
+                nextBtn.disabled = !this.formData.category_id;
+                nextBtn.style.opacity = this.formData.category_id ? '1' : '0.5';
+            }
+        }, 100);
+        
+        console.log('App initialized with formData:', this.formData);
     }
 
     setupEvents() {
@@ -73,24 +84,44 @@ class CompactApp {
         document.getElementById('back-btn')?.addEventListener('click', () => this.prevStep());
         document.getElementById('next-btn')?.addEventListener('click', () => this.nextStep());
         
-        // Форма
-        document.addEventListener('input', (e) => {
-            if (this.formData.hasOwnProperty(e.target.id)) {
-                this.formData[e.target.id] = e.target.value;
-                this.validate();
+        // Обработка всех форм - более надежная
+        const formFields = ['name', 'phone', 'email', 'subcategory', 'description', 'contact-method', 'contact-time'];
+        
+        formFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', (e) => {
+                    this.formData[fieldId.replace('-', '_')] = e.target.value.trim();
+                    this.validate();
+                    console.log(`Updated ${fieldId}:`, e.target.value);
+                });
+                
+                field.addEventListener('change', (e) => {
+                    this.formData[fieldId.replace('-', '_')] = e.target.value.trim();
+                    this.validate();
+                });
             }
         });
         
-        // Счетчик символов
-        document.getElementById('description')?.addEventListener('input', (e) => {
-            const counter = document.getElementById('description-counter');
-            if (counter) counter.textContent = e.target.value.length;
-        });
+        // Специальная обработка описания с счетчиком
+        const descField = document.getElementById('description');
+        if (descField) {
+            descField.addEventListener('input', (e) => {
+                this.formData.description = e.target.value.trim();
+                
+                const counter = document.getElementById('description-counter');
+                if (counter) counter.textContent = e.target.value.length;
+                
+                this.validate();
+            });
+        }
         
         // Файлы
         document.getElementById('files')?.addEventListener('change', (e) => {
             this.handleFiles(e.target.files);
         });
+        
+        console.log('Events setup completed');
     }
 
     renderCategories() {
@@ -173,11 +204,11 @@ class CompactApp {
                 isValid = !!this.formData.category_id;
                 break;
             case 2:
-                isValid = this.formData.description.length > 10;
+                isValid = (this.formData.description && this.formData.description.trim().length >= 5);
                 break;
             case 3:
-                isValid = this.formData.name && 
-                         this.formData.phone && 
+                isValid = this.formData.name && this.formData.name.trim() && 
+                         this.formData.phone && this.formData.phone.trim() && 
                          this.formData.contact_method;
                 break;
             case 4:
@@ -187,6 +218,9 @@ class CompactApp {
         
         nextBtn.disabled = !isValid;
         nextBtn.style.opacity = isValid ? '1' : '0.5';
+        nextBtn.style.pointerEvents = isValid ? 'auto' : 'none';
+        
+        console.log(`Step ${this.currentStep} validation:`, { isValid, formData: this.formData });
     }
 
     prevStep() {
@@ -211,6 +245,8 @@ class CompactApp {
     }
 
     updateUI() {
+        console.log(`Updating UI for step ${this.currentStep}`);
+        
         // Скрыть все шаги
         document.querySelectorAll('.ultra-step').forEach(step => {
             step.classList.remove('active');
@@ -222,6 +258,9 @@ class CompactApp {
         if (currentStepEl) {
             currentStepEl.classList.add('active');
             currentStepEl.classList.remove('hidden');
+            console.log(`Showing step ${this.currentStep}`);
+        } else {
+            console.error(`Step element step-${this.currentStep} not found`);
         }
         
         // Обновить индикатор
@@ -246,6 +285,8 @@ class CompactApp {
         
         if (nextBtn) {
             nextBtn.textContent = this.currentStep === 4 ? 'Отправить' : 'Продолжить →';
+            nextBtn.disabled = false; // Сначала разблокируем
+            nextBtn.style.opacity = '1';
         }
         
         // Заполнить данные для проверки
@@ -253,7 +294,10 @@ class CompactApp {
             this.renderReview();
         }
         
+        // Валидация последней
         this.validate();
+        
+        console.log('UI updated successfully');
     }
 
     renderReview() {
