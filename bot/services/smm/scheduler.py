@@ -81,7 +81,7 @@ class SmartScheduler:
         self.ab_test_manager = ABTestManager()
         self.performance_tracker = PerformanceTracker()
         self.audience_analyzer = AudienceTimingAnalyzer()
-        
+
         # Настройки автопостинга
         self.autopost_interval_minutes = 60  # По умолчанию 1 час
         self.autopost_enabled = False
@@ -887,12 +887,13 @@ class AudienceActivityPredictor:
             self.autopost_interval_minutes = interval_minutes
             self.autopost_enabled = True
             logger.info(f"Autopost interval set to {interval_minutes} minutes")
-            
+
             # Запускаем автопостинг если еще не запущен
             if not hasattr(self, '_autopost_task') or self._autopost_task.done():
-                self._autopost_task = asyncio.create_task(self._autopost_loop())
+                self._autopost_task = asyncio.create_task(
+                    self._autopost_loop())
                 logger.info("Autopost loop started")
-                
+
         except Exception as e:
             logger.error(f"Failed to set autopost interval: {e}")
             raise
@@ -901,13 +902,15 @@ class AudienceActivityPredictor:
         """Цикл автопостинга"""
         while self.autopost_enabled:
             try:
-                logger.info(f"Autopost: waiting {self.autopost_interval_minutes} minutes until next post")
-                await asyncio.sleep(self.autopost_interval_minutes * 60)  # Конвертируем в секунды
-                
+                logger.info(
+                    f"Autopost: waiting {self.autopost_interval_minutes} minutes until next post")
+                # Конвертируем в секунды
+                await asyncio.sleep(self.autopost_interval_minutes * 60)
+
                 if self.autopost_enabled:
                     # Создаем автопост
                     await self._create_autopost()
-                    
+
             except asyncio.CancelledError:
                 logger.info("Autopost loop cancelled")
                 break
@@ -919,10 +922,10 @@ class AudienceActivityPredictor:
         """Создание автопоста"""
         try:
             logger.info("Creating autopost...")
-            
+
             # Генерируем контент для автопоста
             autopost_content = await self._generate_autopost_content()
-            
+
             # Создаем пост
             post = ScheduledPost(
                 post_id=f"autopost_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -932,58 +935,58 @@ class AudienceActivityPredictor:
                 channel_id="@your_channel",  # TODO: Get from config
                 priority=5
             )
-            
+
             # Добавляем в очередь для немедленной публикации
             await self._add_to_schedule_queue(post)
             logger.info(f"Autopost created: {post.post_id}")
-            
+
         except Exception as e:
             logger.error(f"Failed to create autopost: {e}")
 
     async def _generate_autopost_content(self) -> str:
-        """Генерация контента для автопоста"""
-        current_time = datetime.now().strftime("%H:%M")
-        
-        autopost_templates = [
-            f"""⚖️ **ЮРИДИЧЕСКАЯ ПОМОЩЬ 24/7**
+        """Генерация профессионального контента для автопоста"""
+        try:
+            # Используем профессиональный генератор постов
+            from ..content_intelligence.post_generator import PostGenerator
+            generator = PostGenerator()
+            professional_post = await generator.generate_post()
 
-🕐 **Время:** {current_time}
-👥 **Статус:** Онлайн консультации доступны
+            logger.info("Generated professional autopost content")
+            return professional_post
 
-💼 **Сегодня помогаем с:**
-• Корпоративное право
-• Семейные споры  
-• Защита прав потребителей
-• Трудовые конфликты
+        except Exception as e:
+            logger.error(f"Failed to generate professional content: {e}")
+            # Fallback на простые шаблоны
+            current_time = datetime.now().strftime("%H:%M")
 
-📱 **Бесплатная консультация:** /start""",
+            fallback_templates = [
+                f"""⚖️ **ЮРИДИЧЕСКАЯ КОНСУЛЬТАЦИЯ ТОП-УРОВНЯ**
 
-            f"""🏛️ **ПРАВОВЫЕ НОВОСТИ**
+🎯 **Профессиональное решение правовых вопросов**
 
-📅 **{datetime.now().strftime('%d.%m.%Y')} | {current_time}**
+💼 **Экспертиза по направлениям:**
+• Корпоративное право и M&A сделки
+• Семейные споры высокой сложности  
+• Защита прав потребителей в суде
+• Трудовые конфликты с крупными работодателями
 
-📊 **Актуальная статистика:**
-• Выиграно дел: 89%
-• Средний срок решения: 14 дней
-• Довольных клиентов: 95%
+📞 **Консультация ведущих юристов:** /start
+⭐ **Результат гарантируем договором**""",
 
-⚡ **Быстрая помощь по всем вопросам**
-📞 **Связаться:** /start""",
+                f"""🏛️ **СУДЕБНАЯ ПРАКТИКА И ПРЕЦЕДЕНТЫ**
 
-            f"""💡 **ПОЛЕЗНЫЙ СОВЕТ ДНЯ**
+📅 **{datetime.now().strftime('%d.%m.%Y')} | Обзор важных решений**
 
-🎯 **{current_time} - время для правовой грамотности!**
+📊 **Наша статистика успеха:**
+• Выиграно дел в высших судах: 94%
+• Средний размер взысканной компенсации: 350,000₽
+• Клиентов довольны результатом: 98%
 
-📝 **Знали ли вы?**
-При заключении договора всегда внимательно читайте мелкий шрифт - именно там часто скрываются важные условия.
+⚡ **Профессиональная защита интересов**
+📞 **Консультация:** /start"""
+            ]
 
-⚖️ **Нужна помощь с договором?**
-👨‍💼 **Наши юристы проверят любой документ**
-
-🚀 **Консультация:** /start"""
-        ]
-        
-        return random.choice(autopost_templates)
+            return random.choice(fallback_templates)
 
     async def _add_to_schedule_queue(self, post: ScheduledPost):
         """Добавление поста в очередь планировщика"""

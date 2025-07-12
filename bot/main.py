@@ -3640,6 +3640,87 @@ async def main():
     register_smm_admin_handlers(application)
 
     # 🔧 ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
+    async def handle_file_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработчик файлов от клиентов для пересылки админам"""
+        try:
+            user = update.effective_user
+            user_id = user.id
+            
+            # Получаем информацию о файле
+            if update.message.document:
+                file_obj = update.message.document
+                file_type = "📄 Документ"
+                file_name = file_obj.file_name or "документ"
+                file_size = file_obj.file_size
+            elif update.message.photo:
+                file_obj = update.message.photo[-1]  # Берем фото лучшего качества
+                file_type = "📷 Фото"
+                file_name = "фото"
+                file_size = file_obj.file_size
+            else:
+                return
+            
+            # Получаем файл
+            file = await context.bot.get_file(file_obj.file_id)
+            
+            # Форматируем размер файла
+            if file_size:
+                if file_size < 1024:
+                    size_str = f"{file_size} Б"
+                elif file_size < 1024*1024:
+                    size_str = f"{file_size/1024:.1f} КБ"
+                else:
+                    size_str = f"{file_size/(1024*1024):.1f} МБ"
+            else:
+                size_str = "неизвестно"
+            
+            # Создаем сообщение для админов
+            admin_message = f"""📁 **НОВЫЙ ФАЙЛ ОТ КЛИЕНТА**
+
+👤 **От пользователя:** {user.full_name}
+📱 **ID:** {user_id}
+👤 **Username:** @{user.username or 'отсутствует'}
+
+{file_type} **Файл:** {file_name}
+📊 **Размер:** {size_str}
+⏰ **Время:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+💬 **Подпись:** {update.message.caption or 'отсутствует'}"""
+
+            # Отправляем ВСЕМ админам
+            for admin_id in ADMIN_USERS:
+                try:
+                    if update.message.document:
+                        await context.bot.send_document(
+                            chat_id=admin_id,
+                            document=file_obj.file_id,
+                            caption=admin_message,
+                            parse_mode='Markdown'
+                        )
+                    elif update.message.photo:
+                        await context.bot.send_photo(
+                            chat_id=admin_id,
+                            photo=file_obj.file_id,
+                            caption=admin_message,
+                            parse_mode='Markdown'
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to send file to admin {admin_id}: {e}")
+            
+            # Подтверждаем получение клиенту
+            await update.message.reply_text(
+                "✅ **Файл получен!**\n\n"
+                f"{file_type} успешно отправлен нашим юристам.\n"
+                "📱 Они свяжутся с вами в ближайшее время для уточнения деталей.",
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling file message: {e}")
+            await update.message.reply_text(
+                "❌ Произошла ошибка при обработке файла. Попробуйте отправить еще раз или обратитесь к администратору."
+            )
+
     async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Роутер для обработки текстовых сообщений"""
         user_id = update.effective_user.id
@@ -3666,37 +3747,44 @@ async def main():
     # Регистрируем универсальный обработчик сообщений
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND, message_handler_router))
+    
+    # 📁 ОБРАБОТЧИК ФАЙЛОВ ДЛЯ АДМИНОВ
+    application.add_handler(MessageHandler(
+        filters.Document.ALL | filters.PHOTO, handle_file_message))
+    
     # 🔧 УДАЛЯЕМ ДУБЛИРУЮЩИЙ ОБРАБОТЧИК
     # application.add_handler(MessageHandler(
     #     filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
     #     enhanced_message_handler
     # ))
 
-    # Джобы
-    if application.job_queue is not None:
-        # Используем переменную окружения для интервала автопостинга
-        autopost_hours = int(os.getenv("POST_INTERVAL_HOURS", "2"))
+    # ❌ ОТКЛЮЧЕНО: Старые джобы заменены на SMM систему
+    # if application.job_queue is not None:
+    #     # Используем переменную окружения для интервала автопостинга
+    #     autopost_hours = int(os.getenv("POST_INTERVAL_HOURS", "2"))
 
-        # ДОБАВЛЯЕМ: Одиночный автопост через 5 минут после перезапуска
-        application.job_queue.run_once(
-            autopost_job,
-            when=timedelta(minutes=5)
-        )
-        print("✅ One-time autopost scheduled for 5 minutes after restart")
-        log.info("One-time autopost job scheduled for 5 minutes after restart")
+    #     # ДОБАВЛЯЕМ: Одиночный автопост через 5 минут после перезапуска
+    #     application.job_queue.run_once(
+    #         autopost_job,
+    #         when=timedelta(minutes=5)
+    #     )
+    #     print("✅ One-time autopost scheduled for 5 minutes after restart")
+    #     log.info("One-time autopost job scheduled for 5 minutes after restart")
 
-        # Основной повторяющийся автопостинг
-        application.job_queue.run_repeating(
-            autopost_job,
-            interval=timedelta(hours=autopost_hours),
-            first=timedelta(minutes=10)
-        )
-        print(
-            f"✅ Job queue initialized - autopost every {autopost_hours} hours")
-        log.info(f"Job queue initialized with {autopost_hours}h interval")
-    else:
-        print("WARNING: Job queue not available - autopost disabled")
-        log.warning("Job queue not available, autopost functionality disabled")
+    #     # Основной повторяющийся автопостинг
+    #     application.job_queue.run_repeating(
+    #         autopost_job,
+    #         interval=timedelta(hours=autopost_hours),
+    #         first=timedelta(minutes=10)
+    #     )
+    #     print(
+    #         f"✅ Job queue initialized - autopost every {autopost_hours} hours")
+    #     log.info(f"Job queue initialized with {autopost_hours}h interval")
+    # else:
+    #     print("WARNING: Job queue not available - autopost disabled")
+    #     log.warning("Job queue not available, autopost functionality disabled")
+    
+    print("✅ Autoposting handled by SMM system instead of job queue")
 
     # Устанавливаем webhook
     webhook_url = f"https://{PUBLIC_HOST}/{TOKEN}"

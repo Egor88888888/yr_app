@@ -213,7 +213,7 @@ try:
 
     # Also handle the exact webhook URL format used
     # ===== MINI APP SUBMIT ENDPOINT (MUST BE BEFORE /{token}) =====
-    
+
     @app.options("/submit")
     async def submit_options():
         """Handle preflight requests for submit endpoint"""
@@ -225,7 +225,7 @@ try:
                 "Access-Control-Allow-Headers": "Content-Type, Accept",
             }
         )
-    
+
     @app.post("/submit")
     async def submit_application(request: fastapi.Request):
         """Handle Mini App form submissions"""
@@ -233,22 +233,24 @@ try:
             # Parse form data
             data = await request.json()
             print(f"📝 Received application data: {data}")
-            
+
             # Validate required fields
-            required_fields = ['category_id', 'category_name', 'name', 'phone', 'contact_method']
-            missing_fields = [field for field in required_fields if not data.get(field)]
-            
+            required_fields = ['category_id', 'category_name',
+                               'name', 'phone', 'contact_method']
+            missing_fields = [
+                field for field in required_fields if not data.get(field)]
+
             if missing_fields:
                 print(f"❌ Missing required fields: {missing_fields}")
                 return fastapi.Response(
                     status_code=400,
                     content=json.dumps({
-                        "status": "error", 
+                        "status": "error",
                         "message": f"Missing required fields: {', '.join(missing_fields)}"
                     }),
                     media_type="application/json"
                 )
-            
+
             # Extract and validate data
             category_id = data.get('category_id')
             category_name = data.get('category_name', '')
@@ -262,12 +264,12 @@ try:
             files = data.get('files', [])
             tg_user_id = data.get('tg_user_id')
             utm_source = data.get('utm_source')
-            
+
             print(f"👤 Processing application for: {name} ({phone})")
             print(f"📋 Category: {category_name} (ID: {category_id})")
             print(f"📞 Contact: {contact_method} at {contact_time}")
             print(f"📄 Files: {len(files)} uploaded")
-            
+
             # Save to database
             async with async_sessionmaker() as session:
                 try:
@@ -278,14 +280,16 @@ try:
                             select(User).where(User.tg_id == tg_user_id)
                         )
                         user = result.scalar_one_or_none()
-                    
+
                     if not user:
                         # Create new user with fallback tg_id
-                        fallback_tg_id = tg_user_id if tg_user_id else hash(phone + name) % 2147483647
+                        fallback_tg_id = tg_user_id if tg_user_id else hash(
+                            phone + name) % 2147483647
                         user = User(
                             tg_id=fallback_tg_id,
                             first_name=name.split()[0] if name else "Unknown",
-                            last_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "",
+                            last_name=" ".join(name.split()[1:]) if len(
+                                name.split()) > 1 else "",
                             phone=phone,
                             email=email
                         )
@@ -297,18 +301,20 @@ try:
                         if name:
                             name_parts = name.split()
                             user.first_name = name_parts[0]
-                            user.last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+                            user.last_name = " ".join(name_parts[1:]) if len(
+                                name_parts) > 1 else ""
                         if phone:
                             user.phone = phone
                         if email:
                             user.email = email
                         print(f"✅ Updated existing user: {user.id}")
-                    
+
                     # Create application
                     application = AppModel(
                         user_id=user.id,
                         category_id=category_id,
-                        subcategory=f"{subcategory}: {description}" if subcategory and description else (subcategory or description),
+                        subcategory=f"{subcategory}: {description}" if subcategory and description else (
+                            subcategory or description),
                         description=description,
                         contact_method=contact_method,
                         contact_time=contact_time,
@@ -317,23 +323,25 @@ try:
                     )
                     session.add(application)
                     await session.flush()  # Get application.id
-                    
+
                     print(f"✅ Created application: #{application.id}")
-                    
+
                     # Handle files if any
                     files_info = []
                     if files:
                         for i, file_data in enumerate(files):
                             filename = file_data.get('name', f'file_{i+1}')
-                            file_size = len(file_data.get('data', '')) if file_data.get('data') else 0
-                            files_info.append(f"{filename} ({file_size} bytes)")
-                        
+                            file_size = len(file_data.get(
+                                'data', '')) if file_data.get('data') else 0
+                            files_info.append(
+                                f"{filename} ({file_size} bytes)")
+
                         # Add files info to application notes
                         application.notes = f"Uploaded files: {', '.join(files_info)}"
                         print(f"📎 Processed {len(files)} files")
-                    
+
                     await session.commit()
-                    
+
                     # Try to add to Google Sheets
                     try:
                         await append_lead({
@@ -352,28 +360,28 @@ try:
                         print("✅ Added to Google Sheets")
                     except Exception as e:
                         print(f"⚠️ Failed to add to Google Sheets: {e}")
-                    
+
                     # Try to send notifications
                     try:
                         await notify_client_application_received(user, application)
                         print("✅ Client notification sent")
                     except Exception as e:
                         print(f"⚠️ Failed to send client notification: {e}")
-                    
+
                     # Try to notify admins via Telegram
                     try:
                         await notify_admins_new_application(user, application, data)
                         print("✅ Admin notification sent")
                     except Exception as e:
                         print(f"⚠️ Failed to send admin notification: {e}")
-                    
+
                     # Try to create payment if needed
                     payment_url = None
                     try:
                         # Define prices for categories (you can adjust these)
                         category_prices = {
                             1: 3000,   # Семейное право
-                            2: 5000,   # Корпоративное право  
+                            2: 5000,   # Корпоративное право
                             3: 4000,   # Недвижимость
                             4: 3500,   # Трудовое право
                             5: 4500,   # Налоговое право
@@ -385,26 +393,27 @@ try:
                             11: 6000,  # Уголовные дела
                             12: 3000   # Другое
                         }
-                        
+
                         price = category_prices.get(category_id, 3000)
                         application.price = price
-                        
+
                         payment_response = await create_payment(
                             amount=price,
                             description=f"Юридическая консультация: {category_name}",
                             user_id=user.tg_id,
                             application_id=application.id
                         )
-                        
+
                         if payment_response and payment_response.get('url'):
                             payment_url = payment_response['url']
-                            print(f"✅ Payment URL created: {payment_url[:50]}...")
-                        
+                            print(
+                                f"✅ Payment URL created: {payment_url[:50]}...")
+
                         await session.commit()
-                        
+
                     except Exception as e:
                         print(f"⚠️ Failed to create payment: {e}")
-                    
+
                     # Return success response
                     return {
                         "status": "ok",
@@ -412,13 +421,13 @@ try:
                         "application_id": application.id,
                         "pay_url": payment_url or "# Платежная система не настроена"
                     }
-                    
+
                 except Exception as e:
                     await session.rollback()
                     print(f"❌ Database error: {e}")
                     import traceback
                     print(f"❌ Traceback: {traceback.format_exc()}")
-                    
+
                     return fastapi.Response(
                         status_code=500,
                         content=json.dumps({
@@ -427,12 +436,12 @@ try:
                         }),
                         media_type="application/json"
                     )
-            
+
         except Exception as e:
             print(f"❌ Submit error: {e}")
             import traceback
             print(f"❌ Traceback: {traceback.format_exc()}")
-            
+
             return fastapi.Response(
                 status_code=500,
                 content=json.dumps({
@@ -450,42 +459,45 @@ try:
             data = await request.json()
             application_id = data.get('application_id')
             user_data = data.get('user_data', {})
-            
+
             if not bot_application:
-                print("⚠️ Bot application not initialized, cannot send client notification")
+                print(
+                    "⚠️ Bot application not initialized, cannot send client notification")
                 return {"status": "error", "message": "Bot not ready"}
-            
+
             # Get user from database to find their Telegram ID
             async with async_sessionmaker() as session:
                 try:
                     # Try to find user by phone or name
                     phone = user_data.get('phone', '')
                     name = user_data.get('name', '')
-                    
+
                     # Look for user by phone first
                     user = None
                     if phone:
                         result = await session.execute(
-                            select(User).where(User.phone.like(f"%{phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')}%"))
+                            select(User).where(User.phone.like(
+                                f"%{phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')}%"))
                         )
                         user = result.scalar_one_or_none()
-                    
+
                     if not user and name:
                         # Look for user by name
                         result = await session.execute(
-                            select(User).where(User.first_name.like(f"%{name.split()[0]}%"))
+                            select(User).where(
+                                User.first_name.like(f"%{name.split()[0]}%"))
                         )
                         user = result.scalar_one_or_none()
-                    
+
                     if user and user.tg_id:
                         # Send Telegram message to user
                         contact_method = {
                             'telegram': '💬 Telegram',
-                            'phone': '📞 телефонному звонку', 
+                            'phone': '📞 телефонному звонку',
                             'whatsapp': '💚 WhatsApp',
                             'email': '📧 Email'
                         }.get(user_data.get('contact_method', ''), 'выбранному способу связи')
-                        
+
                         message = f"""
 🎉 **ЗАЯВКА УСПЕШНО ОТПРАВЛЕНА!**
 
@@ -506,54 +518,59 @@ try:
                             text=message,
                             parse_mode='Markdown'
                         )
-                        
-                        print(f"✅ Sent Telegram notification to user {user.tg_id} for application #{application_id}")
+
+                        print(
+                            f"✅ Sent Telegram notification to user {user.tg_id} for application #{application_id}")
                         return {"status": "ok", "message": "Notification sent"}
                     else:
-                        print(f"⚠️ User not found or no Telegram ID for application #{application_id}")
+                        print(
+                            f"⚠️ User not found or no Telegram ID for application #{application_id}")
                         return {"status": "warning", "message": "User not found"}
-                        
+
                 except Exception as e:
                     print(f"❌ Database error in client notification: {e}")
                     return {"status": "error", "message": "Database error"}
-                    
+
         except Exception as e:
             print(f"❌ Client notification error: {e}")
             return {"status": "error", "message": "Notification failed"}
 
     # ===== ADMIN NOTIFICATION FUNCTION =====
     async def notify_admins_new_application(user, application, form_data):
-        """Send notification to admins about new Mini App application"""
+        """Send notification to ALL admins about new Mini App application"""
         if not bot_application:
             print("⚠️ Bot application not initialized, cannot send admin notification")
             return
-            
+
         import os
         from datetime import datetime
-        
-        admin_chat_id = int(os.getenv("ADMIN_CHAT_ID", "0"))
-        if admin_chat_id == 0:
-            print("⚠️ ADMIN_CHAT_ID not set, cannot send admin notification")
+
+        # Получаем всех администраторов
+        from bot.main import ADMIN_USERS
+        if not ADMIN_USERS:
+            print("⚠️ No admin users configured, cannot send admin notification")
             return
-        
+
         # Format contact method
         contact_methods = {
             'telegram': '💬 Telegram',
-            'phone': '📞 Звонок', 
+            'phone': '📞 Звонок',
             'whatsapp': '💚 WhatsApp',
             'email': '📧 Email'
         }
-        contact_method = contact_methods.get(form_data.get('contact_method', ''), form_data.get('contact_method', 'Не указан'))
-        
+        contact_method = contact_methods.get(form_data.get(
+            'contact_method', ''), form_data.get('contact_method', 'Не указан'))
+
         # Format contact time
         contact_times = {
             'any': 'Любое время',
             'morning': '🌅 Утром (9:00-12:00)',
-            'afternoon': '☀️ Днём (12:00-17:00)', 
+            'afternoon': '☀️ Днём (12:00-17:00)',
             'evening': '🌆 Вечером (17:00-21:00)'
         }
-        contact_time = contact_times.get(form_data.get('contact_time', 'any'), 'Любое время')
-        
+        contact_time = contact_times.get(
+            form_data.get('contact_time', 'any'), 'Любое время')
+
         admin_text = f"""
 🆕 **НОВАЯ ЗАЯВКА ИЗ MINI APP**
 
@@ -577,17 +594,21 @@ try:
         if form_data.get('files'):
             admin_text += f"\n📎 **Файлы:** {len(form_data['files'])} шт."
 
-        try:
-            await bot_application.bot.send_message(
-                chat_id=admin_chat_id,
-                text=admin_text,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            print(f"❌ Failed to send admin notification: {e}")
-            # Попробуем без Markdown если есть проблемы с форматированием
+        # Отправляем уведомление ВСЕМ администраторам
+        for admin_id in ADMIN_USERS:
             try:
-                simple_text = f"""
+                await bot_application.bot.send_message(
+                    chat_id=admin_id,
+                    text=admin_text,
+                    parse_mode='Markdown'
+                )
+                print(f"✅ Sent admin notification to {admin_id}")
+            except Exception as e:
+                print(
+                    f"❌ Failed to send admin notification to {admin_id}: {e}")
+                # Попробуем без Markdown если есть проблемы с форматированием
+                try:
+                    simple_text = f"""
 НОВАЯ ЗАЯВКА ИЗ MINI APP
 
 Клиент: {form_data.get('name', 'Не указано')}
@@ -605,13 +626,47 @@ Email: {form_data.get('email', 'Не указан') or 'Не указан'}
 ID заявки: #{application.id}
 Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 """
-                await bot_application.bot.send_message(
-                    chat_id=admin_chat_id,
-                    text=simple_text
-                )
-            except Exception as e2:
-                print(f"❌ Failed to send simple admin notification: {e2}")
-                raise e2
+                    await bot_application.bot.send_message(
+                        chat_id=admin_id,
+                        text=simple_text
+                    )
+                    print(f"✅ Sent simple admin notification to {admin_id}")
+                except Exception as e2:
+                    print(
+                        f"❌ Failed to send simple admin notification to {admin_id}: {e2}")
+
+        # Теперь отправляем файлы ВСЕМ администраторам
+        if form_data.get('files'):
+            for admin_id in ADMIN_USERS:
+                for i, file_data in enumerate(form_data['files']):
+                    try:
+                        if file_data.get('data') and file_data.get('name'):
+                            # Декодируем base64 данные файла
+                            import base64
+                            file_bytes = base64.b64decode(file_data['data'])
+
+                            # Создаем caption для файла
+                            file_caption = f"""📁 **ФАЙЛ ОТ КЛИЕНТА**
+
+👤 **Клиент:** {form_data.get('name', 'Не указано')}
+📱 **Телефон:** {form_data.get('phone', 'Не указан')}
+📋 **Заявка:** #{application.id}
+📄 **Файл:** {file_data['name']}
+📊 **Размер:** {len(file_bytes)} байт"""
+
+                            # Отправляем файл администратору
+                            await bot_application.bot.send_document(
+                                chat_id=admin_id,
+                                document=file_bytes,
+                                filename=file_data['name'],
+                                caption=file_caption,
+                                parse_mode='Markdown'
+                            )
+                            print(
+                                f"✅ Sent file {file_data['name']} to admin {admin_id}")
+                    except Exception as e:
+                        print(
+                            f"❌ Failed to send file to admin {admin_id}: {e}")
 
     # ===== TELEGRAM WEBHOOK WILDCARD (AFTER ALL SPECIFIC ROUTES) =====
     @app.post("/{token}")

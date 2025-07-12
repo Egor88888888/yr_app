@@ -92,6 +92,14 @@ class SMMIntegration:
             # Запускаем мониторинг и оптимизацию
             asyncio.create_task(self._integration_monitoring_loop())
 
+            # 🚀 ИСПРАВЛЕНИЕ: Автоматически запускаем автопостинг с интервалом 30 минут
+            try:
+                await self.set_autopost_interval(minutes=30)
+                await self.enable_autopost()
+                logger.info("🚀 Autoposting enabled with 30-minute interval")
+            except Exception as autopost_error:
+                logger.error(f"Failed to enable autoposting: {autopost_error}")
+
             logger.info("✅ Production SMM System fully started")
 
         except Exception as e:
@@ -435,10 +443,10 @@ class SMMIntegration:
                 interval_minutes = kwargs['hours'] * 60
             else:
                 interval_minutes = 60  # По умолчанию 1 час
-                
+
             await self.smm_system.scheduler.set_autopost_interval(interval_minutes)
             logger.info(f"Autopost interval set to {interval_minutes} minutes")
-            
+
         except Exception as e:
             logger.error(f"Failed to set autopost interval: {e}")
             raise
@@ -448,13 +456,13 @@ class SMMIntegration:
         try:
             # Включаем автопостинг в scheduler
             self.smm_system.scheduler.autopost_enabled = True
-            
+
             # Запускаем с текущим интервалом если он установлен
             if not hasattr(self.smm_system.scheduler, '_autopost_task') or self.smm_system.scheduler._autopost_task.done():
                 self.smm_system.scheduler._autopost_task = asyncio.create_task(
                     self.smm_system.scheduler._autopost_loop()
                 )
-            
+
             logger.info("Autoposting enabled")
         except Exception as e:
             logger.error(f"Failed to enable autopost: {e}")
@@ -473,21 +481,21 @@ class SMMIntegration:
         """Установка стратегии контента"""
         try:
             from .smm.config import ContentStrategy
-            
+
             strategy_mapping = {
                 "educational": ContentStrategy.EDUCATIONAL,
                 "cases": ContentStrategy.CASE_STUDIES,
                 "precedents": ContentStrategy.PRECEDENTS,
                 "mixed": ContentStrategy.BALANCED
             }
-            
+
             if strategy in strategy_mapping:
                 self.smm_config.content_strategy = strategy_mapping[strategy]
                 await self.smm_system.update_config(self.smm_config)
                 logger.info(f"Content strategy set to {strategy}")
             else:
                 raise ValueError(f"Unknown strategy: {strategy}")
-                
+
         except Exception as e:
             logger.error(f"Failed to set content strategy: {e}")
             raise
@@ -576,7 +584,8 @@ class SMMIntegration:
         try:
             if immediate:
                 # Немедленная публикация
-                channel_id = list(self.channel_configs.values())[0]['channel_id']
+                channel_id = list(self.channel_configs.values())[
+                    0]['channel_id']
                 result = await self.create_and_publish_post(
                     content=force_content,
                     channel_id=channel_id,
@@ -587,24 +596,25 @@ class SMMIntegration:
                 # Запланированная публикация через SMM систему
                 from .smm.scheduler import ScheduledPost
                 from datetime import datetime, timedelta
-                
+
                 post = ScheduledPost(
                     post_id=f"smart_post_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     content=force_content or "Автоматически сгенерированный пост",
                     content_type="smart_post",
                     scheduled_time=datetime.now() + timedelta(minutes=1),
-                    channel_id=list(self.channel_configs.values())[0]['channel_id'],
+                    channel_id=list(self.channel_configs.values())[
+                        0]['channel_id'],
                     priority=priority
                 )
-                
+
                 await self.smm_system.scheduler._add_to_schedule_queue(post)
-                
+
                 return {
                     "success": True,
                     "post_id": post.post_id,
                     "scheduled_time": post.scheduled_time.isoformat()
                 }
-                
+
         except Exception as e:
             logger.error(f"Failed to schedule smart post: {e}")
             return {"success": False, "error": str(e)}
@@ -617,7 +627,7 @@ class SMMIntegration:
                 create_viral_focused_config, create_conversion_focused_config,
                 create_balanced_config
             )
-            
+
             strategy_mapping = {
                 "viral_focused": create_viral_focused_config(),
                 "conversion_focused": create_conversion_focused_config(),
@@ -625,14 +635,14 @@ class SMMIntegration:
                 "educational": create_balanced_config(),  # Use balanced as base
                 "engagement_focused": create_balanced_config()  # Use balanced as base
             }
-            
+
             if strategy in strategy_mapping:
                 new_config = strategy_mapping[strategy]
-                
+
                 # Применяем новую конфигурацию
                 self.smm_config = new_config
                 await self.smm_system.update_configuration(new_config)
-                
+
                 return {
                     "success": True,
                     "new_mode": strategy,
@@ -644,7 +654,7 @@ class SMMIntegration:
                 }
             else:
                 raise ValueError(f"Unknown strategy: {strategy}")
-                
+
         except Exception as e:
             logger.error(f"Failed to switch SMM mode: {e}")
             return {"success": False, "error": str(e)}
@@ -666,10 +676,10 @@ class SMMIntegration:
                 },
                 "next_optimization": (datetime.now() + timedelta(hours=24)).isoformat()
             }
-            
+
             logger.info("SMM strategy optimization completed")
             return {"success": True, "result": optimization_result}
-            
+
         except Exception as e:
             logger.error(f"Failed to optimize SMM strategy: {e}")
             return {"success": False, "error": str(e)}
