@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Юридический центр - профессиональные юридические услуги онлайн. 12 категорий услуг, AI консультант, онлайн оплата.">
+    <meta name="keywords" content="юридические услуги, юрист онлайн, правовая помощь, консультация юриста">
+    <meta name="author" content="Юридический Центр">
+    <meta name="robots" content="index, follow">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Юридический Центр">
+    
+    <!-- Подключение единого стиля -->
+    <link rel="stylesheet" href="/webapp/unified-styles.css" media="all">
+    
+    <!-- Telegram WebApp Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <title>Юридический Центр - Подача заявки</title>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/webapp/professional-main.js" as="script">
+    
+    <!-- Performance Monitoring -->
+    <script>
+        // Simple performance monitoring
+        window.perfData = {
+            startTime: performance.now(),
+            loadTime: null,
+            errors: []
+        };
+        
+        window.addEventListener('load', () => {
+            window.perfData.loadTime = performance.now() - window.perfData.startTime;
+            console.log(`Page loaded in ${window.perfData.loadTime.toFixed(2)}ms`);
+        });
+        
+        window.addEventListener('error', (e) => {
+            window.perfData.errors.push({
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                timestamp: Date.now()
+            });
+        });
+    </script>
+</head>
+<body class="telegram-webapp">
+
+<div id="app">
+    <!-- Header -->
+    <header class="pro-header">
+        <div class="pro-container">
+            <div class="pro-header-content">
+                <div class="pro-brand">
+                    <div class="pro-brand-icon">⚖️</div>
+                    <h1 class="pro-brand-text">Юридический центр</h1>
+                </div>
+                <div id="step-indicator">Шаг 1 из 4</div>
+            </div>
+            <div class="pro-progress">
+                <div id="progress-bar" class="pro-progress-fill" style="width: 25%"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Step 1: Category Selection -->
+    <section id="step-1" class="pro-step active">
+        <div class="pro-container">
+            <div class="pro-card">
+                <h2 class="pro-title">Выберите категорию услуг</h2>
+                <p class="pro-subtitle">В какой области вам нужна юридическая помощь?</p>
+                <div id="categories" class="pro-categories"></div>
+                <div id="selected-category" class="hidden">
+                    <div class="pro-card-compact" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></div>
+                            <span style="font-weight: 600; color: #374151;">Выбрано: </span>
+                            <span id="selected-category-name" style="color: #1f2937;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 2: Problem Details -->
+    <section id="step-2" class="pro-step hidden">
+        <div class="pro-container">
+            <div class="pro-card">
+                <h2 class="pro-title">Опишите проблему</h2>
+                <p class="pro-subtitle">Расскажите подробнее о вашей ситуации</p>
+                <div class="space-y-6">
+                    <div class="pro-form-group">
+                        <label class="pro-label" for="subcategory">Уточните проблему</label>
+                        <input type="text" id="subcategory" class="pro-input" placeholder="Например: Раздел имущества при разводе">
+                    </div>
+                    <div class="pro-form-group">
+                        <label class="pro-label" for="description">Подробное описание</label>
+                        <textarea id="description" class="pro-input pro-textarea" rows="4" placeholder="Опишите вашу ситуацию максимально подробно. Это поможет юристу лучше понять вашу проблему и подготовить качественную консультацию."></textarea>
+                        <div class="pro-text-xs" style="margin-top: 8px; text-align: right;">
+                            <span id="description-counter">0</span> / 1000 символов
+                        </div>
+                    </div>
+                    <div class="pro-form-group">
+                        <label class="pro-label">Документы (необязательно)</label>
+                        <div class="pro-file-upload">
+                            <input type="file" id="files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="pro-file-input">
+                            <div class="pro-file-trigger" onclick="document.getElementById('files').click()">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Прикрепить файлы</span>
+                            </div>
+                        </div>
+                        <div class="pro-text-xs" style="margin-top: 8px; color: #6b7280;">
+                            PDF, DOC, JPG до 10MB каждый. Максимум 5 файлов.
+                        </div>
+                        <div id="file-list" class="space-y-4" style="margin-top: 16px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 3: Contact Info -->
+    <section id="step-3" class="pro-step hidden">
+        <div class="pro-container">
+            <div class="pro-card">
+                <h2 class="pro-title">Контактные данные</h2>
+                <p class="pro-subtitle">Как с вами связаться для консультации?</p>
+                <div class="space-y-6">
+                    <div class="pro-form-group">
+                        <label class="pro-label" for="name">Ваше имя *</label>
+                        <input type="text" id="name" class="pro-input" placeholder="Иван Иванов" required>
+                    </div>
+                    <div class="pro-form-group">
+                        <label class="pro-label" for="phone">Телефон *</label>
+                        <input type="tel" id="phone" class="pro-input" placeholder="+7 (999) 123-45-67" required>
+                    </div>
+                    <div class="pro-form-group">
+                        <label class="pro-label" for="email">Email</label>
+                        <input type="email" id="email" class="pro-input" placeholder="example@mail.ru">
+                        <div class="pro-text-xs" style="margin-top: 8px; color: #6b7280;">Необязательно. Используется для отправки документов.</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="pro-form-group">
+                            <label class="pro-label" for="contact-method">Способ связи *</label>
+                            <select id="contact-method" class="pro-input pro-select" required>
+                                <option value="">Выберите способ</option>
+                                <option value="telegram">Telegram</option>
+                                <option value="phone">Телефонный звонок</option>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="email">Email</option>
+                            </select>
+                        </div>
+                        <div class="pro-form-group">
+                            <label class="pro-label" for="contact-time">Время связи</label>
+                            <select id="contact-time" class="pro-input pro-select">
+                                <option value="any">Любое время</option>
+                                <option value="morning">Утром (9:00-12:00)</option>
+                                <option value="afternoon">Днём (12:00-17:00)</option>
+                                <option value="evening">Вечером (17:00-21:00)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 4: Review -->
+    <section id="step-4" class="pro-step hidden">
+        <div class="pro-container">
+            <div class="pro-card">
+                <h2 class="pro-title">Проверьте данные</h2>
+                <p class="pro-subtitle">Убедитесь, что вся информация указана верно</p>
+                <div id="review-content"></div>
+                <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 16px; margin-top: 24px;">
+                    <div style="display: flex; align-items: start; gap: 12px;">
+                        <div style="color: #3b82f6; margin-top: 2px;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">Что происходит после отправки?</div>
+                            <div style="font-size: 14px; color: #374151; line-height: 1.5;">
+                                1. Мы получим вашу заявку<br>
+                                2. Юрист изучит вашу ситуацию<br>
+                                3. Мы свяжемся с вами в указанное время<br>
+                                4. Проведём консультацию и поможем решить проблему
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Success Screen -->
+    <section id="success" class="pro-step hidden">
+        <div class="pro-container">
+            <div class="pro-success">
+                <div class="pro-success-icon">
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <h2 class="pro-title">Заявка отправлена!</h2>
+                <p class="pro-subtitle">Спасибо за обращение. Мы свяжемся с вами в ближайшее время.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="/webapp/main.js"></script>
+
+</body>
+</html> 
