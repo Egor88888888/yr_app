@@ -363,6 +363,13 @@ try:
                     except Exception as e:
                         print(f"⚠️ Failed to send client notification: {e}")
                     
+                    # Try to notify admins via Telegram
+                    try:
+                        await notify_admins_new_application(user, application, data)
+                        print("✅ Admin notification sent")
+                    except Exception as e:
+                        print(f"⚠️ Failed to send admin notification: {e}")
+                    
                     # Try to create payment if needed
                     payment_url = None
                     try:
@@ -437,6 +444,98 @@ try:
                 }),
                 media_type="application/json"
             )
+
+    # ===== ADMIN NOTIFICATION FUNCTION =====
+    async def notify_admins_new_application(user, application, form_data):
+        """Send notification to admins about new Mini App application"""
+        if not bot_application:
+            print("⚠️ Bot application not initialized, cannot send admin notification")
+            return
+            
+        import os
+        from datetime import datetime
+        
+        admin_chat_id = int(os.getenv("ADMIN_CHAT_ID", "0"))
+        if admin_chat_id == 0:
+            print("⚠️ ADMIN_CHAT_ID not set, cannot send admin notification")
+            return
+        
+        # Format contact method
+        contact_methods = {
+            'telegram': '💬 Telegram',
+            'phone': '📞 Звонок', 
+            'whatsapp': '💚 WhatsApp',
+            'email': '📧 Email'
+        }
+        contact_method = contact_methods.get(form_data.get('contact_method', ''), form_data.get('contact_method', 'Не указан'))
+        
+        # Format contact time
+        contact_times = {
+            'any': 'Любое время',
+            'morning': '🌅 Утром (9:00-12:00)',
+            'afternoon': '☀️ Днём (12:00-17:00)', 
+            'evening': '🌆 Вечером (17:00-21:00)'
+        }
+        contact_time = contact_times.get(form_data.get('contact_time', 'any'), 'Любое время')
+        
+        admin_text = f"""
+🆕 **НОВАЯ ЗАЯВКА ИЗ MINI APP**
+
+👤 **Клиент:** {form_data.get('name', 'Не указано')}
+📱 **Телефон:** {form_data.get('phone', 'Не указан')}
+📧 **Email:** {form_data.get('email', 'Не указан') or 'Не указан'}
+
+📋 **Категория:** {form_data.get('category_name', 'Не указана')}
+🎯 **Подкатегория:** {form_data.get('subcategory', 'Не указана') or 'Не указана'}
+
+📝 **Описание проблемы:**
+{form_data.get('description', 'Не указано') or 'Не указано'}
+
+📞 **Способ связи:** {contact_method}
+⏰ **Удобное время:** {contact_time}
+
+🆔 **ID заявки:** #{application.id}
+🕐 **Время подачи:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
+"""
+
+        if form_data.get('files'):
+            admin_text += f"\n📎 **Файлы:** {len(form_data['files'])} шт."
+
+        try:
+            await bot_application.bot.send_message(
+                chat_id=admin_chat_id,
+                text=admin_text,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            print(f"❌ Failed to send admin notification: {e}")
+            # Попробуем без Markdown если есть проблемы с форматированием
+            try:
+                simple_text = f"""
+НОВАЯ ЗАЯВКА ИЗ MINI APP
+
+Клиент: {form_data.get('name', 'Не указано')}
+Телефон: {form_data.get('phone', 'Не указан')}
+Email: {form_data.get('email', 'Не указан') or 'Не указан'}
+
+Категория: {form_data.get('category_name', 'Не указана')}
+Подкатегория: {form_data.get('subcategory', 'Не указана') or 'Не указана'}
+
+Описание: {form_data.get('description', 'Не указано') or 'Не указано'}
+
+Способ связи: {contact_method}
+Время: {contact_time}
+
+ID заявки: #{application.id}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+"""
+                await bot_application.bot.send_message(
+                    chat_id=admin_chat_id,
+                    text=simple_text
+                )
+            except Exception as e2:
+                print(f"❌ Failed to send simple admin notification: {e2}")
+                raise e2
 
     # ===== STATIC MOUNTS LAST =====
     app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
