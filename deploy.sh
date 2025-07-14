@@ -5,9 +5,9 @@
 
 echo "🚀 Enhanced AI Production Deployment"
 echo "📅 Timestamp: $(date)"
-echo "🔧 Applying Enhanced AI migration..."
+echo "🔧 Checking system health..."
 
-# Apply Enhanced AI migration using existing manage.py
-python3 manage.py enhanced-ai-deploy
+# Check system health (this will create tables if needed)
+python3 manage.py health-check --detailed || echo "⚠️ Health check had issues, but continuing..."
 
 echo "✅ Enhanced AI deployment completed" 

@@ -41,8 +41,9 @@ async def _health_check_async(detailed):
     try:
         # Database check
         from bot.services.db import async_sessionmaker
+        from sqlalchemy import text
         async with async_sessionmaker() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
         click.echo("✅ Database: Connected")
 
         # Enhanced AI check
