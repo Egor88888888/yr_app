@@ -532,7 +532,7 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         elif data == "smm_settings":
             # Показываем настройки системы
             config = smm_integration.smm_config
-            
+
             settings_text = f"""⚙️ **НАСТРОЙКИ SMM СИСТЕМЫ**
 
 🎯 **Текущая конфигурация:**
@@ -553,19 +553,26 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
             keyboard = [
                 [
-                    InlineKeyboardButton("⏰ Автопостинг", callback_data="smm_autopost_settings"),
-                    InlineKeyboardButton("🎯 Стратегия", callback_data="smm_change_strategy")
+                    InlineKeyboardButton(
+                        "⏰ Автопостинг", callback_data="smm_autopost_settings"),
+                    InlineKeyboardButton(
+                        "🎯 Стратегия", callback_data="smm_change_strategy")
                 ],
                 [
-                    InlineKeyboardButton("📝 Частота", callback_data="smm_change_frequency"),
-                    InlineKeyboardButton("🔧 Функции", callback_data="smm_toggle_features")
+                    InlineKeyboardButton(
+                        "📝 Частота", callback_data="smm_change_frequency"),
+                    InlineKeyboardButton(
+                        "🔧 Функции", callback_data="smm_toggle_features")
                 ],
                 [
-                    InlineKeyboardButton("📊 Метрики", callback_data="smm_set_targets"),
-                    InlineKeyboardButton("🔄 Сброс", callback_data="smm_reset_config")
+                    InlineKeyboardButton(
+                        "📊 Метрики", callback_data="smm_set_targets"),
+                    InlineKeyboardButton(
+                        "🔄 Сброс", callback_data="smm_reset_config")
                 ],
                 [
-                    InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
+                    InlineKeyboardButton(
+                        "◀️◀️ Назад", callback_data="smm_status")
                 ]
             ]
 
@@ -626,6 +633,21 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             interval = data.replace("autopost_interval_", "")
             await handle_set_autopost_interval(query, smm_integration, interval)
 
+        elif data == "autopost_force_now":
+            await handle_autopost_force_now(query, smm_integration)
+
+        elif data == "autopost_content_settings":
+            await handle_autopost_content_settings(query, smm_integration)
+
+        elif data == "autopost_test_deploy":
+            await handle_autopost_test_deploy(query, smm_integration)
+
+        elif data == "autopost_view_logs":
+            await handle_autopost_view_logs(query, smm_integration)
+
+        elif data == "autopost_schedule_view":
+            await handle_autopost_schedule_view(query, smm_integration)
+
         elif data.startswith("strategy_"):
             # Выбор стратегии
             strategy = data.replace("strategy_", "")
@@ -677,63 +699,112 @@ async def smm_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 async def handle_autopost_settings(query, smm_integration):
-    """Обработка настроек автопостинга"""
-    
-    # Получаем текущие настройки автопостинга
-    current_config = smm_integration.smm_config
-    
-    # Проверяем активен ли автопостинг
-    autopost_status = await smm_integration.smm_system.get_autopost_status()
-    
-    settings_text = f"""⏰ **НАСТРОЙКИ АВТОПОСТИНГА**
+    """Расширенная обработка настроек автопостинга"""
 
-🔄 **Статус:** {'🟢 Включен' if autopost_status['enabled'] else '🔴 Выключен'}
-📅 **Интервал:** {autopost_status.get('interval', 'Не установлен')}
+    try:
+        # Получаем детальную информацию об автопостинге
+        autopost_status = await smm_integration.smm_system.get_autopost_status()
+
+        # Проверяем статус deploy autopost
+        from bot.services.deploy_autopost import get_deploy_autopost
+        deploy_autopost = get_deploy_autopost()
+        deploy_active = hasattr(
+            deploy_autopost, 'deploy_task') and deploy_autopost.deploy_task and not deploy_autopost.deploy_task.done()
+
+        # Получаем информацию о последнем автопосте
+        try:
+            from bot.services.enhanced_autopost import get_enhanced_autopost_status
+            enhanced_status = await get_enhanced_autopost_status()
+        except:
+            enhanced_status = {}
+
+        settings_text = f"""⏰ **РАСШИРЕННЫЕ НАСТРОЙКИ АВТОПОСТИНГА**
+
+🔄 **Основной автопостинг:** {'🟢 Включен' if autopost_status['enabled'] else '🔴 Выключен'}
+📅 **Текущий интервал:** {autopost_status.get('interval', 'Не установлен')}
 📝 **Следующий пост:** {autopost_status.get('next_post_time', 'Не запланирован')}
 
-📊 **Статистика:**
+🚀 **Deploy автопост:** {'🟢 Активен' if deploy_active else '🔴 Готов к работе'}
+⏱️ **Интервал после деплоя:** 5 минут
+
+📊 **Детальная статистика:**
 • Всего автопостов: {autopost_status.get('total_autoposts', 0)}
 • За последние 24ч: {autopost_status.get('posts_last_24h', 0)}
 • Успешность: {autopost_status.get('success_rate', 0):.1%}
+• Запланированных постов: {enhanced_status.get('scheduled_count', 0)}
 
-🎯 **Выберите интервал автопостинга:**"""
+🎯 **Управление автопостингом:**"""
 
-    keyboard = [
-        [
-            InlineKeyboardButton("🟢 Вкл/Выкл", callback_data="autopost_toggle"),
-            InlineKeyboardButton("⚡ 30 мин", callback_data="autopost_interval_30m")
-        ],
-        [
-            InlineKeyboardButton("🕐 1 час", callback_data="autopost_interval_1h"),
-            InlineKeyboardButton("🕑 2 часа", callback_data="autopost_interval_2h")
-        ],
-        [
-            InlineKeyboardButton("🕒 3 часа", callback_data="autopost_interval_3h"),
-            InlineKeyboardButton("🕕 6 часов", callback_data="autopost_interval_6h")
-        ],
-        [
-            InlineKeyboardButton("🕘 12 часов", callback_data="autopost_interval_12h"),
-            InlineKeyboardButton("📅 1 день", callback_data="autopost_interval_24h")
-        ],
-        [
-            InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_settings")
+        keyboard = [
+            [
+                InlineKeyboardButton("🟢 Вкл/Выкл основной",
+                                     callback_data="autopost_toggle"),
+                InlineKeyboardButton(
+                    "🔥 Принудительный пост", callback_data="autopost_force_now")
+            ],
+            [
+                InlineKeyboardButton(
+                    "⚡ 30 мин", callback_data="autopost_interval_30m"),
+                InlineKeyboardButton(
+                    "🕐 1 час", callback_data="autopost_interval_1h")
+            ],
+            [
+                InlineKeyboardButton(
+                    "🕑 2 часа", callback_data="autopost_interval_2h"),
+                InlineKeyboardButton(
+                    "🕒 3 часа", callback_data="autopost_interval_3h")
+            ],
+            [
+                InlineKeyboardButton(
+                    "🕕 6 часов", callback_data="autopost_interval_6h"),
+                InlineKeyboardButton(
+                    "🕘 12 часов", callback_data="autopost_interval_12h")
+            ],
+            [
+                InlineKeyboardButton(
+                    "📅 1 день", callback_data="autopost_interval_24h"),
+                InlineKeyboardButton(
+                    "⚙️ Настройки контента", callback_data="autopost_content_settings")
+            ],
+            [
+                InlineKeyboardButton("🚀 Тест деплой-поста",
+                                     callback_data="autopost_test_deploy"),
+                InlineKeyboardButton("📋 Просмотр логов",
+                                     callback_data="autopost_view_logs")
+            ],
+            [
+                InlineKeyboardButton("📊 Расписание постов",
+                                     callback_data="autopost_schedule_view"),
+                InlineKeyboardButton("🔄 Обновить статус",
+                                     callback_data="smm_autopost_settings")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️◀️ Назад", callback_data="smm_settings")
+            ]
         ]
-    ]
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            settings_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
 
-    await query.edit_message_text(
-        settings_text,
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
-    )
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_settings: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка загрузки настроек автопостинга: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="smm_settings")
+            ]])
+        )
 
 
 async def handle_schedule_view(query, smm_integration):
     """Показ расписания постов"""
-    
+
     schedule = await smm_integration.smm_system.get_scheduled_posts(limit=10)
-    
+
     if not schedule.get('posts'):
         schedule_text = """📋 **РАСПИСАНИЕ ПОСТОВ**
 
@@ -746,7 +817,7 @@ async def handle_schedule_view(query, smm_integration):
             posts_info.append(
                 f"• {post['scheduled_time'][:16]} - {post['content_type']}"
             )
-        
+
         schedule_text = f"""📋 **РАСПИСАНИЕ ПОСТОВ**
 
 📝 **Запланировано:** {len(schedule['posts'])}
@@ -759,7 +830,8 @@ async def handle_schedule_view(query, smm_integration):
     keyboard = [
         [
             InlineKeyboardButton("🔄 Обновить", callback_data="smm_schedule"),
-            InlineKeyboardButton("📝 Создать пост", callback_data="smm_create_post")
+            InlineKeyboardButton(
+                "📝 Создать пост", callback_data="smm_create_post")
         ],
         [
             InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
@@ -777,9 +849,9 @@ async def handle_schedule_view(query, smm_integration):
 
 async def handle_system_toggle(query, smm_integration):
     """Переключение состояния системы"""
-    
+
     status = await smm_integration.smm_system.get_system_status()
-    
+
     if status['is_running']:
         await smm_integration.smm_system.stop_system()
         result_text = "🔴 **SMM СИСТЕМА ОСТАНОВЛЕНА**\n\nАвтопостинг приостановлен"
@@ -804,7 +876,7 @@ async def handle_system_toggle(query, smm_integration):
 
 async def handle_frequency_change(query, smm_integration):
     """Изменение частоты постинга"""
-    
+
     frequency_text = """📝 **ЧАСТОТА ПОСТИНГА**
 
 Выберите количество постов в день:
@@ -840,7 +912,7 @@ async def handle_frequency_change(query, smm_integration):
 
 async def handle_strategy_change(query, smm_integration):
     """Изменение стратегии контента"""
-    
+
     strategy_text = """🎯 **СТРАТЕГИЯ КОНТЕНТА**
 
 Выберите стратегию для генерации постов:
@@ -852,11 +924,13 @@ async def handle_strategy_change(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("📚 Образовательная", callback_data="strategy_educational"),
+            InlineKeyboardButton("📚 Образовательная",
+                                 callback_data="strategy_educational"),
             InlineKeyboardButton("💼 Кейсы", callback_data="strategy_cases")
         ],
         [
-            InlineKeyboardButton("⚖️ Прецеденты", callback_data="strategy_precedents"),
+            InlineKeyboardButton(
+                "⚖️ Прецеденты", callback_data="strategy_precedents"),
             InlineKeyboardButton("🎯 Смешанная", callback_data="strategy_mixed")
         ],
         [
@@ -875,9 +949,9 @@ async def handle_strategy_change(query, smm_integration):
 
 async def handle_features_toggle(query, smm_integration):
     """Переключение функций"""
-    
+
     config = smm_integration.smm_config
-    
+
     features_text = f"""🔧 **ФУНКЦИИ СИСТЕМЫ**
 
 📊 **A/B тестирование:** {'✅ Включено' if config.enable_ab_testing else '❌ Выключено'}
@@ -888,14 +962,14 @@ async def handle_features_toggle(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton(f"📊 A/B {'✅' if config.enable_ab_testing else '❌'}", 
-                               callback_data="toggle_ab_testing"),
-            InlineKeyboardButton(f"💬 Взаимодействия {'✅' if config.enable_auto_interactions else '❌'}", 
-                               callback_data="toggle_interactions")
+            InlineKeyboardButton(f"📊 A/B {'✅' if config.enable_ab_testing else '❌'}",
+                                 callback_data="toggle_ab_testing"),
+            InlineKeyboardButton(f"💬 Взаимодействия {'✅' if config.enable_auto_interactions else '❌'}",
+                                 callback_data="toggle_interactions")
         ],
         [
-            InlineKeyboardButton(f"🚀 Амплификация {'✅' if config.enable_viral_amplification else '❌'}", 
-                               callback_data="toggle_amplification")
+            InlineKeyboardButton(f"🚀 Амплификация {'✅' if config.enable_viral_amplification else '❌'}",
+                                 callback_data="toggle_amplification")
         ],
         [
             InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_settings")
@@ -913,9 +987,9 @@ async def handle_features_toggle(query, smm_integration):
 
 async def handle_targets_setting(query, smm_integration):
     """Установка целевых метрик"""
-    
+
     config = smm_integration.smm_config
-    
+
     targets_text = f"""📊 **ЦЕЛЕВЫЕ МЕТРИКИ**
 
 Текущие цели:
@@ -927,11 +1001,14 @@ async def handle_targets_setting(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("📈 Повысить цели", callback_data="targets_increase"),
-            InlineKeyboardButton("📉 Снизить цели", callback_data="targets_decrease")
+            InlineKeyboardButton(
+                "📈 Повысить цели", callback_data="targets_increase"),
+            InlineKeyboardButton(
+                "📉 Снизить цели", callback_data="targets_decrease")
         ],
         [
-            InlineKeyboardButton("🔄 По умолчанию", callback_data="targets_default"),
+            InlineKeyboardButton(
+                "🔄 По умолчанию", callback_data="targets_default"),
             InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_settings")
         ]
     ]
@@ -947,9 +1024,9 @@ async def handle_targets_setting(query, smm_integration):
 
 async def handle_config_reset(query, smm_integration):
     """Сброс конфигурации"""
-    
+
     await smm_integration.reset_to_defaults()
-    
+
     reset_text = """🔄 **КОНФИГУРАЦИЯ СБРОШЕНА**
 
 ✅ Настройки возвращены к значениям по умолчанию
@@ -976,9 +1053,9 @@ async def handle_config_reset(query, smm_integration):
 
 async def handle_detailed_analytics(query, smm_integration):
     """Подробная аналитика"""
-    
+
     analytics = await smm_integration.get_detailed_analytics(days_back=30)
-    
+
     analytics_text = f"""📊 **ПОДРОБНАЯ АНАЛИТИКА** (30 дней)
 
 📝 **Публикации:**
@@ -999,8 +1076,10 @@ async def handle_detailed_analytics(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("📊 Экспорт", callback_data="analytics_export"),
-            InlineKeyboardButton("🔄 Обновить", callback_data="smm_detailed_analytics")
+            InlineKeyboardButton(
+                "📊 Экспорт", callback_data="analytics_export"),
+            InlineKeyboardButton(
+                "🔄 Обновить", callback_data="smm_detailed_analytics")
         ],
         [
             InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_analytics")
@@ -1018,9 +1097,9 @@ async def handle_detailed_analytics(query, smm_integration):
 
 async def handle_optimization_details(query, smm_integration):
     """Детали оптимизации"""
-    
+
     optimization = await smm_integration.get_last_optimization_report()
-    
+
     details_text = f"""🔄 **ДЕТАЛИ ПОСЛЕДНЕЙ ОПТИМИЗАЦИИ**
 
 📅 **Дата:** {optimization.get('date', 'Неизвестно')}
@@ -1037,7 +1116,8 @@ async def handle_optimization_details(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("🔄 Запустить оптимизацию", callback_data="smm_optimize"),
+            InlineKeyboardButton("🔄 Запустить оптимизацию",
+                                 callback_data="smm_optimize"),
             InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_status")
         ]
     ]
@@ -1053,7 +1133,7 @@ async def handle_optimization_details(query, smm_integration):
 
 async def handle_set_autopost_interval(query, smm_integration, interval):
     """Установка интервала автопостинга"""
-    
+
     # Мапинг интервалов
     intervals = {
         "30m": {"minutes": 30, "display": "30 минут"},
@@ -1064,11 +1144,11 @@ async def handle_set_autopost_interval(query, smm_integration, interval):
         "12h": {"hours": 12, "display": "12 часов"},
         "24h": {"hours": 24, "display": "1 день"}
     }
-    
+
     if interval in intervals:
         interval_data = intervals[interval]
         await smm_integration.set_autopost_interval(**{k: v for k, v in interval_data.items() if k != "display"})
-        
+
         result_text = f"""⏰ **ИНТЕРВАЛ АВТОПОСТИНГА УСТАНОВЛЕН**
 
 🔄 **Новый интервал:** {interval_data['display']}
@@ -1078,13 +1158,14 @@ async def handle_set_autopost_interval(query, smm_integration, interval):
 
         # Автоматически активируем автопостинг
         await smm_integration.enable_autopost()
-        
+
     else:
         result_text = "❌ Неизвестный интервал"
 
     keyboard = [
         [
-            InlineKeyboardButton("◀️◀️ Назад", callback_data="smm_autopost_settings")
+            InlineKeyboardButton(
+                "◀️◀️ Назад", callback_data="smm_autopost_settings")
         ]
     ]
 
@@ -1099,17 +1180,17 @@ async def handle_set_autopost_interval(query, smm_integration, interval):
 
 async def handle_set_strategy(query, smm_integration, strategy):
     """Установка стратегии"""
-    
+
     strategies = {
         "educational": "Образовательная",
-        "cases": "Кейсы из практики", 
+        "cases": "Кейсы из практики",
         "precedents": "Судебные прецеденты",
         "mixed": "Смешанная стратегия"
     }
-    
+
     if strategy in strategies:
         await smm_integration.set_content_strategy(strategy)
-        
+
         result_text = f"""🎯 **СТРАТЕГИЯ КОНТЕНТА ИЗМЕНЕНА**
 
 📊 **Новая стратегия:** {strategies[strategy]}
@@ -1135,9 +1216,9 @@ async def handle_set_strategy(query, smm_integration, strategy):
 
 async def handle_set_frequency(query, smm_integration, frequency):
     """Установка частоты постинга"""
-    
+
     await smm_integration.set_posts_per_day(frequency)
-    
+
     result_text = f"""📝 **ЧАСТОТА ПОСТИНГА ИЗМЕНЕНА**
 
 🎯 **Новая частота:** {frequency} постов в день
@@ -1161,7 +1242,7 @@ async def handle_set_frequency(query, smm_integration, frequency):
 
 async def handle_export_data(query, smm_integration):
     """Экспорт данных SMM"""
-    
+
     text = f"""📁 **ЭКСПОРТ ДАННЫХ SMM**
 
 ✅ **Готовые отчеты:**
@@ -1177,17 +1258,20 @@ async def handle_export_data(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("📊 Экспорт основных метрик", callback_data="export_main_metrics"),
-            InlineKeyboardButton("📈 Подробная аналитика", callback_data="export_detailed_analytics")
+            InlineKeyboardButton("📊 Экспорт основных метрик",
+                                 callback_data="export_main_metrics"),
+            InlineKeyboardButton("📈 Подробная аналитика",
+                                 callback_data="export_detailed_analytics")
         ],
         [
-            InlineKeyboardButton("💾 Скачать все", callback_data="export_all_data"),
+            InlineKeyboardButton(
+                "💾 Скачать все", callback_data="export_all_data"),
             InlineKeyboardButton("◀️ Назад", callback_data="smm_analytics")
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await query.edit_message_text(
         text,
         reply_markup=reply_markup,
@@ -1197,20 +1281,20 @@ async def handle_export_data(query, smm_integration):
 
 async def handle_toggle_feature(query, smm_integration, data):
     """Переключение функций SMM"""
-    
+
     feature = data.replace("toggle_", "")
     config = smm_integration.smm_config
-    
+
     if feature == "ab_testing":
         config.enable_ab_testing = not config.enable_ab_testing
         feature_name = "A/B тестирование"
         status = "✅ Включено" if config.enable_ab_testing else "❌ Выключено"
-        
+
     elif feature == "interactions":
         config.enable_auto_interactions = not config.enable_auto_interactions
         feature_name = "Авто-взаимодействия"
         status = "✅ Включены" if config.enable_auto_interactions else "❌ Выключены"
-        
+
     elif feature == "amplification":
         config.enable_viral_amplification = not config.enable_viral_amplification
         feature_name = "Вирусная амплификация"
@@ -1218,10 +1302,10 @@ async def handle_toggle_feature(query, smm_integration, data):
     else:
         feature_name = "Функция"
         status = "Изменено"
-    
+
     # Применяем изменения
     await smm_integration.smm_system.update_configuration(config)
-    
+
     text = f"""🔧 **ФУНКЦИЯ ИЗМЕНЕНА**
 
 ⚙️ **{feature_name}:** {status}
@@ -1231,8 +1315,10 @@ async def handle_toggle_feature(query, smm_integration, data):
 
     keyboard = [
         [
-            InlineKeyboardButton("🔧 Другие функции", callback_data="smm_toggle_features"),
-            InlineKeyboardButton("📊 Статус системы", callback_data="smm_status")
+            InlineKeyboardButton("🔧 Другие функции",
+                                 callback_data="smm_toggle_features"),
+            InlineKeyboardButton("📊 Статус системы",
+                                 callback_data="smm_status")
         ],
         [
             InlineKeyboardButton("◀️ Назад", callback_data="smm_settings")
@@ -1240,7 +1326,7 @@ async def handle_toggle_feature(query, smm_integration, data):
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await query.edit_message_text(
         text,
         reply_markup=reply_markup,
@@ -1250,30 +1336,34 @@ async def handle_toggle_feature(query, smm_integration, data):
 
 async def handle_targets_action(query, smm_integration, data):
     """Управление целевыми метриками"""
-    
+
     action = data.replace("targets_", "")
     config = smm_integration.smm_config
-    
+
     if action == "increase":
-        config.target_engagement_rate = min(config.target_engagement_rate * 1.2, 0.25)
-        config.target_conversion_rate = min(config.target_conversion_rate * 1.2, 0.15)
+        config.target_engagement_rate = min(
+            config.target_engagement_rate * 1.2, 0.25)
+        config.target_conversion_rate = min(
+            config.target_conversion_rate * 1.2, 0.15)
         action_text = "📈 Цели повышены на 20%"
-        
+
     elif action == "decrease":
-        config.target_engagement_rate = max(config.target_engagement_rate * 0.8, 0.02)
-        config.target_conversion_rate = max(config.target_conversion_rate * 0.8, 0.01)
+        config.target_engagement_rate = max(
+            config.target_engagement_rate * 0.8, 0.02)
+        config.target_conversion_rate = max(
+            config.target_conversion_rate * 0.8, 0.01)
         action_text = "📉 Цели снижены на 20%"
-        
+
     elif action == "default":
         config.target_engagement_rate = 0.08
         config.target_conversion_rate = 0.05
         action_text = "🔄 Восстановлены значения по умолчанию"
     else:
         action_text = "Цели изменены"
-    
+
     # Применяем изменения
     await smm_integration.smm_system.update_configuration(config)
-    
+
     text = f"""📊 **ЦЕЛЕВЫЕ МЕТРИКИ ОБНОВЛЕНЫ**
 
 🎯 **Действие:** {action_text}
@@ -1287,16 +1377,18 @@ async def handle_targets_action(query, smm_integration, data):
 
     keyboard = [
         [
-            InlineKeyboardButton("📈 Повысить еще", callback_data="targets_increase"),
+            InlineKeyboardButton(
+                "📈 Повысить еще", callback_data="targets_increase"),
             InlineKeyboardButton("📉 Снизить", callback_data="targets_decrease")
         ],
         [
-            InlineKeyboardButton("◀️ К настройкам", callback_data="smm_settings")
+            InlineKeyboardButton(
+                "◀️ К настройкам", callback_data="smm_settings")
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await query.edit_message_text(
         text,
         reply_markup=reply_markup,
@@ -1306,9 +1398,9 @@ async def handle_targets_action(query, smm_integration, data):
 
 async def handle_analytics_export(query, smm_integration):
     """Экспорт аналитики"""
-    
+
     analytics = await smm_integration.get_detailed_analytics(days_back=30)
-    
+
     text = f"""📊 **ЭКСПОРТ АНАЛИТИКИ ВЫПОЛНЕН**
 
 📋 **Экспортированные данные:**
@@ -1327,16 +1419,19 @@ async def handle_analytics_export(query, smm_integration):
 
     keyboard = [
         [
-            InlineKeyboardButton("📧 Отправить повторно", callback_data="resend_analytics"),
-            InlineKeyboardButton("📊 Обновить данные", callback_data="refresh_analytics")
+            InlineKeyboardButton("📧 Отправить повторно",
+                                 callback_data="resend_analytics"),
+            InlineKeyboardButton("📊 Обновить данные",
+                                 callback_data="refresh_analytics")
         ],
         [
-            InlineKeyboardButton("◀️ К аналитике", callback_data="smm_detailed_analytics")
+            InlineKeyboardButton(
+                "◀️ К аналитике", callback_data="smm_detailed_analytics")
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await query.edit_message_text(
         text,
         reply_markup=reply_markup,
@@ -1346,10 +1441,10 @@ async def handle_analytics_export(query, smm_integration):
 
 async def handle_autopost_toggle(query, smm_integration):
     """Переключение автопостинга вкл/выкл"""
-    
+
     try:
         current_status = await smm_integration.smm_system.get_autopost_status()
-        
+
         if current_status['enabled']:
             # Выключаем автопостинг
             await smm_integration.disable_autopost()
@@ -1360,7 +1455,7 @@ async def handle_autopost_toggle(query, smm_integration):
             await smm_integration.enable_autopost()
             status_text = "🟢 АВТОПОСТИНГ ВКЛЮЧЕН"
             action = "Автопостинг запущен"
-        
+
         text = f"""⚡ **{status_text}**
 
 🎯 **Действие:** {action}
@@ -1370,28 +1465,321 @@ async def handle_autopost_toggle(query, smm_integration):
 
         keyboard = [
             [
-                InlineKeyboardButton("⚙️ Настройки интервала", callback_data="smm_autopost_settings"),
+                InlineKeyboardButton(
+                    "⚙️ Настройки интервала", callback_data="smm_autopost_settings"),
                 InlineKeyboardButton("📊 Статус", callback_data="smm_status")
             ],
             [
-                InlineKeyboardButton("◀️ Назад", callback_data="smm_autopost_settings")
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
             ]
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await query.edit_message_text(
             text,
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
-        
+
     except Exception as e:
         logger.error(f"Error in handle_autopost_toggle: {e}")
         await query.edit_message_text(
             f"❌ Ошибка переключения автопостинга: {str(e)}",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("◀️ Назад", callback_data="smm_autopost_settings")
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]])
+        )
+
+
+async def handle_autopost_force_now(query, smm_integration):
+    """Принудительный запуск автопоста"""
+    try:
+        await query.edit_message_text("🔥 Создание принудительного поста...")
+
+        # Создаем пост немедленно
+        result = await smm_integration.create_immediate_post(
+            content="🚀 Принудительный автопост по запросу администратора",
+            content_type="admin_forced"
+        )
+
+        success_text = f"""✅ **ПРИНУДИТЕЛЬНЫЙ ПОСТ СОЗДАН**
+
+📝 **ID поста:** {result.get('post_id', 'N/A')}
+📅 **Время создания:** {result.get('created_at', 'N/A')}
+📊 **Статус:** {result.get('status', 'Опубликован')}
+
+🎯 Пост успешно отправлен в канал!"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🔄 Создать еще", callback_data="autopost_force_now"),
+                InlineKeyboardButton(
+                    "📊 Статистика", callback_data="smm_autopost_settings")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]
+        ]
+
+        await query.edit_message_text(
+            success_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_force_now: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка создания принудительного поста: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]])
+        )
+
+
+async def handle_autopost_content_settings(query, smm_integration):
+    """Настройки контента для автопостинга"""
+    try:
+        current_config = smm_integration.smm_config
+
+        settings_text = f"""⚙️ **НАСТРОЙКИ КОНТЕНТА АВТОПОСТИНГА**
+
+🎯 **Текущая стратегия:** {current_config.content_strategy.value}
+📝 **Постов в день:** {current_config.posts_per_day}
+🏆 **Порог качества:** {current_config.content_quality_threshold:.1%}
+
+🎨 **Типы контента:**
+• Образовательные статьи
+• Практические кейсы  
+• Юридические новости
+• Прецеденты и решения
+
+⚙️ **Дополнительные настройки:**
+• A/B тестирование: {'✅' if current_config.enable_ab_testing else '❌'}
+• Автовзаимодействия: {'✅' if current_config.enable_auto_interactions else '❌'}
+• Вирусная амплификация: {'✅' if current_config.enable_viral_amplification else '❌'}"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("📚 Изменить стратегию",
+                                     callback_data="smm_change_strategy"),
+                InlineKeyboardButton("📝 Частота постов",
+                                     callback_data="smm_change_frequency")
+            ],
+            [
+                InlineKeyboardButton(
+                    "🎯 A/B тесты", callback_data="toggle_ab_testing"),
+                InlineKeyboardButton("🔄 Автовзаимодействия",
+                                     callback_data="toggle_auto_interactions")
+            ],
+            [
+                InlineKeyboardButton(
+                    "🚀 Вирусность", callback_data="toggle_viral_amplification"),
+                InlineKeyboardButton("📊 Качество контента",
+                                     callback_data="content_quality_settings")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]
+        ]
+
+        await query.edit_message_text(
+            settings_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_content_settings: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка загрузки настроек контента: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]])
+        )
+
+
+async def handle_autopost_test_deploy(query, smm_integration):
+    """Тест автопоста после деплоя"""
+    try:
+        await query.edit_message_text("🚀 Тестирование автопоста после деплоя...")
+
+        # Импортируем и запускаем тест
+        from bot.services.deploy_autopost import trigger_deploy_autopost
+
+        test_deploy_info = {
+            "type": "test_deploy",
+            "version": "test",
+            "timestamp": datetime.now().isoformat(),
+            "features": ["Тестирование deploy autopost", "Проверка 5-минутной задержки"]
+        }
+
+        await trigger_deploy_autopost(test_deploy_info)
+
+        success_text = """✅ **ТЕСТ DEPLOY AUTOPOST ЗАПУЩЕН**
+
+🚀 **Статус:** Тестовый автопост запланирован
+⏱️ **Задержка:** 5 минут (как после реального деплоя)
+📝 **Тип:** Тестовый пост с уведомлением об обновлении
+
+⏰ **Ожидайте пост в канале через 5 минут!**
+
+Это позволяет проверить что система автопостинга после деплоя работает корректно."""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🔄 Запустить еще тест",
+                                     callback_data="autopost_test_deploy"),
+                InlineKeyboardButton(
+                    "📊 Статус", callback_data="smm_autopost_settings")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]
+        ]
+
+        await query.edit_message_text(
+            success_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_test_deploy: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка тестирования deploy autopost: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]])
+        )
+
+
+async def handle_autopost_view_logs(query, smm_integration):
+    """Просмотр логов автопостинга"""
+    try:
+        # Получаем статистику автопостинга
+        autopost_status = await smm_integration.smm_system.get_autopost_status()
+
+        # Получаем последние посты
+        try:
+            from bot.services.enhanced_autopost import get_autopost_dashboard
+            dashboard_data = await get_autopost_dashboard()
+            recent_posts = dashboard_data.get('recent_posts', [])
+        except:
+            recent_posts = []
+
+        logs_text = f"""📋 **ЛОГИ АВТОПОСТИНГА**
+
+📊 **Текущий статус:**
+• Автопостинг: {'🟢 Активен' if autopost_status['enabled'] else '🔴 Отключен'}
+• Интервал: {autopost_status.get('interval', 'Не установлен')}
+• Всего постов: {autopost_status.get('total_autoposts', 0)}
+
+📝 **Последние автопосты:**"""
+
+        if recent_posts:
+            for i, post in enumerate(recent_posts[:5], 1):
+                logs_text += f"\n{i}. {post.get('created_at', 'N/A')[:16]} - {post.get('post_type', 'N/A')}"
+        else:
+            logs_text += "\n• Нет данных о последних постах"
+
+        logs_text += f"""
+
+⚠️ **Примечание:** Детальные логи доступны в системе мониторинга"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🔄 Обновить логи", callback_data="autopost_view_logs"),
+                InlineKeyboardButton("📊 Полная статистика",
+                                     callback_data="smm_detailed_analytics")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]
+        ]
+
+        await query.edit_message_text(
+            logs_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_view_logs: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка загрузки логов: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]])
+        )
+
+
+async def handle_autopost_schedule_view(query, smm_integration):
+    """Просмотр расписания автопостов"""
+    try:
+        # Получаем запланированные посты
+        scheduled_posts = await smm_integration.get_scheduled_posts(10)
+
+        schedule_text = """📊 **РАСПИСАНИЕ АВТОПОСТОВ**
+
+⏰ **Запланированные посты:**"""
+
+        if scheduled_posts:
+            for i, post in enumerate(scheduled_posts, 1):
+                schedule_text += f"\n{i}. {post.get('scheduled_time', 'N/A')[:16]} - {post.get('content_type', 'N/A')}"
+        else:
+            schedule_text += "\n📝 Нет запланированных постов"
+
+        schedule_text += f"""
+
+🎯 **Автопостинг:** Создает посты автоматически по расписанию
+🚀 **Deploy-посты:** Создаются через 5 минут после каждого деплоя"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝 Создать пост", callback_data="smm_create_post"),
+                InlineKeyboardButton(
+                    "⏰ Настроить расписание", callback_data="smm_schedule_advanced")
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔄 Обновить", callback_data="autopost_schedule_view"),
+                InlineKeyboardButton(
+                    "📊 Статистика", callback_data="smm_autopost_settings")
+            ],
+            [
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
+            ]
+        ]
+
+        await query.edit_message_text(
+            schedule_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_autopost_schedule_view: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка загрузки расписания: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="smm_autopost_settings")
             ]])
         )
 

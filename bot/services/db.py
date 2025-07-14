@@ -61,12 +61,15 @@ except ImportError:
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL env not set")
-
-# Fix Railway PostgreSQL URL for async
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgresql://", "postgresql+asyncpg://", 1)
+    # For local development, use SQLite
+    DATABASE_URL = "sqlite+aiosqlite:///bot.db"
+    print("🔧 Using SQLite for local development")
+else:
+    # Fix Railway PostgreSQL URL for async
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgresql://", "postgresql+asyncpg://", 1)
+    print(f"🔗 Using production database: {DATABASE_URL[:30]}...")
 
 async_engine = create_async_engine(
     DATABASE_URL, echo=False, pool_pre_ping=True)

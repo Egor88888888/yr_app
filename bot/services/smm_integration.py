@@ -92,13 +92,24 @@ class SMMIntegration:
             # Запускаем мониторинг и оптимизацию
             asyncio.create_task(self._integration_monitoring_loop())
 
-            # 🚀 ИСПРАВЛЕНИЕ: Автоматически запускаем автопостинг с интервалом 30 минут
+            # 🚀 ИСПРАВЛЕНИЕ: Автоматически запускаем автопостинг с интервалом 1 час
             try:
-                await self.set_autopost_interval(minutes=30)
+                # 1 час как требуется
+                await self.set_autopost_interval(minutes=60)
                 await self.enable_autopost()
-                logger.info("🚀 Autoposting enabled with 30-minute interval")
+                logger.info("🚀 Autoposting enabled with 1-hour interval")
             except Exception as autopost_error:
                 logger.error(f"Failed to enable autoposting: {autopost_error}")
+                # Принудительно включаем через планировщик напрямую
+                try:
+                    self.smm_system.scheduler.autopost_interval_minutes = 60
+                    self.smm_system.scheduler.autopost_enabled = True
+                    asyncio.create_task(
+                        self.smm_system.scheduler._autopost_loop())
+                    logger.info("🔄 Autoposting force-enabled via scheduler")
+                except Exception as force_error:
+                    logger.error(
+                        f"Failed to force-enable autoposting: {force_error}")
 
             logger.info("✅ Production SMM System fully started")
 
