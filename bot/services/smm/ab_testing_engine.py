@@ -143,13 +143,12 @@ class ABTestingEngine:
         self.is_running = True
         logger.info("🧪 Starting A/B Testing Engine")
 
-        tasks = [
-            asyncio.create_task(self._monitor_active_tests()),
-            asyncio.create_task(self._calculate_test_results()),
-            asyncio.create_task(self._auto_stop_completed_tests())
-        ]
+        # Запуск процессов в фоне (не ждем их завершения)
+        asyncio.create_task(self._monitor_active_tests())
+        asyncio.create_task(self._calculate_test_results())
+        asyncio.create_task(self._auto_stop_completed_tests())
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("✅ A/B Testing Engine background tasks started")
 
     async def stop_engine(self):
         """Остановка движка"""

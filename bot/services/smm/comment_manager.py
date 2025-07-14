@@ -114,16 +114,14 @@ class CommentManager:
         self.is_running = True
         logger.info("💬 Starting Comment Manager")
 
-        # Запуск основных процессов
-        tasks = [
-            asyncio.create_task(self._monitor_discussion_groups()),
-            asyncio.create_task(self._process_comment_queue()),
-            asyncio.create_task(self._expert_response_scheduler()),
-            asyncio.create_task(self._conversation_flow_manager()),
-            asyncio.create_task(self._moderation_loop())
-        ]
+        # Запуск основных процессов в фоне (не ждем их завершения)
+        asyncio.create_task(self._monitor_discussion_groups())
+        asyncio.create_task(self._process_comment_queue())
+        asyncio.create_task(self._expert_response_scheduler())
+        asyncio.create_task(self._conversation_flow_manager())
+        asyncio.create_task(self._moderation_loop())
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("✅ Comment Manager background tasks started")
 
     async def stop_manager(self):
         """Остановка системы"""

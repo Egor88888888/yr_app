@@ -94,14 +94,12 @@ class TelegramPublisher:
         self.is_running = True
         logger.info("🚀 Starting Telegram Publisher")
 
-        # Запускаем основные процессы
-        tasks = [
-            asyncio.create_task(self._process_publish_queue()),
-            asyncio.create_task(self._monitor_published_messages()),
-            asyncio.create_task(self._cleanup_old_data())
-        ]
+        # Запускаем основные процессы в фоне (не ждем их завершения)
+        asyncio.create_task(self._process_publish_queue())
+        asyncio.create_task(self._monitor_published_messages())
+        asyncio.create_task(self._cleanup_old_data())
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("✅ Telegram Publisher background tasks started")
 
     async def stop_publisher(self):
         """Остановка системы публикации"""

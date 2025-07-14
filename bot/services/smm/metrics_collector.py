@@ -112,15 +112,13 @@ class MetricsCollector:
         # Инициализация MTProto если доступно
         await self._init_mtproto_client()
 
-        # Запуск процессов сбора
-        tasks = [
-            asyncio.create_task(self._collect_metrics_loop()),
-            asyncio.create_task(self._update_channel_metrics_loop()),
-            asyncio.create_task(self._process_click_events()),
-            asyncio.create_task(self._sync_external_analytics())
-        ]
+        # Запуск процессов сбора в фоне (не ждем их завершения)
+        asyncio.create_task(self._collect_metrics_loop())
+        asyncio.create_task(self._update_channel_metrics_loop())
+        asyncio.create_task(self._process_click_events())
+        asyncio.create_task(self._sync_external_analytics())
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("✅ Metrics Collector background tasks started")
 
     async def stop_collector(self):
         """Остановка сбора метрик"""
