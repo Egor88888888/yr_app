@@ -15,6 +15,7 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from typing import Optional
@@ -59,9 +60,16 @@ try:
 except ImportError:
     pass  # Models might not be available yet
 
+logger = logging.getLogger(__name__)
+
+# =================
+# DATABASE SETUP
+# =================
+
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 if not DATABASE_URL:
-    # For local development, use SQLite
+    # Default local SQLite with async driver
     DATABASE_URL = "sqlite+aiosqlite:///bot.db"
     print("🔧 Using SQLite for local development")
 else:
@@ -69,7 +77,15 @@ else:
     if DATABASE_URL.startswith("postgresql://"):
         DATABASE_URL = DATABASE_URL.replace(
             "postgresql://", "postgresql+asyncpg://", 1)
-    print(f"🔗 Using production database: {DATABASE_URL[:30]}...")
+    # Fix SQLite URLs to use async driver
+    elif DATABASE_URL.startswith("sqlite:///") and "aiosqlite" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://")
+    print(f"🔗 Using production database: {DATABASE_URL[:50]}...")
+
+# Настройка для локальной разработки
+if not os.getenv("DATABASE_URL"):
+    print("🔗 Using fallback local SQLite database")
+    DATABASE_URL = "sqlite+aiosqlite:///bot.db"
 
 async_engine = create_async_engine(
     DATABASE_URL, echo=False, pool_pre_ping=True)

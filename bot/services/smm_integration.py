@@ -40,10 +40,15 @@ class SMMIntegration:
         # Интеграция с существующими системами
         self.content_intelligence = ContentIntelligenceSystem()
 
+        # Настройка переменных окружения
+        import os
+        self.target_channel_id = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
+            'CHANNEL_ID') or '@your_test_channel'
+
         # Production настройки каналов
         self.channel_configs = {
             'main_channel': {
-                'channel_id': '@your_channel',  # Заменить на реальный ID
+                'channel_id': self._get_target_channel_id(),  # Используем переменную окружения
                 'post_frequency': 3,
                 'content_strategy': 'balanced',
                 'enable_comments': True,
@@ -729,6 +734,11 @@ class SMMIntegration:
         except Exception as e:
             logger.error(f"Failed to get scheduled posts: {e}")
             return []
+
+    def _get_target_channel_id(self) -> str:
+        """Получение ID целевого канала"""
+        import os
+        return os.getenv('TARGET_CHANNEL_ID') or os.getenv('CHANNEL_ID') or '@your_test_channel'
 
 
 # Глобальная переменная для хранения экземпляра

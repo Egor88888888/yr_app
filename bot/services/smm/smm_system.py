@@ -601,12 +601,15 @@ class ProfessionalSMMSystem:
     async def _get_performance_trends(self): return {}
 
     # ================ AUTOPOSTING METHODS ================
-    
+
     async def start_autoposting(self):
         """Запуск автопостинга"""
         try:
             if not self.is_running:
-                await self.start_system("@your_channel")  # Replace with actual channel
+                import os
+                channel_id = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
+                    'CHANNEL_ID') or '@your_test_channel'
+                await self.start_system(channel_id)
             logger.info("✅ Autoposting started")
         except Exception as e:
             logger.error(f"Failed to start autoposting: {e}")
@@ -629,9 +632,11 @@ class ProfessionalSMMSystem:
         """Получение статуса автопостинга"""
         try:
             scheduler = self.scheduler
-            enabled = scheduler.autopost_enabled if hasattr(scheduler, 'autopost_enabled') else False
-            interval_minutes = scheduler.autopost_interval_minutes if hasattr(scheduler, 'autopost_interval_minutes') else 60
-            
+            enabled = scheduler.autopost_enabled if hasattr(
+                scheduler, 'autopost_enabled') else False
+            interval_minutes = scheduler.autopost_interval_minutes if hasattr(
+                scheduler, 'autopost_interval_minutes') else 60
+
             # Конвертируем интервал в читаемый формат
             if interval_minutes < 60:
                 interval_text = f"{interval_minutes} минут"
@@ -643,11 +648,11 @@ class ProfessionalSMMSystem:
             else:
                 days = interval_minutes // 1440
                 interval_text = f"{days} дней"
-            
+
             next_post_time = "Не запланирован"
             if enabled:
                 next_post_time = f"Через {interval_text}"
-            
+
             return {
                 "enabled": enabled,
                 "interval": interval_text,

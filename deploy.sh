@@ -7,7 +7,7 @@ echo "🚀 Enhanced AI Production Deployment"
 echo "📅 Timestamp: $(date)"
 echo "🔧 Applying Enhanced AI migration..."
 
-# Apply Enhanced AI migration
-python3 deploy_enhanced_ai_simple.py
+# Apply Enhanced AI migration using existing manage.py
+python3 manage.py enhanced-ai-deploy
 
 echo "✅ Enhanced AI deployment completed" 
