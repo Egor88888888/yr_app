@@ -43,7 +43,7 @@ class SMMIntegration:
         # Настройка переменных окружения
         import os
         self.target_channel_id = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
-            'CHANNEL_ID') or '@your_test_channel'
+            'CHANNEL_ID') or '@test_legal_channel'
 
         # Production настройки каналов
         self.channel_configs = {
@@ -738,7 +738,7 @@ class SMMIntegration:
     def _get_target_channel_id(self) -> str:
         """Получение ID целевого канала"""
         import os
-        return os.getenv('TARGET_CHANNEL_ID') or os.getenv('CHANNEL_ID') or '@your_test_channel'
+        return os.getenv('TARGET_CHANNEL_ID') or os.getenv('CHANNEL_ID') or '@test_legal_channel'
 
 
 # Глобальная переменная для хранения экземпляра

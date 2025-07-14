@@ -3464,25 +3464,31 @@ async def post_init(application: Application):
 
     # 🚀 ИНИЦИАЛИЗИРУЕМ SMM СИСТЕМУ И АВТОПОСТИНГ ПОСЛЕ ДЕПЛОЯ
     try:
+        print("🔧 Initializing SMM system and deploy autopost...")
         from .services.deploy_autopost import init_deploy_autopost
         from .services.smm_integration import initialize_smm_integration, get_smm_integration
 
         # Сначала инициализируем SMM integration
+        print("🔧 Initializing SMM integration...")
         smm_integration = await initialize_smm_integration(application.bot, ai_enhanced_manager)
         if smm_integration:
             print("✅ SMM integration initialized")
 
             # Запускаем SMM систему
+            print("🔧 Starting SMM system...")
             await smm_integration.start_smm_system()
             print("✅ SMM system started")
 
             # Инициализируем автопост после деплоя
+            print("🔧 Initializing deploy autopost...")
             await init_deploy_autopost(smm_integration)
             print("🚀 Deploy autopost initialized successfully")
         else:
             print("⚠️ Failed to initialize SMM integration")
     except Exception as e:
         print(f"❌ Failed to initialize deploy autopost: {e}")
+        import traceback
+        print(f"❌ Deploy autopost error traceback: {traceback.format_exc()}")
         log.error(f"Deploy autopost error: {e}")
 
 

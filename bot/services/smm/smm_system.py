@@ -608,7 +608,7 @@ class ProfessionalSMMSystem:
             if not self.is_running:
                 import os
                 channel_id = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
-                    'CHANNEL_ID') or '@your_test_channel'
+                    'CHANNEL_ID') or '@test_legal_channel'
                 await self.start_system(channel_id)
             logger.info("✅ Autoposting started")
         except Exception as e:
