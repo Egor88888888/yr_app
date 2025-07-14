@@ -69,48 +69,95 @@ class SMMIntegration:
             self.is_running = True
 
             # Запускаем все компоненты SMM системы
-            if self.smm_system.telegram_publisher:
-                await self.smm_system.telegram_publisher.start_publisher()
+            try:
+                print("🔧 Starting telegram publisher...")
+                if self.smm_system.telegram_publisher:
+                    await self.smm_system.telegram_publisher.start_publisher()
+                print("✅ Telegram publisher started")
+            except Exception as e:
+                print(f"❌ Telegram publisher failed: {e}")
+                raise
 
-            if self.smm_system.metrics_collector:
-                await self.smm_system.metrics_collector.start_collector()
+            try:
+                print("🔧 Starting metrics collector...")
+                if self.smm_system.metrics_collector:
+                    await self.smm_system.metrics_collector.start_collector()
+                print("✅ Metrics collector started")
+            except Exception as e:
+                print(f"❌ Metrics collector failed: {e}")
+                raise
 
-            if self.smm_system.comment_manager:
-                await self.smm_system.comment_manager.start_manager()
+            try:
+                print("🔧 Starting comment manager...")
+                if self.smm_system.comment_manager:
+                    await self.smm_system.comment_manager.start_manager()
+                print("✅ Comment manager started")
+            except Exception as e:
+                print(f"❌ Comment manager failed: {e}")
+                raise
 
-            await self.smm_system.ab_testing_engine.start_engine()
+            try:
+                print("🔧 Starting AB testing engine...")
+                await self.smm_system.ab_testing_engine.start_engine()
+                print("✅ AB testing engine started")
+            except Exception as e:
+                print(f"❌ AB testing engine failed: {e}")
+                raise
 
             # Настраиваем каналы для комментариев
-            for config in self.channel_configs.values():
-                if config.get('enable_comments'):
-                    await self.smm_system.comment_manager.setup_discussion_group(
-                        config['channel_id'],
-                        "auto_setup"
-                    )
+            try:
+                print("🔧 Setting up discussion groups...")
+                for config in self.channel_configs.values():
+                    if config.get('enable_comments'):
+                        await self.smm_system.comment_manager.setup_discussion_group(
+                            config['channel_id'],
+                            "auto_setup"
+                        )
+                print("✅ Discussion groups set up")
+            except Exception as e:
+                print(f"❌ Discussion groups setup failed: {e}")
+                raise
 
             # Запускаем основную SMM систему
-            for config in self.channel_configs.values():
-                asyncio.create_task(
-                    self.smm_system.start_system(config['channel_id'])
-                )
+            try:
+                print("🔧 Starting main SMM systems...")
+                for config in self.channel_configs.values():
+                    asyncio.create_task(
+                        self.smm_system.start_system(config['channel_id'])
+                    )
+                print("✅ Main SMM systems started")
+            except Exception as e:
+                print(f"❌ Main SMM systems failed: {e}")
+                raise
 
             # Запускаем мониторинг и оптимизацию
-            asyncio.create_task(self._integration_monitoring_loop())
+            try:
+                print("🔧 Starting integration monitoring...")
+                asyncio.create_task(self._integration_monitoring_loop())
+                print("✅ Integration monitoring started")
+            except Exception as e:
+                print(f"❌ Integration monitoring failed: {e}")
+                raise
 
             # 🚀 ИСПРАВЛЕНИЕ: Автоматически запускаем автопостинг с интервалом 1 час
             try:
+                print("🔧 Setting up autoposting...")
                 # 1 час как требуется
                 await self.set_autopost_interval(minutes=60)
                 await self.enable_autopost()
+                print("🚀 Autoposting enabled with 1-hour interval")
                 logger.info("🚀 Autoposting enabled with 1-hour interval")
             except Exception as autopost_error:
+                print(f"❌ Autoposting setup failed: {autopost_error}")
                 logger.error(f"Failed to enable autoposting: {autopost_error}")
                 # Принудительно включаем через планировщик напрямую
                 try:
+                    print("🔧 Force-enabling autoposting via scheduler...")
                     self.smm_system.scheduler.autopost_interval_minutes = 60
                     self.smm_system.scheduler.autopost_enabled = True
                     asyncio.create_task(
                         self.smm_system.scheduler._autopost_loop())
+                    print("🔄 Autoposting force-enabled via scheduler")
                     logger.info("🔄 Autoposting force-enabled via scheduler")
                 except Exception as force_error:
                     logger.error(
