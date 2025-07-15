@@ -645,6 +645,52 @@ class ScheduleOptimizationEngine:
 
         return optimal_times[:3]  # Возвращаем топ-3 варианта
 
+    async def _generate_alternative_times(
+        self,
+        content_type: str,
+        original_time: datetime
+    ) -> List[datetime]:
+        """Генерация альтернативных времен для публикации"""
+        alternative_times = []
+
+        # Базовые сдвиги относительно оригинального времени
+        time_offsets = [
+            -2, -1, 1, 2,  # ±1-2 часа
+            24, 48,        # +1-2 дня
+            -24, -48       # -1-2 дня
+        ]
+
+        for offset_hours in time_offsets:
+            alt_time = original_time + timedelta(hours=offset_hours)
+
+            # Проверяем, что время разумное (рабочие часы)
+            if 8 <= alt_time.hour <= 22:
+                alternative_times.append(alt_time)
+
+        # Добавляем популярные времена для типа контента
+        content_optimal_hours = {
+            'viral_case_study': [9, 10, 18, 19],
+            'trending_legal_news': [8, 9, 17, 18],
+            'legal_life_hack': [10, 11, 18, 19],
+            'controversial_topic': [12, 13, 19, 20]
+        }
+
+        optimal_hours = content_optimal_hours.get(content_type, [9, 12, 18])
+
+        for hour in optimal_hours:
+            # Ближайшее время с оптимальным часом
+            alt_time = original_time.replace(
+                hour=hour, minute=0, second=0, microsecond=0)
+            if alt_time <= datetime.now():
+                alt_time += timedelta(days=1)
+            alternative_times.append(alt_time)
+
+        # Убираем дубликаты и сортируем
+        unique_times = list(set(alternative_times))
+        unique_times.sort()
+
+        return unique_times[:5]  # Возвращаем топ-5 альтернатив
+
 
 class ABTestManager:
     """Менеджер A/B тестов"""

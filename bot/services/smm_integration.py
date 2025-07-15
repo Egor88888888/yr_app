@@ -19,6 +19,7 @@ from .smm import (
     create_viral_focused_config,
     create_conversion_focused_config
 )
+from .smm.telegram_publisher import PublishRequest
 from .content_intelligence import ContentIntelligenceSystem
 from .ai_enhanced import AIEnhancedManager
 from .db import async_sessionmaker
