@@ -205,6 +205,11 @@ class SMMIntegration:
     ) -> Dict[str, Any]:
         """Создание и публикация поста с A/B тестированием"""
         try:
+            # ИСПРАВЛЕНИЕ: Используем markdown_fix для корректного отображения
+            from .markdown_fix import prepare_telegram_message
+
+            # Подготавливаем сообщение с правильным парсингом
+            message_data = prepare_telegram_message(content)
             # Если включено A/B тестирование и есть варианты
             if enable_ab_testing and content_variants and len(content_variants) > 1:
                 # Создаем A/B тест
@@ -226,14 +231,16 @@ class SMMIntegration:
 
                 if variant:
                     content_to_publish = variant.content["text"]
-                else:
-                    content_to_publish = content
+                    # Обновляем message_data для варианта
+                    message_data = prepare_telegram_message(content_to_publish)
+                # Используем уже подготовленный message_data
 
                 # Публикуем через production publisher
                 publish_request = PublishRequest(
                     post_id=f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     channel_id=channel_id,
-                    content=content_to_publish,
+                    content=message_data["text"],
+                    parse_mode=message_data.get("parse_mode"),
                     ab_test_variant=variant.variant_id if variant else None
                 )
 
@@ -266,7 +273,8 @@ class SMMIntegration:
                 publish_request = PublishRequest(
                     post_id=f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     channel_id=channel_id,
-                    content=content
+                    content=message_data["text"],
+                    parse_mode=message_data.get("parse_mode")
                 )
 
                 result = await self.smm_system.telegram_publisher.publish_now(publish_request)
@@ -786,7 +794,17 @@ class SMMIntegration:
     def _get_target_channel_id(self) -> str:
         """Получение ID целевого канала"""
         import os
-        return os.getenv('TARGET_CHANNEL_ID') or os.getenv('CHANNEL_ID') or '@test_legal_channel'
+        # ИСПРАВЛЕНИЕ: Используем более стабильный fallback
+        channel_id = os.getenv('TARGET_CHANNEL_ID') or os.getenv('CHANNEL_ID')
+
+        if not channel_id:
+            logger.warning(
+                "⚠️ TARGET_CHANNEL_ID не установлен! Используется fallback.")
+            logger.info(
+                "🔧 Для исправления: установите TARGET_CHANNEL_ID в Railway")
+            return '@test_legal_channel'  # Временный fallback
+
+        return channel_id
 
     async def create_deploy_autopost(self) -> Dict[str, Any]:
         """Создание БОЕВОГО автопоста после деплоя (используя реальную SMM систему)"""

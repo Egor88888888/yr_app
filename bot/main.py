@@ -51,6 +51,8 @@ from bot.services.notifications import notify_client_application_received, notif
 from bot.handlers.smm_admin import register_smm_admin_handlers
 from menu_utils import MenuBuilder, format_menu_title, format_stats_section
 from missing_handlers import handle_missing_callback, validate_callback_coverage
+# Импорт быстрых исправлений
+from bot.handlers.quick_fixes import register_quick_fixes_handlers
 # Импорт улучшенной системы автопостинга
 try:
     from bot.services.enhanced_autopost import (
@@ -3690,6 +3692,13 @@ async def main():
 
     # Регистрируем SMM админ обработчики
     register_smm_admin_handlers(application)
+
+    # Регистрируем обработчики быстрых исправлений
+    try:
+        register_quick_fixes_handlers(application)
+        print("✅ Quick fixes handlers registered")
+    except Exception as e:
+        print(f"⚠️ Could not register quick fixes handlers: {e}")
 
     # 🔧 ФИКС: Добавляем обработчик для ввода телефона и деталей консультации
     async def handle_file_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
