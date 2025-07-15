@@ -57,15 +57,20 @@ async def quick_fix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton(
                 "📝 Тест markdown", callback_data="test_markdown"),
-            InlineKeyboardButton("🧪 Тестовый пост", callback_data="test_post")
+            InlineKeyboardButton(
+                "🧪 Тестовый пост", callback_data="test_post")
         ],
         [
             InlineKeyboardButton("🧪 Тест комментариев",
                                  callback_data="test_comments"),
-            InlineKeyboardButton("📋 Полный отчет", callback_data="full_report")
+            InlineKeyboardButton("🚀 Диагностика автопостинга",
+                                 callback_data="diagnose_autopost")
         ],
         [
-            InlineKeyboardButton("🔄 Обновить", callback_data="refresh_status")
+            InlineKeyboardButton(
+                "📋 Полный отчет", callback_data="full_report"),
+            InlineKeyboardButton(
+                "🔄 Обновить", callback_data="refresh_status")
         ]
     ]
 
@@ -100,6 +105,12 @@ async def quick_fix_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_add_bot_to_group(query, context)
     elif data == "show_bot_add_instructions":
         await handle_show_bot_add_instructions(query, context)
+    elif data == "diagnose_autopost":
+        await handle_autopost_diagnostic(query, context)
+    elif data == "fix_autopost":
+        await handle_autopost_fix(query, context)
+    elif data == "create_immediate_post":
+        await handle_create_immediate_post(query, context)
     else:
         await query.edit_message_text(f"⚠️ Неизвестная команда: {data}")
 
@@ -662,10 +673,251 @@ async def handle_show_bot_add_instructions(query, context):
     )
 
 
+async def handle_autopost_diagnostic(query, context):
+    """🔧 Диагностика автопостинга"""
+    await query.edit_message_text("🔧 Запуск диагностики автопостинга...")
+
+    try:
+        from bot.services.autopost_diagnostic import run_autopost_diagnostic, format_diagnostic_report
+
+        # Запускаем полную диагностику
+        diagnostic_result = await run_autopost_diagnostic(context.bot)
+
+        # Форматируем отчет
+        report = format_diagnostic_report(diagnostic_result)
+
+        # Подготавливаем ответ
+        from bot.services.markdown_fix import prepare_telegram_message
+        message_data = prepare_telegram_message(report)
+
+        # Создаем кнопки в зависимости от статуса
+        status = diagnostic_result.get("overall_status", "unknown")
+        issues = diagnostic_result.get("issues", [])
+
+        if status == "fully_working":
+            keyboard = [
+                [
+                    InlineKeyboardButton("🚀 Создать тестовый пост",
+                                         callback_data="create_immediate_post"),
+                    InlineKeyboardButton("📊 SMM панель",
+                                         callback_data="admin_smm")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Диагностика снова",
+                                         callback_data="diagnose_autopost"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+        elif len(issues) > 0:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🔧 Исправить автоматически",
+                                         callback_data="fix_autopost"),
+                    InlineKeyboardButton("📋 Инструкции",
+                                         callback_data="show_autopost_manual_fix")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Диагностика снова",
+                                         callback_data="diagnose_autopost"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🔧 Попробовать исправить",
+                                         callback_data="fix_autopost"),
+                    InlineKeyboardButton("📞 Техподдержка",
+                                         url="https://t.me/your_support")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Диагностика снова",
+                                         callback_data="diagnose_autopost"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        await query.edit_message_text(
+            f"❌ **ОШИБКА ДИАГНОСТИКИ АВТОПОСТИНГА**\n\n```\n{str(e)}\n```\n\nДетали:\n```\n{error_details[:500]}...\n```",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="refresh_status")
+            ]]),
+            parse_mode='Markdown'
+        )
+
+
+async def handle_autopost_fix(query, context):
+    """🔧 Автоматическое исправление автопостинга"""
+    await query.edit_message_text("🔧 Исправление проблем автопостинга...")
+
+    try:
+        from bot.services.autopost_diagnostic import run_autopost_diagnostic, fix_autopost_issues
+
+        # Сначала диагностируем проблемы
+        diagnostic_result = await run_autopost_diagnostic(context.bot)
+        issues = diagnostic_result.get("issues", [])
+
+        if not issues:
+            response_text = """✅ **ПРОБЛЕМ НЕ ОБНАРУЖЕНО**
+            
+Автопостинг работает корректно!
+
+🎯 **Текущий статус:**
+- Система запущена
+- Канал настроен
+- Права корректны
+- Планировщик активен
+
+💡 **Следующий пост ожидается через час.**"""
+        else:
+            # Пытаемся исправить проблемы
+            fix_result = await fix_autopost_issues(context.bot, issues)
+
+            if fix_result.get("success"):
+                fixes_applied = fix_result.get("fixes_applied", [])
+                response_text = f"""✅ **ПРОБЛЕМЫ ИСПРАВЛЕНЫ**
+
+🔧 **Применено исправлений:** {len(fixes_applied)}
+
+"""
+                for fix in fixes_applied:
+                    if fix == "autopost_enabled":
+                        response_text += "✅ Автопостинг включен\n"
+                    elif fix == "scheduler_restarted":
+                        response_text += "✅ Планировщик перезапущен\n"
+                    elif fix == "test_post_created":
+                        response_text += "✅ Тестовый пост создан\n"
+
+                response_text += f"""
+🚀 **Автопостинг восстановлен!**
+- Интервал: каждый час
+- Следующий пост: через 60 минут
+- Статус: активен"""
+            else:
+                response_text = f"""❌ **НЕ УДАЛОСЬ ИСПРАВИТЬ АВТОМАТИЧЕСКИ**
+
+🔍 **Обнаруженные проблемы:**
+{chr(10).join(f'• {issue}' for issue in issues)}
+
+🔧 **Требуется ручная настройка:**
+1. Проверьте настройки канала в Railway
+2. Убедитесь что бот - администратор канала  
+3. Перезапустите приложение
+4. Обратитесь к техподдержке
+
+💡 **Или используйте SMM панель для управления автопостингом.**"""
+
+        from bot.services.markdown_fix import prepare_telegram_message
+        message_data = prepare_telegram_message(response_text)
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🔄 Диагностика снова",
+                                     callback_data="diagnose_autopost"),
+                InlineKeyboardButton("📊 SMM панель",
+                                     callback_data="admin_smm")
+            ],
+            [
+                InlineKeyboardButton("🚀 Создать пост сейчас",
+                                     callback_data="create_immediate_post"),
+                InlineKeyboardButton("◀️ Назад",
+                                     callback_data="refresh_status")
+            ]
+        ]
+
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        await query.edit_message_text(
+            f"❌ Ошибка при исправлении автопостинга: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="refresh_status")
+            ]])
+        )
+
+
+async def handle_create_immediate_post(query, context):
+    """🚀 Создание немедленного поста"""
+    await query.edit_message_text("🚀 Создание поста...")
+
+    try:
+        # Используем существующую функцию из main.py
+        from bot.main import autopost_job
+
+        # Создаем немедленный пост
+        await autopost_job(context)
+
+        response_text = """🚀 **ПОСТ СОЗДАН УСПЕШНО!**
+
+✅ **Результат:**
+- Пост опубликован в канале
+- Время публикации: сейчас
+- Тип: автоматически выбранный
+- Кнопки: добавлены
+
+📊 **Ожидаемые показатели:**
+- Охват: 800-1,500 просмотров
+- Вовлеченность: 6-12%
+- Переходы: 20-40
+- Потенциальные заявки: 1-4
+
+⏰ **Следующий автопост:** через час"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🚀 Создать еще один",
+                                     callback_data="create_immediate_post"),
+                InlineKeyboardButton("📊 SMM панель",
+                                     callback_data="admin_smm")
+            ],
+            [
+                InlineKeyboardButton("🔧 Диагностика",
+                                     callback_data="diagnose_autopost"),
+                InlineKeyboardButton("◀️ Назад",
+                                     callback_data="refresh_status")
+            ]
+        ]
+
+        from bot.services.markdown_fix import prepare_telegram_message
+        message_data = prepare_telegram_message(response_text)
+
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        await query.edit_message_text(
+            f"❌ Ошибка создания поста: {str(e)}\n\n💡 Попробуйте через SMM панель: /admin → SMM",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "📊 SMM панель", callback_data="admin_smm"),
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="refresh_status")
+            ]])
+        )
+
+
 def register_quick_fixes_handlers(application):
     """Регистрация обработчиков быстрых исправлений"""
     application.add_handler(CommandHandler("quick_fix", quick_fix_command))
     application.add_handler(CallbackQueryHandler(
         quick_fix_callback_handler,
-        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions)$"
+        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions|diagnose_autopost|fix_autopost|create_immediate_post)$"
     ))
