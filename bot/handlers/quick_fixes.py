@@ -8,6 +8,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from bot.services.channel_fix import quick_channel_fix, get_channel_status_report, ChannelCommentsSetup
 from bot.services.markdown_fix import prepare_telegram_message
+from bot.services.autopost_diagnostic import get_autopost_diagnostic
+from bot.services.comments_diagnostic import get_comments_diagnostic
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +63,8 @@ async def quick_fix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🧪 Тестовый пост", callback_data="test_post")
         ],
         [
-            InlineKeyboardButton("🧪 Тест комментариев",
-                                 callback_data="test_comments"),
+            InlineKeyboardButton("💬 Диагностика комментариев",
+                                 callback_data="comments_diagnostic"),
             InlineKeyboardButton("🚀 Диагностика автопостинга",
                                  callback_data="diagnose_autopost")
         ],
@@ -111,6 +113,14 @@ async def quick_fix_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_autopost_fix(query, context)
     elif data == "create_immediate_post":
         await handle_create_immediate_post(query, context)
+    elif data == "comments_diagnostic":
+        await handle_comments_diagnostic(query, context)
+    elif data == "comments_setup_guide":
+        await handle_comments_setup_guide(query, context)
+    elif data == "comments_test_post":
+        await handle_comments_test_post(query, context)
+    elif data == "comments_basic_guide":
+        await handle_comments_basic_guide(query, context)
     else:
         await query.edit_message_text(f"⚠️ Неизвестная команда: {data}")
 
@@ -673,6 +683,195 @@ async def handle_show_bot_add_instructions(query, context):
     )
 
 
+async def handle_comments_diagnostic(query, context):
+    """💬 Диагностика комментариев"""
+    await query.edit_message_text("💬 Диагностика системы комментариев...")
+
+    try:
+        # Получаем диагностику комментариев
+        comments_diagnostic = get_comments_diagnostic(context.bot)
+
+        # Запускаем полную диагностику
+        result = await comments_diagnostic.diagnose_comments_system()
+
+        if result["success"]:
+            # Формируем отчет
+            channel_info = result.get("channel_info", {})
+            discussion_info = result.get("discussion_group", {})
+
+            report_text = f"""💬 **ДИАГНОСТИКА КОММЕНТАРИЕВ**
+
+📺 **Канал:** {channel_info.get('title', 'Неизвестно')} ({result['channel_id']})
+💬 **Статус комментариев:** {"✅ Работают" if result['comments_working'] else "❌ Не настроены"}
+
+📊 **Детали:**
+• Группа обсуждений: {"✅ Настроена" if discussion_info.get('has_discussion_group') else "❌ Отсутствует"}  
+• Права бота: {"✅ Достаточные" if result.get('bot_permissions', {}).get('sufficient_permissions') else "⚠️ Ограниченные"}
+
+{"✅ **КОММЕНТАРИИ РАБОТАЮТ**" if result['comments_working'] else "❌ **ТРЕБУЕТСЯ НАСТРОЙКА**"}"""
+
+            # Кнопки действий
+            if result['comments_working']:
+                keyboard = [
+                    [InlineKeyboardButton(
+                        "🧪 Тестовый пост", callback_data="comments_test_post")],
+                    [InlineKeyboardButton(
+                        "◀️ Назад", callback_data="quick_fix")]
+                ]
+            else:
+                keyboard = [
+                    [InlineKeyboardButton(
+                        "📋 Инструкции по настройке", callback_data="comments_setup_guide")],
+                    [InlineKeyboardButton(
+                        "🧪 Тестовый пост", callback_data="comments_test_post")],
+                    [InlineKeyboardButton(
+                        "◀️ Назад", callback_data="quick_fix")]
+                ]
+        else:
+            report_text = f"""❌ **ОШИБКА ДИАГНОСТИКИ**
+
+🔍 Не удалось проверить систему комментариев:
+{result.get('error', 'Неизвестная ошибка')}
+
+💡 **Рекомендации:**
+• Проверьте права бота в канале
+• Убедитесь что TARGET_CHANNEL_ID настроен правильно  
+• Проверьте доступность канала"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📋 Базовые инструкции", callback_data="comments_basic_guide")],
+                [InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")]
+            ]
+
+        # Отправляем отчет
+        message_data = prepare_telegram_message(report_text)
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        logger.error(f"Error in comments diagnostic: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка диагностики комментариев: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")
+            ]])
+        )
+
+
+async def handle_comments_setup_guide(query, context):
+    """📋 Подробные инструкции по настройке комментариев"""
+    guide_text = """📋 **НАСТРОЙКА КОММЕНТАРИЕВ В TELEGRAM**
+
+❗ **ВАЖНО:** Комментарии настраиваются ТОЛЬКО вручную через Telegram!
+
+🔧 **ПОШАГОВАЯ ИНСТРУКЦИЯ:**
+
+**ШАГ 1: Создание группы обсуждений**
+1️⃣ Откройте Telegram
+2️⃣ Создайте новую группу: "Меню → Новая группа"
+3️⃣ Название: "Legal Center - Обсуждения"
+4️⃣ Добавьте только себя как участника
+
+**ШАГ 2: Добавление бота**  
+1️⃣ В группе: "Участники → Добавить участника"
+2️⃣ Найдите и добавьте @{context.bot.username}
+3️⃣ Сделайте бота администратором группы
+4️⃣ Дайте боту ВСЕ права администратора
+
+**ШАГ 3: Связывание с каналом**
+1️⃣ Откройте настройки вашего канала  
+2️⃣ Перейдите в "Управление → Обсуждения"
+3️⃣ Выберите созданную группу
+4️⃣ Сохраните изменения
+
+✅ **РЕЗУЛЬТАТ:**
+• Под каждым постом появится кнопка "Комментарии"
+• Пользователи смогут оставлять комментарии
+• Все комментарии будут в группе обсуждений
+
+💡 **После настройки все новые посты автоматически поддерживают комментарии!**"""
+
+    keyboard = [
+        [InlineKeyboardButton(
+            "🧪 Тестовый пост", callback_data="comments_test_post")],
+        [InlineKeyboardButton("🔄 Повторить диагностику",
+                              callback_data="comments_diagnostic")],
+        [InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")]
+    ]
+
+    message_data = prepare_telegram_message(guide_text)
+    await query.edit_message_text(
+        **message_data,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def handle_comments_test_post(query, context):
+    """🧪 Создание тестового поста для проверки комментариев"""
+    await query.edit_message_text("🧪 Создание тестового поста...")
+
+    try:
+        comments_diagnostic = get_comments_diagnostic(context.bot)
+        result = await comments_diagnostic.test_comments_functionality()
+
+        if result["success"]:
+            success_text = f"""✅ **ТЕСТОВЫЙ ПОСТ СОЗДАН**
+
+🧪 Тестовый пост опубликован в канале для проверки комментариев.
+
+📋 **Что проверить:**
+• Есть ли кнопка "Комментарии" под постом
+• Открывается ли группа обсуждений при нажатии
+• Можно ли оставить комментарий
+
+⏱ **Тестовый пост будет автоматически удален через 2 минуты.**
+
+💡 Если комментарии работают - система настроена правильно!"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "🔄 Повторить диагностику", callback_data="comments_diagnostic")],
+                [InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")]
+            ]
+        else:
+            success_text = f"""❌ **НЕ УДАЛОСЬ СОЗДАТЬ ТЕСТОВЫЙ ПОСТ**
+
+🔍 Причина: {result.get('error', 'Неизвестная ошибка')}
+
+💡 **Возможные проблемы:**
+• Бот не админ канала
+• Нет прав на отправку сообщений
+• Неправильный ID канала
+
+🛠 **Рекомендации:**
+• Проверьте права бота в канале
+• Убедитесь что TARGET_CHANNEL_ID правильный"""
+
+            keyboard = [
+                [InlineKeyboardButton(
+                    "📋 Инструкции", callback_data="comments_setup_guide")],
+                [InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")]
+            ]
+
+        message_data = prepare_telegram_message(success_text)
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating test post: {e}")
+        await query.edit_message_text(
+            f"❌ Ошибка создания тестового поста: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")
+            ]])
+        )
+
+
 async def handle_autopost_diagnostic(query, context):
     """🔧 Диагностика автопостинга"""
     await query.edit_message_text("🔧 Запуск диагностики автопостинга...")
@@ -914,10 +1113,58 @@ async def handle_create_immediate_post(query, context):
         )
 
 
+async def handle_comments_basic_guide(query, context):
+    """📋 Базовые инструкции по настройке комментариев"""
+    guide_text = """📋 **НАСТРОЙКА КОММЕНТАРИЕВ В TELEGRAM**
+
+❗ **ВАЖНО:** Комментарии настраиваются ТОЛЬКО вручную через Telegram!
+
+🔧 **ПОШАГОВАЯ ИНСТРУКЦИЯ:**
+
+**ШАГ 1: Создание группы обсуждений**
+1️⃣ Откройте Telegram
+2️⃣ Создайте новую группу: "Меню → Новая группа"
+3️⃣ Название: "Legal Center - Обсуждения"
+4️⃣ Добавьте только себя как участника
+
+**ШАГ 2: Добавление бота**  
+1️⃣ В группе: "Участники → Добавить участника"
+2️⃣ Найдите и добавьте @{context.bot.username}
+3️⃣ Сделайте бота администратором группы
+4️⃣ Дайте боту ВСЕ права администратора
+
+**ШАГ 3: Связывание с каналом**
+1️⃣ Откройте настройки вашего канала  
+2️⃣ Перейдите в "Управление → Обсуждения"
+3️⃣ Выберите созданную группу
+4️⃣ Сохраните изменения
+
+✅ **РЕЗУЛЬТАТ:**
+• Под каждым постом появится кнопка "Комментарии"
+• Пользователи смогут оставлять комментарии
+• Все комментарии будут в группе обсуждений
+
+💡 **После настройки все новые посты автоматически поддерживают комментарии!**"""
+
+    keyboard = [
+        [InlineKeyboardButton(
+            "🧪 Тестовый пост", callback_data="comments_test_post")],
+        [InlineKeyboardButton("🔄 Повторить диагностику",
+                              callback_data="comments_diagnostic")],
+        [InlineKeyboardButton("◀️ Назад", callback_data="quick_fix")]
+    ]
+
+    message_data = prepare_telegram_message(guide_text)
+    await query.edit_message_text(
+        **message_data,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
 def register_quick_fixes_handlers(application):
     """Регистрация обработчиков быстрых исправлений"""
     application.add_handler(CommandHandler("quick_fix", quick_fix_command))
     application.add_handler(CallbackQueryHandler(
         quick_fix_callback_handler,
-        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions|diagnose_autopost|fix_autopost|create_immediate_post)$"
+        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions|diagnose_autopost|fix_autopost|create_immediate_post|comments_diagnostic|comments_setup_guide|comments_test_post|comments_basic_guide)$"
     ))

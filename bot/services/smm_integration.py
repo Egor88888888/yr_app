@@ -238,12 +238,10 @@ class SMMIntegration:
                 # ИСПРАВЛЕНИЕ: Временные кнопки для публикации
                 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-                # Создаем временные кнопки (будут обновлены после публикации)
+                # Создаем кнопку консультации (единственная кнопка под постом)
                 temp_buttons = [[
                     InlineKeyboardButton(
-                        "💬 Комментарии", url=f"https://t.me/{self.bot.username}"),
-                    InlineKeyboardButton(
-                        "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
+                        "📱 Получить консультацию", url=f"https://t.me/{self.bot.username}")
                 ]]
                 reply_markup = InlineKeyboardMarkup(temp_buttons)
 
@@ -292,12 +290,10 @@ class SMMIntegration:
                 # ИСПРАВЛЕНИЕ: Временные кнопки для публикации
                 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-                # Создаем временные кнопки (будут обновлены после публикации)
+                # Создаем кнопку консультации (единственная кнопка под постом)
                 temp_buttons = [[
                     InlineKeyboardButton(
-                        "💬 Комментарии", url=f"https://t.me/{self.bot.username}"),
-                    InlineKeyboardButton(
-                        "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
+                        "📱 Получить консультацию", url=f"https://t.me/{self.bot.username}")
                 ]]
                 reply_markup = InlineKeyboardMarkup(temp_buttons)
 
@@ -1036,14 +1032,10 @@ class SMMIntegration:
                 fallback_to_bot=True  # Если комментарии не настроены, ведем в бота
             )
 
-            # Создаем кнопки с автоматическими комментариями
+            # Создаем единственную кнопку консультации
             correct_buttons = [[
                 InlineKeyboardButton(
-                    "💬 Комментарии",
-                    url=comments_url
-                ),
-                InlineKeyboardButton(
-                    "📝 Подать заявку",
+                    "📱 Получить консультацию",
                     url=f"https://t.me/{self.bot.username}"
                 )
             ]]
