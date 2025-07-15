@@ -63,3 +63,30 @@ class DeployAutopost:
             logger.error(
                 f"❌ Критическая ошибка в _create_deploy_autopost_after_delay: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+
+
+# Глобальный экземпляр
+_deploy_autopost_instance = None
+
+
+async def init_deploy_autopost(smm_integration):
+    """Инициализация deploy autopost системы"""
+    global _deploy_autopost_instance
+
+    try:
+        logger.info("🔧 Инициализируем deploy autopost систему...")
+
+        # Создаем экземпляр deploy autopost
+        _deploy_autopost_instance = DeployAutopost(smm_integration)
+
+        logger.info("✅ SMM интеграция подключена к deploy autopost")
+
+        # Запускаем планирование deploy autopost
+        await _deploy_autopost_instance.schedule_deploy_autopost()
+
+        logger.info("🚀 Deploy autopost система инициализирована успешно!")
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации deploy autopost: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
