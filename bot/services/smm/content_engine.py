@@ -8,7 +8,7 @@ import random
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,11 @@ class ContentPiece:
     conversion_potential: float
     discussion_triggers: List[str]
     ab_test_variant: Optional[str] = None
+    media_urls: List[str] = field(default_factory=list)
+    engagement_hooks: List[str] = field(default_factory=list)
+    call_to_action: Optional[str] = None
+    target_audience: Optional[str] = None
+    complexity_level: Optional[str] = None
 
 
 @dataclass
