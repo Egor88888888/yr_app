@@ -1019,18 +1019,20 @@ class SMMIntegration:
     async def _update_post_buttons_after_publication(
         self,
         channel_id: str,
-        message_id: int,
-        channel_username: str = "legalcenter_pro"
+        message_id: int
     ) -> bool:
         """Обновляет кнопки поста после публикации с правильными ссылками на комментарии"""
         try:
             from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+            # Формируем правильную ссылку на комментарии
+            comments_url = self._create_comments_url(channel_id, message_id)
+
             # Создаем правильные кнопки
             correct_buttons = [[
                 InlineKeyboardButton(
                     "💬 Комментарии",
-                    url=f"https://t.me/{channel_username}/{message_id}?comment=1"
+                    url=comments_url
                 ),
                 InlineKeyboardButton(
                     "📝 Подать заявку",
@@ -1054,6 +1056,34 @@ class SMMIntegration:
         except Exception as e:
             logger.error(f"❌ Failed to update post buttons: {e}")
             return False
+
+    def _create_comments_url(self, channel_id: str, message_id: int) -> str:
+        """Создает правильную ссылку на комментарии к посту"""
+        try:
+            # Если channel_id начинается с @, это username
+            if channel_id.startswith('@'):
+                channel_username = channel_id[1:]  # Убираем @
+                return f"https://t.me/{channel_username}/{message_id}?comment=1"
+
+            # Если это численный ID (например -1001234567890)
+            elif channel_id.startswith('-100'):
+                # Для численных ID каналов нужен формат t.me/c/ID/MESSAGE_ID
+                numeric_id = channel_id[4:]  # Убираем -100 префикс
+                return f"https://t.me/c/{numeric_id}/{message_id}?comment=1"
+
+            # Если это обычный численный ID
+            elif channel_id.startswith('-'):
+                numeric_id = channel_id[1:]  # Убираем - префикс
+                return f"https://t.me/c/{numeric_id}/{message_id}?comment=1"
+
+            # Fallback - предполагаем что это username без @
+            else:
+                return f"https://t.me/{channel_id}/{message_id}?comment=1"
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create comments URL: {e}")
+            # Fallback - ведем в бота
+            return f"https://t.me/{self.bot.username}"
 
 
 # Глобальная переменная для хранения экземпляра
