@@ -60,8 +60,11 @@ async def quick_fix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🧪 Тестовый пост", callback_data="test_post")
         ],
         [
-            InlineKeyboardButton(
-                "📋 Полный отчет", callback_data="full_report"),
+            InlineKeyboardButton("🧪 Тест комментариев",
+                                 callback_data="test_comments"),
+            InlineKeyboardButton("📋 Полный отчет", callback_data="full_report")
+        ],
+        [
             InlineKeyboardButton("🔄 Обновить", callback_data="refresh_status")
         ]
     ]
@@ -91,6 +94,12 @@ async def quick_fix_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_full_report(query, context)
     elif data == "refresh_status":
         await handle_refresh_status(query, context)
+    elif data == "test_comments":
+        await handle_comments_test(query, context)
+    elif data == "add_bot_to_group":
+        await handle_add_bot_to_group(query, context)
+    elif data == "show_bot_add_instructions":
+        await handle_show_bot_add_instructions(query, context)
     else:
         await query.edit_message_text(f"⚠️ Неизвестная команда: {data}")
 
@@ -435,10 +444,228 @@ async def handle_refresh_status(query, context):
     await quick_fix_command(query, context)
 
 
+async def handle_comments_test(query, context):
+    """🧪 Тестирование функциональности комментариев"""
+    await query.edit_message_text("🧪 Запуск полной проверки комментариев...")
+
+    try:
+        from bot.services.comments_test import run_comments_verification, format_verification_report
+
+        # Получаем текущий канал
+        import os
+        current_channel = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
+            'CHANNEL_ID') or '@test_legal_channel'
+
+        # Запускаем полную проверку
+        verification_result = await run_comments_verification(context.bot, current_channel)
+
+        # Форматируем отчет
+        report = await format_verification_report(verification_result)
+
+        # Подготавливаем ответ
+        from bot.services.markdown_fix import prepare_telegram_message
+        message_data = prepare_telegram_message(report)
+
+        # Создаем кнопки в зависимости от статуса
+        status = verification_result.get("overall_status", "unknown")
+
+        if status == "fully_configured":
+            keyboard = [
+                [
+                    InlineKeyboardButton("🚀 Создать тестовый пост",
+                                         callback_data="create_test_post"),
+                    InlineKeyboardButton("📊 Запустить SMM тест",
+                                         callback_data="smm_force_post")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Проверить снова",
+                                         callback_data="test_comments"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+        elif status == "bot_not_in_group":
+            keyboard = [
+                [
+                    InlineKeyboardButton("🤖 Добавить бота в группу",
+                                         callback_data="add_bot_to_group"),
+                    InlineKeyboardButton("📋 Инструкция",
+                                         callback_data="show_bot_add_instructions")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Проверить снова",
+                                         callback_data="test_comments"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🔧 Исправить канал",
+                                         callback_data="fix_channel"),
+                    InlineKeyboardButton("💬 Настроить комментарии",
+                                         callback_data="fix_comments")
+                ],
+                [
+                    InlineKeyboardButton("🔄 Проверить снова",
+                                         callback_data="test_comments"),
+                    InlineKeyboardButton("◀️ Назад",
+                                         callback_data="refresh_status")
+                ]
+            ]
+
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        await query.edit_message_text(
+            f"❌ **ОШИБКА ТЕСТИРОВАНИЯ КОММЕНТАРИЕВ**\n\n```\n{str(e)}\n```\n\nДетали:\n```\n{error_details[:500]}...\n```",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="refresh_status")
+            ]]),
+            parse_mode='Markdown'
+        )
+
+
+async def handle_add_bot_to_group(query, context):
+    """🤖 Помощь в добавлении бота в группу обсуждений"""
+    await query.edit_message_text("🤖 Проверяю возможность добавления бота...")
+
+    try:
+        from bot.services.comments_test import CommentsTestManager
+
+        manager = CommentsTestManager(context.bot)
+
+        # Получаем текущий канал
+        import os
+        current_channel = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
+            'CHANNEL_ID') or '@test_legal_channel'
+
+        # Пытаемся добавить бота
+        result = await manager.add_bot_to_discussion_group(current_channel)
+
+        if result["success"]:
+            response_text = f"""✅ **БОТ УСПЕШНО ДОБАВЛЕН**
+
+{result['message']}
+
+🔄 **Теперь запустите проверку снова для подтверждения.**"""
+        elif result.get("manual_required"):
+            response_text = f"""📋 **ТРЕБУЕТСЯ РУЧНОЕ ДОБАВЛЕНИЕ**
+
+{result['instructions']}
+
+⚠️ **ВАЖНО:** Telegram не позволяет ботам автоматически добавлять себя в группы."""
+        else:
+            response_text = f"""❌ **НЕ УДАЛОСЬ ДОБАВИТЬ БОТА**
+
+🔍 **Ошибка:** {result['error']}
+
+📋 **Что нужно сделать:**
+1. Откройте группу обсуждений вашего канала
+2. Добавьте @{context.bot.username} как участника
+3. Дайте боту права администратора
+4. Запустите проверку снова"""
+
+        from bot.services.markdown_fix import prepare_telegram_message
+        message_data = prepare_telegram_message(response_text)
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🔄 Проверить снова",
+                                     callback_data="test_comments"),
+                InlineKeyboardButton("📋 Подробная инструкция",
+                                     callback_data="show_bot_add_instructions")
+            ],
+            [
+                InlineKeyboardButton("◀️ Назад",
+                                     callback_data="refresh_status")
+            ]
+        ]
+
+        await query.edit_message_text(
+            **message_data,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        await query.edit_message_text(
+            f"❌ Ошибка при добавлении бота: {str(e)}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад", callback_data="refresh_status")
+            ]])
+        )
+
+
+async def handle_show_bot_add_instructions(query, context):
+    """📋 Показать подробную инструкцию по добавлению бота"""
+
+    instructions = f"""📋 **ДОБАВЛЕНИЕ БОТА В ГРУППУ ОБСУЖДЕНИЙ**
+
+🎯 **Цель:** Добавить @{context.bot.username} как администратора в группу обсуждений
+
+📝 **ПОШАГОВАЯ ИНСТРУКЦИЯ:**
+
+1️⃣ **Найти группу обсуждений:**
+   • Откройте ваш канал
+   • Опубликуйте любой пост
+   • Нажмите на кнопку "💬 Комментарии" под постом
+   • Это откроет группу обсуждений
+
+2️⃣ **Добавить бота:**
+   • В группе обсуждений: ⋮ → "Добавить участника"
+   • Введите: @{context.bot.username}
+   • Нажмите "Добавить"
+
+3️⃣ **Дать права администратора:**
+   • ⋮ → "Управление группой" → "Администраторы"
+   • Найдите @{context.bot.username} → "Изменить права"
+   • Включите ВСЕ права:
+     ✅ Удаление сообщений
+     ✅ Блокировка пользователей  
+     ✅ Закрепление сообщений
+     ✅ Добавление новых участников
+     ✅ Изменение информации
+
+4️⃣ **Проверить результат:**
+   • Вернитесь сюда и нажмите "🔄 Проверить снова"
+   • Система покажет успешную настройку
+
+💡 **ГОТОВО!** После этого все комментарии будут автоматически модерироваться."""
+
+    from bot.services.markdown_fix import prepare_telegram_message
+    message_data = prepare_telegram_message(instructions)
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🔄 Проверить снова",
+                                 callback_data="test_comments"),
+            InlineKeyboardButton("🤖 Попробовать автодобавление",
+                                 callback_data="add_bot_to_group")
+        ],
+        [
+            InlineKeyboardButton("◀️ Назад",
+                                 callback_data="refresh_status")
+        ]
+    ]
+
+    await query.edit_message_text(
+        **message_data,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
 def register_quick_fixes_handlers(application):
     """Регистрация обработчиков быстрых исправлений"""
     application.add_handler(CommandHandler("quick_fix", quick_fix_command))
     application.add_handler(CallbackQueryHandler(
         quick_fix_callback_handler,
-        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status)$"
+        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions)$"
     ))

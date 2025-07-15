@@ -258,6 +258,11 @@ class AutoCommentsManager:
             }
 
 
+def get_auto_comments_manager(bot):
+    """Получить экземпляр менеджера автокомментариев"""
+    return AutoCommentsManager(bot)
+
+
 # Глобальный экземпляр для использования в других модулях
 _auto_comments_manager = None
 
