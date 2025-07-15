@@ -3462,26 +3462,30 @@ async def post_init(application: Application):
         print(f"❌ Failed to set menu button: {e}")
         log.error(f"Menu button error: {e}")
 
-        # 🚀 ЭТАП 1: ВКЛЮЧАЕМ ТОЛЬКО SMM INTEGRATION (БЕЗ ЗАПУСКА СИСТЕМЫ)
+        # 🚀 ЭТАП 2: ВКЛЮЧАЕМ start_smm_system() С МИНИМАЛЬНОЙ ФУНКЦИОНАЛЬНОСТЬЮ
     try:
-        print("🔧 Phase 1: Testing SMM integration initialization only...")
+        print("🔧 Phase 2: Testing start_smm_system() with minimal components...")
         from .services.smm_integration import initialize_smm_integration
 
-        # Инициализируем только SMM integration (без запуска системы)
+        # Инициализируем SMM integration
         print("🔧 Initializing SMM integration...")
         smm_integration = await initialize_smm_integration(application.bot, ai_enhanced_manager)
         if smm_integration:
             print("✅ SMM integration initialized successfully")
-            print("⚠️ SMM system startup SKIPPED for safety testing")
+
+            # ПРОБУЕМ запустить SMM систему (там внутри уже есть безопасные обертки)
+            print("🔧 Testing SMM system startup...")
+            await smm_integration.start_smm_system()
+            print("✅ SMM system started successfully!")
         else:
             print("❌ Failed to initialize SMM integration")
 
     except Exception as e:
-        print(f"❌ SMM integration failed: {e}")
+        print(f"❌ SMM system startup failed: {e}")
         import traceback
         print(f"❌ FULL TRACEBACK: {traceback.format_exc()}")
         print("⚠️ Continuing without SMM system...")
-        log.error(f"SMM integration error: {e}")
+        log.error(f"SMM system startup error: {e}")
 
 
 async def fix_database_schema():
