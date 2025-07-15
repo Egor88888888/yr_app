@@ -690,7 +690,16 @@ class AdvancedContentEngine:
         return ContentPiece(
             content_type=ContentType.CONTROVERSIAL_TOPIC,
             text=topic["content"],
+            engagement_mechanics=[
+                EngagementMechanic.COMMUNITY_VOTE, EngagementMechanic.CASE_DISCUSSION],
+            target_segments=["legal_professionals"],
             hashtags=topic["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.8,
+            viral_potential=0.85,
+            conversion_potential=0.6,
+            discussion_triggers=[
+                "А как считаете вы? Пишите в комментариях свое мнение!"],
             media_urls=[],
             engagement_hooks=["🤔", "⚖️", "💡"],
             call_to_action="💬 А как считаете вы? Пишите в комментариях свое мнение!",
@@ -798,7 +807,16 @@ class ViralOptimizer:
         return ContentPiece(
             content_type=ContentType.CONTROVERSIAL_TOPIC,
             text=topic["content"],
+            engagement_mechanics=[
+                EngagementMechanic.COMMUNITY_VOTE, EngagementMechanic.CASE_DISCUSSION],
+            target_segments=["legal_professionals"],
             hashtags=topic["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.8,
+            viral_potential=0.85,
+            conversion_potential=0.6,
+            discussion_triggers=[
+                "А как считаете вы? Пишите в комментариях свое мнение!"],
             media_urls=[],
             engagement_hooks=["🤔", "⚖️", "💡"],
             call_to_action="💬 А как считаете вы? Пишите в комментариях свое мнение!",
@@ -860,7 +878,15 @@ class ViralOptimizer:
         return ContentPiece(
             content_type=ContentType.CLIENT_SUCCESS_STORY,
             text=story["content"],
+            engagement_mechanics=[
+                EngagementMechanic.CASE_DISCUSSION, EngagementMechanic.BEFORE_AFTER],
+            target_segments=["potential_clients"],
             hashtags=story["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.85,
+            viral_potential=0.8,
+            conversion_potential=0.9,
+            discussion_triggers=["Есть похожая проблема? Напишите нам!"],
             media_urls=[],
             engagement_hooks=["🚀", "✅", "💡"],
             call_to_action="💬 Есть похожая проблема? Напишите нам!",
@@ -901,7 +927,15 @@ class ViralOptimizer:
         return ContentPiece(
             content_type=ContentType.EXPERT_OPINION,
             text=opinion["content"],
+            engagement_mechanics=[
+                EngagementMechanic.CASE_DISCUSSION, EngagementMechanic.COMMUNITY_VOTE],
+            target_segments=["legal_professionals"],
             hashtags=opinion["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.75,
+            viral_potential=0.7,
+            conversion_potential=0.8,
+            discussion_triggers=["Согласны с экспертом? Поделитесь мнением!"],
             media_urls=[],
             engagement_hooks=["👨‍💼", "🔍", "⚖️"],
             call_to_action="💬 Согласны с экспертом? Поделитесь мнением!",
@@ -943,7 +977,14 @@ class ViralOptimizer:
         return ContentPiece(
             content_type=ContentType.BEHIND_SCENES,
             text=content["content"],
+            engagement_mechanics=[EngagementMechanic.CASE_DISCUSSION],
+            target_segments=["general_public"],
             hashtags=content["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.7,
+            viral_potential=0.75,
+            conversion_potential=0.6,
+            discussion_triggers=["Интересно узнать больше о работе юристов?"],
             media_urls=[],
             engagement_hooks=["🎬", "📚", "⚖️"],
             call_to_action="💬 Интересно узнать больше о работе юристов?",
@@ -994,7 +1035,15 @@ class ViralOptimizer:
         return ContentPiece(
             content_type=ContentType.MYTH_BUSTING,
             text=content["content"],
+            engagement_mechanics=[
+                EngagementMechanic.COMMUNITY_VOTE, EngagementMechanic.CASE_DISCUSSION],
+            target_segments=["general_public"],
             hashtags=content["hashtags"],
+            optimal_publish_time=datetime.now() + timedelta(hours=1),
+            expected_engagement=0.8,
+            viral_potential=0.85,
+            conversion_potential=0.65,
+            discussion_triggers=["Какие еще мифы развенчать?"],
             media_urls=[],
             engagement_hooks=["🔍", "❌", "✅"],
             call_to_action="💬 Какие еще мифы развенчать?",
