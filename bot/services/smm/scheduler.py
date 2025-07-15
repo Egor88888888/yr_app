@@ -597,6 +597,39 @@ class ScheduleOptimizationEngine:
 
         return base_score * multiplier
 
+    async def _find_optimal_windows(self, historical_performance, audience_forecast, preferred_time):
+        """Находит оптимальные временные окна для публикации"""
+        from datetime import datetime, timedelta
+
+        # Простая реализация: возвращаем несколько хороших временных слотов
+        optimal_times = []
+        now = datetime.now()
+
+        # Добавляем популярные времена для юридического контента
+        popular_hours = [9, 12, 14, 17, 19, 21]  # Рабочие часы + вечер
+
+        for hour in popular_hours:
+            # Ищем ближайшее время с этим часом
+            target_time = now.replace(
+                hour=hour, minute=0, second=0, microsecond=0)
+            if target_time <= now:
+                target_time += timedelta(days=1)
+
+            optimal_times.append(target_time)
+
+        # Сортируем по времени
+        optimal_times.sort()
+
+        # Если указано предпочтительное время, ставим его первым
+        if preferred_time:
+            for opt_time in optimal_times[:]:
+                if abs((opt_time - preferred_time).total_seconds()) < 3600:  # В пределах часа
+                    optimal_times.remove(opt_time)
+                    optimal_times.insert(0, opt_time)
+                    break
+
+        return optimal_times[:3]  # Возвращаем топ-3 варианта
+
 
 class ABTestManager:
     """Менеджер A/B тестов"""
