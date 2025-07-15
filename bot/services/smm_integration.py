@@ -235,17 +235,17 @@ class SMMIntegration:
                     message_data = prepare_telegram_message(content_to_publish)
                 # Используем уже подготовленный message_data
 
-                # ИСПРАВЛЕНИЕ: Добавляем кнопки консультации к посту
+                # ИСПРАВЛЕНИЕ: Временные кнопки для публикации
                 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-                # Создаем кнопки для взаимодействия с пользователями
-                consultation_buttons = [[
+                # Создаем временные кнопки (будут обновлены после публикации)
+                temp_buttons = [[
                     InlineKeyboardButton(
-                        "💬 Получить консультацию", url=f"https://t.me/{self.bot.username}"),
+                        "💬 Комментарии", url=f"https://t.me/{self.bot.username}"),
                     InlineKeyboardButton(
                         "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
                 ]]
-                reply_markup = InlineKeyboardMarkup(consultation_buttons)
+                reply_markup = InlineKeyboardMarkup(temp_buttons)
 
                 # Публикуем через production publisher
                 publish_request = PublishRequest(
@@ -258,6 +258,13 @@ class SMMIntegration:
                 )
 
                 result = await self.smm_system.telegram_publisher.publish_now(publish_request)
+
+                # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем кнопки после публикации
+                if result.success and result.message_id:
+                    await self._update_post_buttons_after_publication(
+                        channel_id=channel_id,
+                        message_id=result.message_id
+                    )
 
                 if result.success:
                     # Запускаем сбор метрик
@@ -282,17 +289,17 @@ class SMMIntegration:
                 }
 
             else:
-                # ИСПРАВЛЕНИЕ: Добавляем кнопки консультации и к обычной публикации
+                # ИСПРАВЛЕНИЕ: Временные кнопки для публикации
                 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-                # Создаем кнопки для взаимодействия с пользователями
-                consultation_buttons = [[
+                # Создаем временные кнопки (будут обновлены после публикации)
+                temp_buttons = [[
                     InlineKeyboardButton(
-                        "💬 Получить консультацию", url=f"https://t.me/{self.bot.username}"),
+                        "💬 Комментарии", url=f"https://t.me/{self.bot.username}"),
                     InlineKeyboardButton(
                         "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
                 ]]
-                reply_markup = InlineKeyboardMarkup(consultation_buttons)
+                reply_markup = InlineKeyboardMarkup(temp_buttons)
 
                 # Обычная публикация без A/B тестирования
                 publish_request = PublishRequest(
@@ -304,6 +311,13 @@ class SMMIntegration:
                 )
 
                 result = await self.smm_system.telegram_publisher.publish_now(publish_request)
+
+                # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем кнопки после публикации
+                if result.success and result.message_id:
+                    await self._update_post_buttons_after_publication(
+                        channel_id=channel_id,
+                        message_id=result.message_id
+                    )
 
                 if result.success:
                     # Запускаем сбор метрик
@@ -1001,6 +1015,45 @@ class SMMIntegration:
 
         import random
         return random.choice(professional_posts)
+
+    async def _update_post_buttons_after_publication(
+        self,
+        channel_id: str,
+        message_id: int,
+        channel_username: str = "legalcenter_pro"
+    ) -> bool:
+        """Обновляет кнопки поста после публикации с правильными ссылками на комментарии"""
+        try:
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+            # Создаем правильные кнопки
+            correct_buttons = [[
+                InlineKeyboardButton(
+                    "💬 Комментарии",
+                    url=f"https://t.me/{channel_username}/{message_id}?comment=1"
+                ),
+                InlineKeyboardButton(
+                    "📝 Подать заявку",
+                    url=f"https://t.me/{self.bot.username}"
+                )
+            ]]
+
+            reply_markup = InlineKeyboardMarkup(correct_buttons)
+
+            # Редактируем кнопки поста
+            await self.bot.edit_message_reply_markup(
+                chat_id=channel_id,
+                message_id=message_id,
+                reply_markup=reply_markup
+            )
+
+            logger.info(
+                f"✅ Updated post buttons for message {message_id} in channel {channel_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to update post buttons: {e}")
+            return False
 
 
 # Глобальная переменная для хранения экземпляра
