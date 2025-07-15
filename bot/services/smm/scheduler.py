@@ -159,19 +159,28 @@ class SmartScheduler:
             try:
                 current_time = datetime.now()
 
-                # Находим посты для публикации
-                posts_to_publish = [
-                    post for post in self.schedule_queue
-                    if post.scheduled_time <= current_time
-                ]
+                # Находим посты для публикации (извлекаем из tuple)
+                posts_to_publish = []
+                for queue_item in self.schedule_queue:
+                    if isinstance(queue_item, tuple):
+                        timestamp, post = queue_item
+                        if post.scheduled_time <= current_time:
+                            posts_to_publish.append((timestamp, post))
+                    else:
+                        # Backwards compatibility для старого формата
+                        if queue_item.scheduled_time <= current_time:
+                            posts_to_publish.append((0, queue_item))
 
-                for post in posts_to_publish:
+                for timestamp, post in posts_to_publish:
                     try:
                         # Публикуем пост
                         await self._publish_post(post)
 
                         # Удаляем из очереди
-                        self.schedule_queue.remove(post)
+                        queue_item = (
+                            timestamp, post) if timestamp > 0 else post
+                        if queue_item in self.schedule_queue:
+                            self.schedule_queue.remove(queue_item)
 
                         # Запускаем отслеживание эффективности
                         asyncio.create_task(
@@ -201,11 +210,17 @@ class SmartScheduler:
         current_time = datetime.now()
         cutoff_time = current_time + timedelta(hours=look_ahead_hours)
 
-        # Находим посты для потенциальной оптимизации
-        posts_to_optimize = [
-            post for post in self.schedule_queue
-            if current_time < post.scheduled_time <= cutoff_time
-        ]
+        # Находим посты для потенциальной оптимизации (извлекаем из tuple)
+        posts_to_optimize = []
+        for queue_item in self.schedule_queue:
+            if isinstance(queue_item, tuple):
+                timestamp, post = queue_item
+                if current_time < post.scheduled_time <= cutoff_time:
+                    posts_to_optimize.append(post)
+            else:
+                # Backwards compatibility для старого формата
+                if current_time < queue_item.scheduled_time <= cutoff_time:
+                    posts_to_optimize.append(queue_item)
 
         for post in posts_to_optimize:
             # Проверяем возможность оптимизации
