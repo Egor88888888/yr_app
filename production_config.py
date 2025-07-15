@@ -53,10 +53,11 @@ class ProductionConfig:
             log_dir = Path("logs")
             log_dir.mkdir(exist_ok=True)
 
-            handlers.extend([
-                logging.FileHandler(log_dir / "bot.log"),
-                logging.FileHandler(log_dir / "error.log", level=logging.ERROR)
-            ])
+            bot_handler = logging.FileHandler(log_dir / "bot.log")
+            error_handler = logging.FileHandler(log_dir / "error.log")
+            error_handler.setLevel(logging.ERROR)
+
+            handlers.extend([bot_handler, error_handler])
 
         logging.basicConfig(
             level=cls.LOG_LEVEL,
