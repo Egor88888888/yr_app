@@ -157,7 +157,9 @@ class AutoCommentsManager:
                     return f"https://t.me/{bot_username}?start=discuss_{message_id}"
                 except Exception:
                     # Если бот не инициализирован, используем общий fallback
-                    return f"https://t.me/your_bot?start=discuss_{message_id}"
+                    bot_username = os.getenv(
+                        "BOT_USERNAME", "your_bot").replace("@", "")
+                    return f"https://t.me/{bot_username}?start=discuss_{message_id}"
 
             # Возвращаем ссылку на пост без параметра comment
             return self._create_post_url(channel_id, message_id)
@@ -170,7 +172,9 @@ class AutoCommentsManager:
                 return f"https://t.me/{bot_username}"
             except Exception:
                 # Финальный fallback если бот не инициализирован
-                return "https://t.me/your_bot"
+                bot_username = os.getenv(
+                    "BOT_USERNAME", "your_bot").replace("@", "")
+                return f"https://t.me/{bot_username}"
 
     def _create_comments_url(self, channel_id: str, message_id: int) -> str:
         """Создать URL для комментариев к посту"""
@@ -202,7 +206,9 @@ class AutoCommentsManager:
                 return f"https://t.me/{bot_username}"
             except Exception:
                 # Fallback если бот не инициализирован
-                return "https://t.me/your_bot"
+                bot_username = os.getenv(
+                    "BOT_USERNAME", "your_bot").replace("@", "")
+                return f"https://t.me/{bot_username}"
 
     def _create_post_url(self, channel_id: str, message_id: int) -> str:
         """Создать URL поста без комментариев"""

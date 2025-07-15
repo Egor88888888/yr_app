@@ -237,12 +237,12 @@ class LegalContentDatabase:
     def schedule_post(self, post_data: Dict, scheduled_time: datetime, channel_id: str = "@your_channel") -> str:
         """Планирование поста"""
         post_id = f"post_{uuid.uuid4().hex[:8]}"
-        
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         keyboard_json = json.dumps(post_data.get('keyboard', []))
-        
+
         cursor.execute('''
             INSERT INTO scheduled_posts 
             (post_id, title, content, post_type, topic, scheduled_time, channel_id, 
@@ -259,17 +259,17 @@ class LegalContentDatabase:
             post_data.get('enable_comments', True),
             keyboard_json
         ))
-        
+
         conn.commit()
         conn.close()
-        
+
         return post_id
 
     def get_scheduled_posts(self, limit: int = 10) -> List[Dict]:
         """Получить запланированные посты"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             SELECT post_id, title, post_type, topic, scheduled_time, 
                    channel_id, status, enable_comments, views, comments_count
@@ -278,7 +278,7 @@ class LegalContentDatabase:
             ORDER BY scheduled_time ASC
             LIMIT ?
         ''', (limit,))
-        
+
         posts = []
         for row in cursor.fetchall():
             posts.append({
@@ -293,7 +293,7 @@ class LegalContentDatabase:
                 'views': row[8],
                 'comments_count': row[9]
             })
-        
+
         conn.close()
         return posts
 
@@ -301,32 +301,32 @@ class LegalContentDatabase:
         """Добавить комментарий к посту"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             INSERT INTO post_comments 
             (post_id, user_id, username, comment_text, reply_to_comment_id)
             VALUES (?, ?, ?, ?, ?)
         ''', (post_id, user_id, username, comment_text, reply_to))
-        
+
         comment_id = cursor.lastrowid
-        
+
         # Обновляем счетчик комментариев у поста
         cursor.execute('''
             UPDATE scheduled_posts 
             SET comments_count = comments_count + 1 
             WHERE post_id = ?
         ''', (post_id,))
-        
+
         conn.commit()
         conn.close()
-        
+
         return comment_id
 
     def get_post_comments(self, post_id: str, limit: int = 20) -> List[Dict]:
         """Получить комментарии к посту"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             SELECT id, user_id, username, comment_text, comment_time, 
                    is_approved, is_expert_response, reply_to_comment_id
@@ -335,7 +335,7 @@ class LegalContentDatabase:
             ORDER BY comment_time ASC
             LIMIT ?
         ''', (post_id, limit))
-        
+
         comments = []
         for row in cursor.fetchall():
             comments.append({
@@ -348,7 +348,7 @@ class LegalContentDatabase:
                 'is_expert_response': row[6],
                 'reply_to': row[7]
             })
-        
+
         conn.close()
         return comments
 
@@ -356,13 +356,13 @@ class LegalContentDatabase:
         """Отметить пост как опубликованный"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             UPDATE scheduled_posts 
             SET status = 'published', published_at = ?
             WHERE post_id = ?
         ''', (datetime.now().isoformat(), post_id))
-        
+
         conn.commit()
         conn.close()
 
@@ -658,12 +658,16 @@ class EnhancedAutopostSystem:
             # Fallback на кейс
             post_data = await self.generator.generate_case_post("Общие правовые вопросы")
 
-        # Добавляем интерактивные кнопки
-        post_data['content'] += "\n\n💬 **Есть вопросы? Обсуждайте в комментариях!**"
-        post_data['enable_comments'] = True
+        # Добавляем кнопку консультации
+        post_data['content'] += "\n\n📱 **Есть вопросы? Получите консультацию!**"
+        post_data['enable_comments'] = False
+
+        # Получаем имя бота из переменных окружения или используем fallback
+        import os
+        bot_username = os.getenv("BOT_USERNAME", "your_bot").replace("@", "")
+
         post_data['keyboard'] = [
-            [{"text": "📩 Запросить консультацию", "url": f"https://t.me/your_bot"}],
-            [{"text": "💬 Обсудить в группе", "url": f"https://t.me/your_discussion_group"}]
+            [{"text": "📱 Получить консультацию", "url": f"https://t.me/{bot_username}"}]
         ]
 
         # Сохраняем в историю
@@ -726,20 +730,20 @@ class EnhancedAutopostSystem:
 
     async def schedule_professional_post(self, hours_from_now: int = 24, channel_id: str = "@your_channel") -> Dict[str, str]:
         """Запланировать профессиональный пост"""
-        
+
         # Генерируем контент
         post_data = await self.generate_daily_post()
-        
+
         # Планируем время публикации
         scheduled_time = datetime.now() + timedelta(hours=hours_from_now)
-        
+
         # Сохраняем в базу
         post_id = self.db.schedule_post(post_data, scheduled_time, channel_id)
-        
+
         post_data['post_id'] = post_id
         post_data['scheduled_time'] = scheduled_time.isoformat()
         post_data['channel_id'] = channel_id
-        
+
         return post_data
 
     async def get_scheduled_posts_list(self, limit: int = 10) -> List[Dict]:
@@ -767,17 +771,17 @@ class EnhancedAutopostSystem:
 
     async def get_autopost_dashboard_data(self) -> Dict[str, Any]:
         """Получить данные для дашборда автопостинга"""
-        
+
         # Основная статистика
         stats = await self.get_posting_statistics()
-        
+
         # Запланированные посты
         scheduled = await self.get_scheduled_posts_list(5)
-        
+
         # Последние опубликованные посты
         conn = sqlite3.connect(self.db.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             SELECT post_id, title, post_type, published_at, views, comments_count
             FROM scheduled_posts 
@@ -785,7 +789,7 @@ class EnhancedAutopostSystem:
             ORDER BY published_at DESC
             LIMIT 5
         ''')
-        
+
         published_posts = []
         for row in cursor.fetchall():
             published_posts.append({
@@ -796,9 +800,9 @@ class EnhancedAutopostSystem:
                 'views': row[4],
                 'comments_count': row[5]
             })
-        
+
         conn.close()
-        
+
         return {
             'statistics': stats,
             'scheduled_posts': scheduled,
