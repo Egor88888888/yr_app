@@ -3477,6 +3477,16 @@ async def post_init(application: Application):
             print("🔧 Testing SMM system startup...")
             await smm_integration.start_smm_system()
             print("✅ SMM system started successfully!")
+
+            # ВКЛЮЧАЕМ DEPLOY AUTOPOST ПОСЛЕ УСПЕШНОГО ЗАПУСКА SMM
+            try:
+                print("🔧 Initializing deploy autopost...")
+                from .services.deploy_autopost import init_deploy_autopost
+                await init_deploy_autopost(smm_integration)
+                print("🚀 Deploy autopost initialized successfully!")
+            except Exception as deploy_error:
+                print(f"⚠️ Deploy autopost failed: {deploy_error}")
+                print("✅ SMM system works fine without deploy autopost")
         else:
             print("❌ Failed to initialize SMM integration")
 
