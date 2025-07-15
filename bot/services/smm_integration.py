@@ -235,12 +235,25 @@ class SMMIntegration:
                     message_data = prepare_telegram_message(content_to_publish)
                 # Используем уже подготовленный message_data
 
+                # ИСПРАВЛЕНИЕ: Добавляем кнопки консультации к посту
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+                # Создаем кнопки для взаимодействия с пользователями
+                consultation_buttons = [[
+                    InlineKeyboardButton(
+                        "💬 Получить консультацию", url=f"https://t.me/{self.bot.username}"),
+                    InlineKeyboardButton(
+                        "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
+                ]]
+                reply_markup = InlineKeyboardMarkup(consultation_buttons)
+
                 # Публикуем через production publisher
                 publish_request = PublishRequest(
                     post_id=f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     channel_id=channel_id,
                     content=message_data["text"],
                     parse_mode=message_data.get("parse_mode"),
+                    reply_markup=reply_markup,
                     ab_test_variant=variant.variant_id if variant else None
                 )
 
@@ -269,12 +282,25 @@ class SMMIntegration:
                 }
 
             else:
+                # ИСПРАВЛЕНИЕ: Добавляем кнопки консультации и к обычной публикации
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+                # Создаем кнопки для взаимодействия с пользователями
+                consultation_buttons = [[
+                    InlineKeyboardButton(
+                        "💬 Получить консультацию", url=f"https://t.me/{self.bot.username}"),
+                    InlineKeyboardButton(
+                        "📝 Подать заявку", url=f"https://t.me/{self.bot.username}")
+                ]]
+                reply_markup = InlineKeyboardMarkup(consultation_buttons)
+
                 # Обычная публикация без A/B тестирования
                 publish_request = PublishRequest(
                     post_id=f"post_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     channel_id=channel_id,
                     content=message_data["text"],
-                    parse_mode=message_data.get("parse_mode")
+                    parse_mode=message_data.get("parse_mode"),
+                    reply_markup=reply_markup
                 )
 
                 result = await self.smm_system.telegram_publisher.publish_now(publish_request)

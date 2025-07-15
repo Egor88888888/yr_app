@@ -419,7 +419,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if "код 402" not in response:
                 response += "\n\n Для детальной консультации нажмите кнопки ниже."
 
-        # 🎯 НОВОЕ: Добавляем клиентский путь с кнопками
+        # 🎯 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Гарантируем отображение кнопок всегда
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -437,7 +437,17 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await update.message.reply_text(response, reply_markup=reply_markup)
+        # ИСПРАВЛЕНИЕ: Принудительно отправляем с кнопками независимо от ошибок
+        try:
+            await update.message.reply_text(response, reply_markup=reply_markup)
+        except Exception as reply_error:
+            # Если основной ответ не удался, отправляем хотя бы кнопки
+            logger.error(
+                f"Failed to send response with buttons: {reply_error}")
+            await update.message.reply_text(
+                "🤖 AI консультант обрабатывает ваш запрос. Используйте кнопки для быстрой связи:",
+                reply_markup=reply_markup
+            )
 
         log.info(
             f"✅ AI response sent to user {user_id} with client flow buttons")
@@ -446,14 +456,24 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.error(f"❌ AI Chat error for user {user_id}: {e}")
         await log_request(user_id, "ai", False, str(e))
 
-        # Fallback ответ с кнопками
-        fallback_keyboard = [[
-            InlineKeyboardButton(
-                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
-        ]]
+        # ИСПРАВЛЕНО: Fallback с полным набором кнопок консультации
+        fallback_keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                InlineKeyboardButton("📞 Заказать звонок",
+                                     callback_data="request_call")
+            ],
+            [
+                InlineKeyboardButton(
+                    "💬 Консультация", callback_data="chat_consultation"),
+                InlineKeyboardButton("💳 Узнать стоимость",
+                                     callback_data="get_price")
+            ]
+        ]
 
         await update.message.reply_text(
-            "🤖 AI временно недоступен, но вы можете оставить заявку на консультацию.",
+            "🤖 AI временно недоступен, но вы можете получить консультацию через кнопки ниже:",
             reply_markup=InlineKeyboardMarkup(fallback_keyboard)
         )
 
