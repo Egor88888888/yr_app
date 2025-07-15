@@ -533,3 +533,17 @@ def format_diagnostic_report(result: Dict[str, Any]) -> str:
 
     except Exception as e:
         return f"❌ **ОШИБКА ФОРМАТИРОВАНИЯ:** {e}"
+
+
+# Главная функция для быстрого доступа
+async def get_autopost_diagnostic(bot):
+    """
+    Быстрый доступ к диагностике автопостинга
+    """
+    try:
+        diagnostic = AutopostDiagnostic(bot)
+        result = await diagnostic.run_full_diagnostic()
+        return format_diagnostic_report(result)
+    except Exception as e:
+        logger.error(f"Ошибка диагностики автопостинга: {e}")
+        return f"❌ **ОШИБКА ДИАГНОСТИКИ:** {e}"
