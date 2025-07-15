@@ -157,31 +157,65 @@ async def handle_channel_fix(query, context):
 
 
 async def handle_comments_fix(query, context):
-    """Исправление комментариев"""
-    await query.edit_message_text("💬 Настраиваю комментарии...")
+    """Автоматическое исправление комментариев"""
+    await query.edit_message_text("💬 Диагностика системы комментариев...")
 
     try:
-        setup = ChannelCommentsSetup(context.bot)
+        from bot.services.comments_auto_setup import get_auto_comments_manager
+
+        # Используем новый автоматический менеджер
+        comments_manager = get_auto_comments_manager(context.bot)
 
         # Получаем текущий канал
         import os
         current_channel = os.getenv('TARGET_CHANNEL_ID') or os.getenv(
             'CHANNEL_ID') or '@test_legal_channel'
 
-        result = await setup.enable_comments_for_channel(current_channel)
+        # Автоматическая диагностика и настройка
+        result = await comments_manager.enable_comments_for_all_posts(current_channel)
 
         if result["success"]:
-            response_text = result["instructions"]
+            response_text = f"""✅ **КОММЕНТАРИИ НАСТРОЕНЫ**
+
+📺 **Канал:** {current_channel}
+💬 **Статус:** {result['message']}
+
+🎉 **Все новые посты будут автоматически поддерживать комментарии!**
+
+📋 **Что это означает:**
+• Под каждым постом будет кнопка "💬 Комментарии"
+• Пользователи смогут оставлять комментарии
+• Комментарии модерируются автоматически
+• Система отвечает на вопросы пользователей
+
+🔧 **Дополнительные возможности:**
+• Автоматические ответы экспертов
+• Уведомления о новых комментариях
+• Аналитика взаимодействий"""
         else:
-            response_text = f"❌ Ошибка настройки комментариев: {result['error']}"
+            response_text = f"""⚠️ **ТРЕБУЕТСЯ НАСТРОЙКА КОММЕНТАРИЕВ**
+
+📺 **Канал:** {current_channel}
+❌ **Проблема:** {result.get('message', 'Неизвестная ошибка')}
+
+{result.get('instructions', '📋 Инструкции по настройке недоступны')}
+
+💡 **СОВЕТ:**
+После настройки группы обсуждений комментарии будут работать автоматически для всех постов!"""
 
         # Подготавливаем ответ
         message_data = prepare_telegram_message(response_text)
 
         keyboard = [
             [
-                InlineKeyboardButton("🧪 Тест комментариев",
+                InlineKeyboardButton("🧪 Тестовый пост",
                                      callback_data="test_post"),
+                InlineKeyboardButton("📊 Статус всех каналов",
+                                     callback_data="comments_status_all")
+            ],
+            [
+                InlineKeyboardButton("🔄 Повторить диагностику",
+                                     callback_data="fix_comments"),
                 InlineKeyboardButton("🔧 Исправить канал",
                                      callback_data="fix_channel")
             ],
@@ -199,7 +233,7 @@ async def handle_comments_fix(query, context):
     except Exception as e:
         logger.error(f"Error in handle_comments_fix: {e}")
         await query.edit_message_text(
-            f"❌ Ошибка настройки комментариев: {str(e)}",
+            f"❌ Ошибка диагностики комментариев: {str(e)}",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton(
                     "◀️ Назад", callback_data="refresh_status")

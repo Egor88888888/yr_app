@@ -1021,14 +1021,22 @@ class SMMIntegration:
         channel_id: str,
         message_id: int
     ) -> bool:
-        """Обновляет кнопки поста после публикации с правильными ссылками на комментарии"""
+        """Обновляет кнопки поста после публикации с автоматическими комментариями"""
         try:
             from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+            from .comments_auto_setup import get_auto_comments_manager
 
-            # Формируем правильную ссылку на комментарии
-            comments_url = self._create_comments_url(channel_id, message_id)
+            # Используем автоматический менеджер комментариев
+            comments_manager = get_auto_comments_manager(self.bot)
 
-            # Создаем правильные кнопки
+            # Получаем правильную ссылку на комментарии (с автопроверкой настройки)
+            comments_url = await comments_manager.ensure_comments_for_post(
+                channel_id,
+                message_id,
+                fallback_to_bot=True  # Если комментарии не настроены, ведем в бота
+            )
+
+            # Создаем кнопки с автоматическими комментариями
             correct_buttons = [[
                 InlineKeyboardButton(
                     "💬 Комментарии",
@@ -1050,7 +1058,7 @@ class SMMIntegration:
             )
 
             logger.info(
-                f"✅ Updated post buttons for message {message_id} in channel {channel_id}")
+                f"✅ Updated post buttons with auto-comments for message {message_id} in channel {channel_id}")
             return True
 
         except Exception as e:
