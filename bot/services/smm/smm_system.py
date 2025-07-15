@@ -525,10 +525,26 @@ class ProfessionalSMMSystem:
     async def get_system_status(self) -> Dict[str, Any]:
         """Получение статуса системы"""
 
-        upcoming_posts_count = len([
-            post for post in self.scheduler.schedule_queue
-            if post.scheduled_time <= datetime.now() + timedelta(hours=24)
-        ])
+        # Безопасное извлечение постов из очереди с учетом tuple format
+        upcoming_posts_count = 0
+        try:
+            cutoff_time = datetime.now() + timedelta(hours=24)
+            for queue_item in self.scheduler.schedule_queue:
+                try:
+                    if isinstance(queue_item, tuple):
+                        timestamp, post = queue_item
+                        if post.scheduled_time <= cutoff_time:
+                            upcoming_posts_count += 1
+                    else:
+                        # Backwards compatibility для старого формата
+                        if hasattr(queue_item, 'scheduled_time') and queue_item.scheduled_time <= cutoff_time:
+                            upcoming_posts_count += 1
+                except Exception as e:
+                    logger.warning(f"Error processing queue item: {e}")
+                    continue
+        except Exception as e:
+            logger.error(f"Error calculating upcoming posts: {e}")
+            upcoming_posts_count = 0
 
         active_sessions_count = len(self.interaction_manager.active_sessions)
 
@@ -669,14 +685,33 @@ class ProfessionalSMMSystem:
         """Получение запланированных постов"""
         try:
             posts = []
-            for i, (timestamp, post) in enumerate(self.scheduler.schedule_queue[:limit]):
-                posts.append({
-                    "id": post.post_id,
-                    "content": post.content[:100] + "..." if len(post.content) > 100 else post.content,
-                    "scheduled_time": post.scheduled_time.strftime("%d.%m %H:%M"),
-                    "type": post.content_type,
-                    "priority": post.priority
-                })
+            processed_count = 0
+
+            for queue_item in self.scheduler.schedule_queue:
+                if processed_count >= limit:
+                    break
+
+                try:
+                    # Безопасное извлечение поста из очереди
+                    if isinstance(queue_item, tuple):
+                        timestamp, post = queue_item
+                    else:
+                        # Backwards compatibility для старого формата
+                        post = queue_item
+
+                    posts.append({
+                        "id": post.post_id,
+                        "content": post.content[:100] + "..." if len(post.content) > 100 else post.content,
+                        "scheduled_time": post.scheduled_time.strftime("%d.%m %H:%M"),
+                        "type": post.content_type,
+                        "priority": getattr(post, 'priority', 1)
+                    })
+                    processed_count += 1
+
+                except Exception as e:
+                    logger.warning(f"Error processing scheduled post: {e}")
+                    continue
+
             return posts
         except Exception as e:
             logger.error(f"Failed to get scheduled posts: {e}")

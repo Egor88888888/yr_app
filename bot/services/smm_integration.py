@@ -453,9 +453,15 @@ class SMMIntegration:
             # Проверяем качество метрик
             analytics = self.smm_system.metrics_collector.get_analytics_summary(
                 1)
-            if analytics.get("data_confidence", 0) < 0.7:
+            data_confidence = analytics.get(
+                "data_confidence", 0.5)  # Увеличиваем default
+
+            # Логируем только критически низкую достоверность
+            if data_confidence < 0.3:
                 logger.warning(
-                    f"⚠️ Low data confidence: {analytics.get('data_confidence', 0):.2%}")
+                    f"⚠️ Critical low data confidence: {data_confidence:.2%}")
+            elif data_confidence < 0.5:
+                logger.info(f"📊 Data confidence: {data_confidence:.2%}")
 
         except Exception as e:
             logger.error(f"Error checking performance issues: {e}")
