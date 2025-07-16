@@ -8,15 +8,49 @@ Azure Embeddings Deployment: text-embedding-ada-002 ГОТОВ К РАБОТЕ!
 
 import asyncio
 import logging
-import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 import aiohttp
 import os
+
+# Optional numpy import for production compatibility
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    # Create fallback functions
+
+    class np:
+        # Fallback ndarray type
+        ndarray = list
+
+        @staticmethod
+        def array(data):
+            return data
+
+        @staticmethod
+        def dot(a, b):
+            return sum(x * y for x, y in zip(a, b))
+
+        @staticmethod
+        def linalg():
+            class linalg:
+                @staticmethod
+                def norm(x):
+                    return (sum(i * i for i in x)) ** 0.5
+            return linalg()
 
 from sqlalchemy import select
 from ...db import async_sessionmaker, Category
 
 logger = logging.getLogger(__name__)
+
+# Log numpy status
+if HAS_NUMPY:
+    logger.info("🔢 ML Classifier: Using real numpy for ML operations")
+else:
+    logger.warning(
+        "🔢 ML Classifier: Using fallback math (numpy not available)")
 
 # Azure OpenAI Configuration для эмбеддингов
 AZURE_OPENAI_API_KEY = os.getenv(

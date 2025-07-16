@@ -28,7 +28,20 @@ from ...ai_enhanced_models import (
 )
 from .context_builder import ContextBuilder, AIContext
 from .response_optimizer import ResponseOptimizer
-from ..classification.ml_classifier import MLClassifier
+try:
+    from ..classification.ml_classifier import MLClassifier, HAS_NUMPY
+    ML_AVAILABLE = True
+except ImportError:
+    HAS_NUMPY = False
+    ML_AVAILABLE = False
+    # Fallback ML Classifier
+
+    class MLClassifier:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def classify_category(self, *args, **kwargs):
+            return {"category": "Семейное право", "confidence": 0.5}
 from ..classification.intent_detector import IntentDetector
 from ..memory.dialogue_memory import DialogueMemory
 from ..memory.user_profiler import UserProfiler
@@ -48,9 +61,20 @@ class AIEnhancedManager:
         self.context_builder = ContextBuilder()
         self.response_optimizer = ResponseOptimizer()
 
-        # ML компоненты
+        # ML компоненты с статусом
         self.ml_classifier = MLClassifier()
         self.intent_detector = IntentDetector()
+
+        # Log ML status
+        if ML_AVAILABLE and HAS_NUMPY:
+            logger.info(
+                "🧠 AI Enhanced: Full ML capabilities enabled with numpy")
+        elif ML_AVAILABLE:
+            logger.warning(
+                "🧠 AI Enhanced: ML enabled with fallback (no numpy)")
+        else:
+            logger.warning(
+                "🧠 AI Enhanced: ML disabled, using fallback classifier")
 
         # Память
         self.dialogue_memory = DialogueMemory()

@@ -6,7 +6,22 @@ Embeddings Manager - управление векторными представ�
 
 import logging
 from typing import Dict, Optional
-import numpy as np
+
+# Optional numpy import for production compatibility
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    # Fallback - simple list operations
+
+    class np:
+        # Fallback ndarray type
+        ndarray = list
+
+        @staticmethod
+        def array(data):
+            return data
 
 logger = logging.getLogger(__name__)
 
