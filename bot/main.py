@@ -53,6 +53,8 @@ from menu_utils import MenuBuilder, format_menu_title, format_stats_section
 from missing_handlers import handle_missing_callback, validate_callback_coverage
 # Импорт быстрых исправлений
 from bot.handlers.quick_fixes import register_quick_fixes_handlers
+# Импорт продакшн тестирования
+from bot.handlers.production_testing import register_production_testing_handlers
 # Импорт улучшенной системы автопостинга
 try:
     from bot.services.enhanced_autopost import (
