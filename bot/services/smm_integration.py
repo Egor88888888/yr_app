@@ -23,8 +23,8 @@ from .markdown_fix import prepare_telegram_message
 # PRODUCTION ENHANCEMENT: Импортируем enhanced comments manager
 from .comments_enhanced_setup import EnhancedCommentsManager, ensure_production_comments
 
-# ИСПРАВЛЕНИЕ: Импортируем enhanced comments manager
-from .comments_enhanced_setup import EnhancedCommentsManager, ensure_production_comments
+# ИСПРАВЛЕНИЕ: Импортируем AIEnhancedManager
+from .ai_enhanced import AIEnhancedManager
 
 logger = logging.getLogger(__name__)
 
