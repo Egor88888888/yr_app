@@ -1,28 +1,30 @@
 """
-🔗 SMM INTEGRATION - PRODUCTION READY
-Integration layer between Professional SMM System and existing bot infrastructure
+🚀 SMM INTEGRATION - PRODUCTION READY
+Интеграция всех SMM компонентов для продакшн среды
 """
 
 import logging
 import asyncio
+import os
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-import json
+from typing import Dict, List, Optional, Any, Tuple
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, Application
+from telegram.constants import ParseMode
+from telegram.error import TelegramError, BadRequest, Forbidden
 
-from telegram import Bot
-from telegram.error import TelegramError
+from .smm.smm_system import ProfessionalSMMSystem, SMMConfig, SMMSystemMode
+from .smm.telegram_publisher import TelegramPublisher, PublishRequest, MessageType, PublishResult
+from .smm.metrics_collector import MetricsCollector
+from .smm.comment_manager import CommentManager
+from .smm.content_engine import AdvancedContentEngine, ContentType
+from .markdown_fix import prepare_telegram_message
 
-from .smm import (
-    ProfessionalSMMSystem,
-    SMMConfig,
-    create_balanced_config,
-    create_viral_focused_config,
-    create_conversion_focused_config
-)
-from .smm.telegram_publisher import PublishRequest
-from .content_intelligence import ContentIntelligenceSystem
-from .ai_enhanced import AIEnhancedManager
-from .db import async_sessionmaker
+# PRODUCTION ENHANCEMENT: Импортируем enhanced comments manager
+from .comments_enhanced_setup import EnhancedCommentsManager, ensure_production_comments
+
+# ИСПРАВЛЕНИЕ: Импортируем enhanced comments manager
+from .comments_enhanced_setup import EnhancedCommentsManager, ensure_production_comments
 
 logger = logging.getLogger(__name__)
 
