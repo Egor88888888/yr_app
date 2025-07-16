@@ -84,6 +84,58 @@ try:
     # Global variable to store bot application
     bot_application = None
 
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize bot on FastAPI startup"""
+        global bot_application
+        try:
+            print("🔧 FastAPI Startup: Initializing bot application...")
+
+            from bot.main import TOKEN
+            from telegram.ext import Application
+
+            # Create bot application
+            application = Application.builder().token(TOKEN).build()
+
+            # Setup handlers (import from bot.main)
+            from bot.main import cmd_start, cmd_admin, universal_callback_handler, post_init
+            from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters
+
+            application.add_handler(CommandHandler("start", cmd_start))
+            application.add_handler(CommandHandler("admin", cmd_admin))
+            application.add_handler(
+                CallbackQueryHandler(universal_callback_handler))
+
+            # Add message handler for AI
+            from bot.main import ai_chat
+            application.add_handler(MessageHandler(
+                filters.TEXT & ~filters.COMMAND, ai_chat))
+
+            print("✅ Handlers registered")
+
+            # Initialize
+            await application.initialize()
+            await post_init(application)
+
+            # Set webhook
+            webhook_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}/telegram/{TOKEN}"
+            await application.bot.set_webhook(webhook_url)
+            print(f"✅ Webhook set to: {webhook_url}")
+
+            # Start application
+            await application.start()
+            print("✅ Bot application started and ready")
+
+            # Store globally for webhook access
+            bot_application = application
+            print(
+                f"🔍 Global bot_application initialized: {bot_application is not None}")
+
+        except Exception as e:
+            print(f"❌ Bot startup error: {e}")
+            import traceback
+            traceback.print_exc()
+
     # ===== API ROUTES FIRST (before static mounts) =====
 
     @app.get("/health")
