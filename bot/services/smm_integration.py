@@ -13,7 +13,7 @@ from telegram.ext import ContextTypes, Application
 from telegram.constants import ParseMode
 from telegram.error import TelegramError, BadRequest, Forbidden
 
-from .smm.smm_system import ProfessionalSMMSystem, SMMConfig, SMMSystemMode
+from .smm.smm_system import ProfessionalSMMSystem, create_balanced_config
 from .smm.telegram_publisher import TelegramPublisher, PublishRequest, MessageType, PublishResult
 from .smm.metrics_collector import MetricsCollector
 from .smm.comment_manager import CommentManager
