@@ -83,9 +83,8 @@ class ProfessionalSMMSystem:
         self.content_engine = AdvancedContentEngine()
         self.interaction_manager = InteractionManager()
         self.analytics_engine = AnalyticsEngine()
-        self.scheduler = SmartScheduler()
 
-        # Production-ready компоненты
+        # Production-ready компоненты (создаем сначала)
         if bot:
             self.telegram_publisher = TelegramPublisher(bot)
             self.metrics_collector = MetricsCollector(bot)
@@ -94,6 +93,10 @@ class ProfessionalSMMSystem:
             self.telegram_publisher = None
             self.metrics_collector = None
             self.comment_manager = None
+
+        # ИСПРАВЛЕНИЕ: Создаем SmartScheduler с TelegramPublisher
+        self.scheduler = SmartScheduler(
+            telegram_publisher=self.telegram_publisher)
 
         self.ab_testing_engine = ABTestingEngine()
 

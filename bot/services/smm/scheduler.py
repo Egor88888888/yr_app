@@ -75,12 +75,15 @@ class ScheduleOptimization:
 class SmartScheduler:
     """Умный планировщик контента"""
 
-    def __init__(self):
+    def __init__(self, telegram_publisher=None):
         self.schedule_queue: List[ScheduledPost] = []
         self.optimization_engine = ScheduleOptimizationEngine()
         self.ab_test_manager = ABTestManager()
         self.performance_tracker = PerformanceTracker()
         self.audience_analyzer = AudienceTimingAnalyzer()
+
+        # ИСПРАВЛЕНИЕ: Добавляем TelegramPublisher для реальной публикации
+        self.telegram_publisher = telegram_publisher
 
         # Настройки автопостинга
         self.autopost_interval_minutes = 60  # По умолчанию 1 час
@@ -272,15 +275,59 @@ class SmartScheduler:
     async def _publish_post(self, post: ScheduledPost):
         """Публикация поста"""
 
-        # Здесь вызов реального API публикации
         logger.info(
             f"Publishing post {post.post_id} to channel {post.channel_id}")
 
-        # Имитация публикации
-        await asyncio.sleep(1)
+        # ИСПРАВЛЕНИЕ: Используем реальный TelegramPublisher вместо заглушки
+        if self.telegram_publisher:
+            try:
+                from .telegram_publisher import PublishRequest, MessageType
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+                import os
 
-        # Запись в аналитику
-        await self.performance_tracker.record_publication(post)
+                # Создаем кнопку консультации
+                buttons = [[
+                    InlineKeyboardButton(
+                        "📱 Получить консультацию",
+                        url=f"https://t.me/{os.getenv('BOT_USERNAME', 'yur_lawyer_bot')}"
+                    )
+                ]]
+                reply_markup = InlineKeyboardMarkup(buttons)
+
+                # Создаем запрос на публикацию
+                publish_request = PublishRequest(
+                    post_id=post.post_id,
+                    channel_id=post.channel_id,
+                    content=post.content,
+                    parse_mode="MarkdownV2",
+                    reply_markup=reply_markup,
+                    message_type=MessageType.TEXT,
+                    track_analytics=True
+                )
+
+                # РЕАЛЬНАЯ ПУБЛИКАЦИЯ
+                result = await self.telegram_publisher.publish_now(publish_request)
+
+                if result.success:
+                    logger.info(
+                        f"✅ Successfully published post {post.post_id}, message_id: {result.message_id}")
+                    # Запись в аналитику
+                    await self.performance_tracker.record_publication(post)
+                else:
+                    logger.error(
+                        f"❌ Failed to publish post {post.post_id}: {result.error_message}")
+                    raise Exception(
+                        f"Publication failed: {result.error_message}")
+
+            except Exception as e:
+                logger.error(f"❌ Error publishing post {post.post_id}: {e}")
+                raise
+        else:
+            # Fallback: заглушка если нет TelegramPublisher
+            logger.warning(
+                f"⚠️ No TelegramPublisher available, using fallback for post {post.post_id}")
+            await asyncio.sleep(1)
+            await self.performance_tracker.record_publication(post)
 
     async def _handle_publish_failure(self, post: ScheduledPost):
         """Обработка неудачной публикации"""

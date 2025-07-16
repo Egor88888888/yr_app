@@ -8,7 +8,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 from bot.services.channel_fix import quick_channel_fix, get_channel_status_report, ChannelCommentsSetup
 from bot.services.markdown_fix import prepare_telegram_message
-from bot.services.autopost_diagnostic import get_autopost_diagnostic
+from bot.services.autopost_diagnostic import get_autopost_diagnostic, create_test_autopost
 from bot.services.comments_diagnostic import get_comments_diagnostic
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,12 @@ async def quick_fix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                  callback_data="diagnose_autopost")
         ],
         [
+            InlineKeyboardButton("🧪 Создать тестовый автопост",
+                                 callback_data="create_test_autopost"),
+            InlineKeyboardButton("📊 Статистика публикаций",
+                                 callback_data="publish_stats")
+        ],
+        [
             InlineKeyboardButton(
                 "📋 Полный отчет", callback_data="full_report"),
             InlineKeyboardButton(
@@ -113,6 +119,10 @@ async def quick_fix_callback_handler(update: Update, context: ContextTypes.DEFAU
         await handle_autopost_fix(query, context)
     elif data == "create_immediate_post":
         await handle_create_immediate_post(query, context)
+    elif data == "create_test_autopost":
+        await handle_create_test_autopost(query, context)
+    elif data == "publish_stats":
+        await handle_publish_stats(query, context)
     elif data == "comments_diagnostic":
         await handle_comments_diagnostic(query, context)
     elif data == "comments_setup_guide":
@@ -1113,6 +1123,130 @@ async def handle_create_immediate_post(query, context):
         )
 
 
+async def handle_create_test_autopost(query, context):
+    """Создание тестового автопоста"""
+    try:
+        await query.answer()
+
+        # Показываем loading
+        loading_message = await query.edit_message_text(
+            "🔧 Создание тестового автопоста...",
+            parse_mode="Markdown"
+        )
+
+        # Создаем тестовый пост
+        result = await create_test_autopost(context.bot)
+
+        # Обновляем сообщение с результатом
+        await loading_message.edit_text(
+            result,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🔄 Еще один тест", callback_data="create_test_autopost"),
+                InlineKeyboardButton(
+                    "🚀 Диагностика", callback_data="diagnose_autopost")
+            ], [
+                InlineKeyboardButton(
+                    "◀️ Назад к меню", callback_data="back_to_main")
+            ]])
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_create_test_autopost: {e}")
+        await query.edit_message_text(
+            f"❌ **ОШИБКА:** {e}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад к меню", callback_data="back_to_main")
+            ]])
+        )
+
+
+async def handle_publish_stats(query, context):
+    """Статистика публикаций"""
+    try:
+        await query.answer()
+
+        # Показываем loading
+        loading_message = await query.edit_message_text(
+            "📊 Загрузка статистики...",
+            parse_mode="Markdown"
+        )
+
+        # Получаем статистику из SMM Integration
+        try:
+            from bot.services.smm_integration import SMMIntegration
+            smm = SMMIntegration(context.bot)
+
+            if smm.smm_system and smm.smm_system.telegram_publisher:
+                stats = smm.smm_system.telegram_publisher.analytics_tracker.get_publish_stats(
+                    7)
+
+                stats_text = f"""📊 **СТАТИСТИКА ПУБЛИКАЦИЙ** (7 дней)
+
+📈 **ОБЩИЕ ПОКАЗАТЕЛИ:**
+• Всего постов: {stats.get('total_posts', 0)}
+• Успешных: {stats.get('successful_posts', 0)}
+• Неудачных: {stats.get('failed_posts', 0)}
+• Success Rate: {stats.get('success_rate', 0):.1%}
+
+📋 **ПО КАНАЛАМ:**"""
+
+                channels = stats.get('channels', [])
+                for channel in channels:
+                    stats_text += f"\n• {channel}"
+
+                message_types = stats.get('message_types', {})
+                if message_types:
+                    stats_text += f"\n\n📝 **ПО ТИПАМ СООБЩЕНИЙ:**"
+                    for msg_type, count in message_types.items():
+                        stats_text += f"\n• {msg_type}: {count}"
+            else:
+                stats_text = """📊 **СТАТИСТИКА НЕДОСТУПНА**
+
+⚠️ SMM система не запущена или не настроена.
+
+🔧 **РЕКОМЕНДАЦИИ:**
+1. Запустите диагностику автопостинга
+2. Создайте тестовый пост
+3. Проверьте настройки системы"""
+
+        except Exception as e:
+            stats_text = f"""❌ **ОШИБКА ПОЛУЧЕНИЯ СТАТИСТИКИ**
+
+🚫 {str(e)}
+
+🔧 Попробуйте перезапустить систему или обратитесь к администратору."""
+
+        # Обновляем сообщение с результатом
+        await loading_message.edit_text(
+            stats_text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "🔄 Обновить", callback_data="publish_stats"),
+                InlineKeyboardButton(
+                    "🚀 Диагностика", callback_data="diagnose_autopost")
+            ], [
+                InlineKeyboardButton(
+                    "◀️ Назад к меню", callback_data="back_to_main")
+            ]])
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_publish_stats: {e}")
+        await query.edit_message_text(
+            f"❌ **ОШИБКА:** {e}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    "◀️ Назад к меню", callback_data="back_to_main")
+            ]])
+        )
+
+
 async def handle_comments_basic_guide(query, context):
     """📋 Базовые инструкции по настройке комментариев"""
     guide_text = """📋 **НАСТРОЙКА КОММЕНТАРИЕВ В TELEGRAM**
@@ -1166,5 +1300,5 @@ def register_quick_fixes_handlers(application):
     application.add_handler(CommandHandler("quick_fix", quick_fix_command))
     application.add_handler(CallbackQueryHandler(
         quick_fix_callback_handler,
-        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions|diagnose_autopost|fix_autopost|create_immediate_post|comments_diagnostic|comments_setup_guide|comments_test_post|comments_basic_guide)$"
+        pattern="^(fix_channel|fix_comments|test_markdown|test_post|full_report|refresh_status|test_comments|add_bot_to_group|show_bot_add_instructions|diagnose_autopost|fix_autopost|create_immediate_post|comments_diagnostic|comments_setup_guide|comments_test_post|comments_basic_guide|create_test_autopost|publish_stats)$"
     ))
