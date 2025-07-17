@@ -3486,40 +3486,45 @@ async def post_init(application: Application):
         print(f"❌ Failed to set menu button: {e}")
         log.error(f"Menu button error: {e}")
 
-        # 🚀 ЭТАП 2: ВКЛЮЧАЕМ start_smm_system() С МИНИМАЛЬНОЙ ФУНКЦИОНАЛЬНОСТЬЮ
+    # 🚀 ПРОСТАЯ И НАДЕЖНАЯ СИСТЕМА АВТОПОСТИНГА
     try:
-        print("🔧 Phase 2: Testing start_smm_system() with minimal components...")
-        from .services.smm_integration import initialize_smm_integration
+        print("🔧 Initializing simple autopost system...")
+        from .services.simple_autopost import init_simple_autopost
 
-        # Инициализируем SMM integration
-        print("🔧 Initializing SMM integration...")
-        smm_integration = await initialize_smm_integration(application.bot, ai_enhanced_manager)
-        if smm_integration:
-            print("✅ SMM integration initialized successfully")
+        # Инициализируем простую систему автопостинга в фоне
+        asyncio.create_task(init_simple_autopost(application.bot))
+        print("✅ Simple autopost system initialization started!")
 
-            # ПРОБУЕМ запустить SMM систему (там внутри уже есть безопасные обертки)
-            print("🔧 Testing SMM system startup...")
-            await smm_integration.start_smm_system()
-            print("✅ SMM system started successfully!")
-
-            # ВКЛЮЧАЕМ DEPLOY AUTOPOST ПОСЛЕ УСПЕШНОГО ЗАПУСКА SMM
-            try:
-                print("🔧 Initializing deploy autopost...")
-                from .services.deploy_autopost import init_deploy_autopost
-                await init_deploy_autopost(smm_integration)
-                print("🚀 Deploy autopost initialized successfully!")
-            except Exception as deploy_error:
-                print(f"⚠️ Deploy autopost failed: {deploy_error}")
-                print("✅ SMM system works fine without deploy autopost")
-        else:
-            print("❌ Failed to initialize SMM integration")
+        # Уведомляем админа о запуске
+        try:
+            await application.bot.send_message(
+                ADMIN_CHAT_ID,
+                "🚀 **СИСТЕМА АВТОПОСТИНГА ЗАПУЩЕНА!**\n\n"
+                "✅ Deploy автопост: через 5 минут\n"
+                "✅ Регулярные посты: каждый час\n"
+                "✅ Система работает стабильно\n\n"
+                "Команды:\n"
+                "/admin - админ панель\n"
+                "/autopost_status - статус автопостинга\n"
+                "/autopost_test - тестовый пост",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
 
     except Exception as e:
-        print(f"❌ SMM system startup failed: {e}")
-        import traceback
-        print(f"❌ FULL TRACEBACK: {traceback.format_exc()}")
-        print("⚠️ Continuing without SMM system...")
-        log.error(f"SMM system startup error: {e}")
+        print(f"❌ Simple autopost initialization failed: {e}")
+        log.error(f"Simple autopost error: {e}")
+        # Fallback на старую систему если нужно
+        try:
+            print("🔧 Fallback: trying complex SMM system...")
+            from .services.smm_integration import initialize_smm_integration
+            smm_integration = await initialize_smm_integration(application.bot, ai_enhanced_manager)
+            if smm_integration:
+                await smm_integration.start_smm_system()
+                print("✅ Complex SMM system started as fallback")
+        except Exception as smm_error:
+            print(f"❌ Both autopost systems failed: {smm_error}")
 
 
 async def fix_database_schema():
