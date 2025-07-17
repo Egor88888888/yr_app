@@ -326,8 +326,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
 
     keyboard = [[
-        InlineKeyboardButton(
-            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))
+        InlineKeyboardButton("📝 Подать заявку", url=WEB_APP_URL)
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -425,7 +424,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                    "📝 Подать заявку", url=WEB_APP_URL),
                 InlineKeyboardButton("📞 Заказать звонок",
                                      callback_data="request_call")
             ],
@@ -461,8 +460,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # ИСПРАВЛЕНО: Fallback с полным набором кнопок консультации
         fallback_keyboard = [
             [
-                InlineKeyboardButton(
-                    "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+                InlineKeyboardButton("📝 Подать заявку", url=WEB_APP_URL),
                 InlineKeyboardButton("📞 Заказать звонок",
                                      callback_data="request_call")
             ],
@@ -2346,8 +2344,7 @@ CLOCK: **Рабочие часы:** 9:00 - 21:00 (МСК)
     keyboard = [
         [InlineKeyboardButton("PHONE: Указать телефон",
                               callback_data="enter_phone")],
-        [InlineKeyboardButton(
-            "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Подать заявку", url=WEB_APP_URL)],
         [InlineKeyboardButton("◀ Назад", callback_data="back_to_chat")]
     ]
 
@@ -2430,8 +2427,7 @@ SCALES: **СУДЕБНОЕ ПРЕДСТАВИТЕЛЬСТВО:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("📝 Получить расчет",
-                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Получить расчет", url=WEB_APP_URL)],
         [InlineKeyboardButton("PHONE: Обсудить по телефону",
                               callback_data="request_call")],
         [InlineKeyboardButton("◀ Назад", callback_data="back_to_chat")]
@@ -2478,8 +2474,7 @@ async def handle_consultation_category(query, context):
     context.user_data['awaiting_consultation_details'] = True
 
     keyboard = [
-        [InlineKeyboardButton("📝 Заполнить подробную заявку",
-                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Заполнить подробную заявку", url=WEB_APP_URL)],
         [InlineKeyboardButton("◀ Выбрать другую категорию",
                               callback_data="chat_consultation")]
     ]
@@ -2501,8 +2496,7 @@ CHAT: Продолжайте задавать вопросы в чате.
 
     keyboard = [
         [
-            InlineKeyboardButton(
-                "📝 Подать заявку", web_app=WebAppInfo(url=WEB_APP_URL)),
+            InlineKeyboardButton("📝 Подать заявку", url=WEB_APP_URL),
             InlineKeyboardButton("PHONE: Звонок",
                                  callback_data="request_call")
         ],
@@ -2580,8 +2574,7 @@ IDEA: **Пока ждете ответа:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("📝 Подать подробную заявку",
-                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Подать подробную заявку", url=WEB_APP_URL)],
         [InlineKeyboardButton("PHONE: Заказать звонок",
                               callback_data="request_call")]
     ]
@@ -2721,8 +2714,7 @@ CLOCK: **Также укажите удобное время для звонка
     context.user_data['awaiting_phone_input'] = True
 
     keyboard = [
-        [InlineKeyboardButton("📝 Заполнить заявку вместо звонка",
-                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Заполнить заявку вместо звонка", url=WEB_APP_URL)],
         [InlineKeyboardButton("◀ Назад", callback_data="request_call")]
     ]
 
@@ -2791,8 +2783,7 @@ PHONE: **Если не дозвонимся:**
 """
 
     keyboard = [
-        [InlineKeyboardButton("📝 Дополнительная заявка",
-                              web_app=WebAppInfo(url=WEB_APP_URL))],
+        [InlineKeyboardButton("📝 Дополнительная заявка", url=WEB_APP_URL)],
         [InlineKeyboardButton("CHAT: Задать вопрос в чате",
                               callback_data="chat_consultation")]
     ]
