@@ -138,6 +138,23 @@ try:
 
     # ===== API ROUTES FIRST (before static mounts) =====
 
+    @app.get("/")
+    async def root():
+        """Root endpoint - Welcome page for production deployment"""
+        return {
+            "service": "Юридический центр - Production API",
+            "version": "1.0.0",
+            "status": "🚀 PRODUCTION READY",
+            "endpoints": {
+                "webapp": "/webapp/",
+                "health": "/health",
+                "docs": "/docs",
+                "api": "/api/"
+            },
+            "telegram_bot": "@yrrisst_bot",
+            "description": "Professional legal services platform with AI-enhanced consultation system"
+        }
+
     @app.get("/health")
     async def health():
         ai_manager = AIEnhancedManager()
