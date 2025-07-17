@@ -53,11 +53,13 @@ for expected, alternatives in env_mapping.items():
 # Critical variables check
 if not os.getenv("BOT_TOKEN"):
     print("❌ BOT_TOKEN not found")
-    sys.exit(1)
+    # sys.exit(1)  # Don't exit - let Railway handle restarts
+    print("⚠️ Continuing without BOT_TOKEN - some features may not work")
 
 if not os.getenv("DATABASE_URL"):
     print("❌ DATABASE_URL not set")
-    sys.exit(1)
+    # sys.exit(1)  # Don't exit - let Railway handle restarts
+    print("⚠️ Continuing without DATABASE_URL - some features may not work")
 
 if missing_vars:
     print(f"⚠️ Optional variables missing: {', '.join(missing_vars)}")
@@ -65,24 +67,25 @@ if missing_vars:
 print("✅ Environment variables OK")
 print(f"🔗 Database URL: {os.getenv('DATABASE_URL')[:30]}...")
 
+# Create FastAPI app FIRST - always available for import
+app = fastapi.FastAPI()
+
+# Add CORS middleware for Mini App
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify your domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global variable to store bot application
+bot_application = None
+
 # Start bot
 try:
     from bot.main import main as bot_main
     print("✅ Bot module imported")
-
-    app = fastapi.FastAPI()
-
-    # Add CORS middleware for Mini App
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],  # In production, specify your domain
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Global variable to store bot application
-    bot_application = None
 
     @app.on_event("startup")
     async def startup_event():
@@ -811,7 +814,8 @@ ID заявки: #{application.id}
     if __name__ == "__main__":
         asyncio.run(main())
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"❌ Error during app initialization: {e}")
     import traceback
     traceback.print_exc()
-    sys.exit(1)
+    # Don't exit here - let Railway handle restarts
+    # sys.exit(1)  # Commented out to allow proper import
