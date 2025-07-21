@@ -170,7 +170,11 @@ class SimpleAutopost:
     async def _create_deploy_post(self):
         """Создание поста после деплоя"""
         try:
+            print("🚀 Creating deploy autopost...")
             logger.info("🚀 Creating deploy autopost...")
+            
+            print(f"🔧 Channel ID: {self.channel_id}")
+            logger.info(f"🔧 Channel ID: {self.channel_id}")
 
             post_text = f"""🚀 **СИСТЕМА ОБНОВЛЕНА И ГОТОВА К РАБОТЕ!**
 
@@ -193,13 +197,24 @@ class SimpleAutopost:
 *Обновлено: {datetime.now().strftime('%d.%m.%Y в %H:%M')}*"""
 
             # Создаем кнопку
+            try:
+                bot_username = await self.bot.get_me()
+                print(f"🔧 Bot username: {bot_username.username}")
+                bot_url = f"https://t.me/{bot_username.username}"
+            except Exception as e:
+                print(f"⚠️ Failed to get bot username: {e}")
+                bot_url = "https://t.me/your_legal_bot"  # fallback
+            
             keyboard = [[
                 InlineKeyboardButton(
                     "📱 Получить консультацию",
-                    url=f"https://t.me/{self.bot.username.replace('@', '')}"
+                    url=bot_url
                 )
             ]]
 
+            print("📝 Sending deploy post to channel...")
+            logger.info("📝 Sending deploy post to channel...")
+            
             # Отправляем пост
             message = await self.bot.send_message(
                 chat_id=self.channel_id,
@@ -208,11 +223,16 @@ class SimpleAutopost:
                 parse_mode='Markdown'
             )
 
+            print(f"✅ Deploy autopost created: {message.message_id}")
             logger.info(f"✅ Deploy autopost created: {message.message_id}")
             return {"success": True, "message_id": message.message_id}
 
         except Exception as e:
+            print(f"❌ Failed to create deploy post: {e}")
             logger.error(f"Failed to create deploy post: {e}")
+            import traceback
+            print(f"Deploy post traceback: {traceback.format_exc()}")
+            logger.error(f"Deploy post traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
     async def _create_regular_post(self):
