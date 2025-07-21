@@ -278,11 +278,10 @@ class SimpleAutopost:
 
                 # ПРОВЕРКА УНИКАЛЬНОСТИ КОНТЕНТА
                 title = post_text.split('\n')[0][:100]  # Первая строка как заголовок
-                is_valid, message = validate_and_register_content(
+                is_valid, message = await validate_and_register_content(
                     title=title,
                     content=post_text,
-                    content_type="simple_autopost",
-                    source_system="simple_autopost"
+                    content_type="simple_autopost"
                 )
 
                 if not is_valid:
