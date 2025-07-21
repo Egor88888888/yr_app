@@ -1,6 +1,7 @@
 """
 🧠 MAIN CONTENT INTELLIGENCE SYSTEM
 Главная система умного контента
++ ИНТЕГРИРОВАНА СИСТЕМА ПРЕДОТВРАЩЕНИЯ ДУБЛИРОВАНИЯ КОНТЕНТА
 """
 
 import asyncio
@@ -16,6 +17,7 @@ from .models import NewsItem, ContentItem, PostHistory
 from .news_parser import NewsParser
 from .content_analyzer import ContentAnalyzer
 from .post_generator import PostGenerator
+from ..content_deduplication import validate_and_register_content, get_deduplication_system
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +62,30 @@ class ContentIntelligenceSystem:
             for item in saved_items[:3]:  # Максимум 3 поста
                 try:
                     post_text = await self.generator.generate_post(item)
-                    if not await self._is_post_duplicate(post_text):
+                    
+                    # НОВАЯ СИСТЕМА ПРОВЕРКИ УНИКАЛЬНОСТИ
+                    title = item.title[:100]  # Используем заголовок новости как title
+                    is_valid, message = validate_and_register_content(
+                        title=title,
+                        content=post_text,
+                        content_type="intelligence_post",
+                        source_system="content_intelligence"
+                    )
+                    
+                    if is_valid:
                         await self._save_post_history(post_text)
                         posts.append(post_text)
+                        logger.info(f"✅ Unique intelligence post created from: {item.source}")
+                    else:
+                        logger.warning(f"❌ Intelligence post not unique: {message}")
+                        # Блокируем тему/источник временно
+                        dedup_system = get_deduplication_system()
+                        dedup_system.block_topic_temporarily(
+                            f"{item.source}:{item.category}", 
+                            f"Intelligence duplicate: {message}", 
+                            hours=6
+                        )
+                        
                 except Exception as e:
                     logger.error(f"Failed to generate post: {e}")
             

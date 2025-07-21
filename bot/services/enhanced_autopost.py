@@ -1,6 +1,7 @@
 """
 🔷 ПРОФЕССИОНАЛЬНАЯ СИСТЕМА АВТОПОСТИНГА
 Генерирует ежедневный разнообразный юридический контент с реальными источниками
++ ИНТЕГРИРОВАНА СИСТЕМА ПРЕДОТВРАЩЕНИЯ ДУБЛИРОВАНИЯ КОНТЕНТА
 """
 
 import asyncio
@@ -12,6 +13,22 @@ from typing import Dict, List, Optional, Tuple, Any
 import aiohttp
 import json
 import logging
+
+# Импорт системы дедупликации
+try:
+    from .content_deduplication import validate_and_register_content, get_deduplication_system
+    from .professional_legal_content import get_expert_legal_content
+    from .ai_legal_expert import generate_ai_expert_content
+except ImportError:
+    # Fallback если модуль не найден
+    def validate_and_register_content(*args, **kwargs):
+        return True, "Deduplication not available"
+    def get_deduplication_system():
+        return None
+    async def get_expert_legal_content(*args, **kwargs):
+        return "Professional content not available"
+    async def generate_ai_expert_content(*args, **kwargs):
+        return "AI content not available"
 
 log = logging.getLogger(__name__)
 
@@ -640,47 +657,150 @@ class EnhancedAutopostSystem:
         self.last_post_time = None
 
     async def generate_daily_post(self) -> Dict[str, str]:
-        """Генерация ежедневного поста с учетом ротации"""
+        """Генерация ежедневного поста с учетом ротации и проверкой уникальности"""
 
-        # Получаем следующую тему по ротации
-        post_type, topic = self.db.get_next_topic()
+        max_attempts = 15  # Больше попыток для более сложной системы
+        
+        for attempt in range(max_attempts):
+            try:
+                # Получаем следующую тему по ротации
+                post_type, topic = self.db.get_next_topic()
 
-        log.info(f"Generating {post_type} post about: {topic}")
+                log.info(f"Generating {post_type} post about: {topic} (attempt {attempt + 1}/{max_attempts})")
 
-        # Генерируем контент в зависимости от типа
-        if post_type == "case":
-            post_data = await self.generator.generate_case_post(topic)
-        elif post_type == "article":
-            post_data = await self.generator.generate_article_post(topic)
-        elif post_type == "news":
-            post_data = await self.generator.generate_news_post(topic)
-        else:
-            # Fallback на кейс
-            post_data = await self.generator.generate_case_post("Общие правовые вопросы")
+                # ОБНОВЛЕННАЯ СИСТЕМА: Приоритет профессиональному контенту
+                use_professional = random.random() < 0.9  # 90% профессиональный контент
+                
+                if use_professional:
+                    try:
+                        if post_type == "case":
+                            expert_content = await get_expert_legal_content("case")
+                        elif post_type == "article":  
+                            expert_content = await get_expert_legal_content("guide")
+                        elif post_type == "news":
+                            expert_content = await get_expert_legal_content("update")
+                        else:
+                            expert_content = await get_expert_legal_content("practice")
+                        
+                        # Формируем данные поста из экспертного контента
+                        title = expert_content.split('\n')[0].replace('**', '').replace('*', '').strip()
+                        post_data = {
+                            "title": title[:100],
+                            "content": expert_content,
+                            "type": f"expert_{post_type}",
+                            "topic": topic,
+                            "legal_reference": "Экспертный анализ"
+                        }
+                        
+                    except Exception as e:
+                        log.warning(f"Failed to generate expert content: {e}, falling back to standard")
+                        use_professional = False
+                
+                if not use_professional:
+                    # Генерируем стандартный контент в зависимости от типа
+                    if post_type == "case":
+                        post_data = await self.generator.generate_case_post(topic)
+                    elif post_type == "article":
+                        post_data = await self.generator.generate_article_post(topic)
+                    elif post_type == "news":
+                        post_data = await self.generator.generate_news_post(topic)
+                    else:
+                        # Fallback на кейс
+                        post_data = await self.generator.generate_case_post("Общие правовые вопросы")
 
-        # Добавляем кнопку консультации
-        post_data['content'] += "\n\n📱 **Есть вопросы? Получите консультацию!**"
-        post_data['enable_comments'] = False
+                # ПРОВЕРКА УНИКАЛЬНОСТИ КОНТЕНТА
+                is_valid, message = validate_and_register_content(
+                    title=post_data['title'],
+                    content=post_data['content'],
+                    content_type="enhanced_autopost",
+                    source_system="enhanced_autopost"
+                )
 
-        # Получаем имя бота из переменных окружения или используем fallback
+                if not is_valid:
+                    log.warning(f"❌ Enhanced post not unique (attempt {attempt + 1}): {message}")
+                    # Блокируем тему на более длительный срок
+                    dedup_system = get_deduplication_system()
+                    if dedup_system:
+                        dedup_system.block_topic_temporarily(
+                            topic, 
+                            f"Enhanced autopost duplicate on attempt {attempt + 1}: {message}", 
+                            hours=4
+                        )
+                    continue
+
+                # Добавляем кнопку консультации
+                post_data['content'] += "\n\n📱 **Есть вопросы? Получите консультацию!**"
+                post_data['enable_comments'] = False
+
+                # Получаем имя бота из переменных окружения или используем fallback
+                import os
+                bot_username = os.getenv("BOT_USERNAME", "your_bot").replace("@", "")
+
+                post_data['keyboard'] = [
+                    [{"text": "📱 Получить консультацию", "url": f"https://t.me/{bot_username}"}]
+                ]
+
+                # Сохраняем в историю только после успешной проверки уникальности
+                self.db.save_post(
+                    post_data['type'],
+                    post_data['title'],
+                    post_data['topic'],
+                    post_data.get('legal_reference', '')
+                )
+
+                self.last_post_time = datetime.now()
+                
+                # Добавляем информацию о проверке уникальности
+                post_data['uniqueness_validated'] = True
+                post_data['attempts_needed'] = attempt + 1
+
+                log.info(f"✅ Unique enhanced post created after {attempt + 1} attempts")
+                return post_data
+                
+            except Exception as e:
+                log.error(f"Error generating post (attempt {attempt + 1}): {e}")
+                if attempt == max_attempts - 1:
+                    # Последняя попытка - возвращаем fallback
+                    break
+                continue
+
+        # Если все попытки исчерпаны, возвращаем fallback без проверки уникальности
+        log.error(f"❌ Failed to generate unique enhanced content after {max_attempts} attempts, using fallback")
+        
+        fallback_data = {
+            "title": "📚 Правовая помощь доступна каждому",
+            "content": """⚖️ **ЗНАЙТЕ СВОИ ПРАВА!**
+
+🔍 **Каждый день мы помогаем людям решать правовые вопросы:**
+• Трудовые споры и увольнения
+• Семейные конфликты и алименты
+• Защита прав потребителей
+• Жилищные вопросы и ЖКХ
+• Автомобильные споры и ОСАГО
+
+💡 **Помните:** незнание закона не освобождает от ответственности, но знание защищает ваши права!
+
+❓ **Есть вопрос? Получите персональную консультацию!**
+
+📱 **Есть вопросы? Получите консультацию!**""",
+            "type": "fallback",
+            "topic": "Общая правовая помощь",
+            "legal_reference": "Общие нормы права",
+            "enable_comments": False,
+            "uniqueness_validated": False,
+            "attempts_needed": max_attempts,
+            "is_fallback": True
+        }
+        
+        # Получаем имя бота
         import os
         bot_username = os.getenv("BOT_USERNAME", "your_bot").replace("@", "")
-
-        post_data['keyboard'] = [
+        fallback_data['keyboard'] = [
             [{"text": "📱 Получить консультацию", "url": f"https://t.me/{bot_username}"}]
         ]
 
-        # Сохраняем в историю
-        self.db.save_post(
-            post_data['type'],
-            post_data['title'],
-            post_data['topic'],
-            post_data.get('legal_reference', '')
-        )
-
         self.last_post_time = datetime.now()
-
-        return post_data
+        return fallback_data
 
     async def should_post_now(self) -> bool:
         """Проверка нужно ли публиковать пост сейчас"""

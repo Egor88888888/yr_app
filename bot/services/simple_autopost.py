@@ -1,6 +1,7 @@
 """
 🚀 ПРОСТАЯ И НАДЕЖНАЯ СИСТЕМА АВТОПОСТИНГА
 Работает БЕЗ сложных зависимостей - только базовый python + telegram
++ ИНТЕГРИРОВАНА СИСТЕМА ПРЕДОТВРАЩЕНИЯ ДУБЛИРОВАНИЯ КОНТЕНТА
 """
 
 import asyncio
@@ -11,6 +12,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
+
+# Импорт системы дедупликации
+from .content_deduplication import validate_and_register_content, get_deduplication_system
+# Импорт профессионального контента
+from .professional_legal_content import get_expert_legal_content
+from .ai_legal_expert import generate_ai_expert_content
 
 logger = logging.getLogger(__name__)
 
@@ -180,52 +187,100 @@ class SimpleAutopost:
             return {"success": False, "error": str(e)}
 
     async def _create_regular_post(self):
-        """Создание регулярного поста"""
-        try:
-            logger.info("📝 Creating regular autopost...")
+        """Создание регулярного поста с проверкой уникальности"""
+        max_attempts = 10  # Максимум попыток генерации уникального контента
+        
+        for attempt in range(max_attempts):
+            try:
+                logger.info(f"📝 Creating regular autopost (attempt {attempt + 1}/{max_attempts})...")
 
-            # Выбираем тип контента
-            post_types = [
-                "legal_case",
-                "legal_tip",
-                "legal_news",
-                "legal_fact"
-            ]
+                # Выбираем тип контента
+                post_types = [
+                    "legal_case",
+                    "legal_tip", 
+                    "legal_news",
+                    "legal_fact"
+                ]
 
-            post_type = random.choice(post_types)
+                post_type = random.choice(post_types)
 
-            if post_type == "legal_case":
-                post_text = await self._generate_legal_case()
-            elif post_type == "legal_tip":
-                post_text = await self._generate_legal_tip()
-            elif post_type == "legal_news":
-                post_text = await self._generate_legal_news()
-            else:
-                post_text = await self._generate_legal_fact()
+                # НОВАЯ СИСТЕМА: Генерация профессионального контента
+                if post_type == "legal_case":
+                    # 80% профессиональный контент, 20% базовый
+                    if random.random() < 0.8:
+                        post_text = await get_expert_legal_content("case")
+                    else:
+                        post_text = await self._generate_legal_case()
+                elif post_type == "legal_tip":
+                    if random.random() < 0.8:
+                        post_text = await get_expert_legal_content("guide")
+                    else:
+                        post_text = await self._generate_legal_tip()
+                elif post_type == "legal_news":
+                    if random.random() < 0.8:
+                        post_text = await get_expert_legal_content("update")
+                    else:
+                        post_text = await self._generate_legal_news()
+                else:
+                    if random.random() < 0.8:
+                        post_text = await get_expert_legal_content("practice")
+                    else:
+                        post_text = await self._generate_legal_fact()
 
-            # Добавляем кнопку консультации
-            keyboard = [[
-                InlineKeyboardButton(
-                    "📱 Получить консультацию",
-                    url=f"https://t.me/{self.bot.username.replace('@', '')}"
+                # ПРОВЕРКА УНИКАЛЬНОСТИ КОНТЕНТА
+                title = post_text.split('\n')[0][:100]  # Первая строка как заголовок
+                is_valid, message = validate_and_register_content(
+                    title=title,
+                    content=post_text,
+                    content_type="simple_autopost",
+                    source_system="simple_autopost"
                 )
-            ]]
 
-            # Отправляем пост
-            message = await self.bot.send_message(
-                chat_id=self.channel_id,
-                text=post_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
-            )
+                if not is_valid:
+                    logger.warning(f"❌ Post not unique (attempt {attempt + 1}): {message}")
+                    # Блокируем использованную тему на 2 часа
+                    dedup_system = get_deduplication_system()
+                    dedup_system.block_topic_temporarily(title, f"SimpleAutopost duplicate on attempt {attempt + 1}", hours=2)
+                    continue
 
-            logger.info(
-                f"✅ Regular autopost created: {message.message_id} (type: {post_type})")
-            return {"success": True, "message_id": message.message_id, "type": post_type}
+                # Добавляем кнопку консультации
+                keyboard = [[
+                    InlineKeyboardButton(
+                        "📱 Получить консультацию",
+                        url=f"https://t.me/{self.bot.username.replace('@', '')}"
+                    )
+                ]]
 
-        except Exception as e:
-            logger.error(f"Failed to create regular post: {e}")
-            return {"success": False, "error": str(e)}
+                # Отправляем пост
+                message = await self.bot.send_message(
+                    chat_id=self.channel_id,
+                    text=post_text,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+
+                logger.info(f"✅ Unique regular autopost created: {message.message_id} (type: {post_type}) after {attempt + 1} attempts")
+                return {
+                    "success": True, 
+                    "message_id": message.message_id, 
+                    "type": post_type,
+                    "attempts_needed": attempt + 1,
+                    "uniqueness_validated": True
+                }
+
+            except Exception as e:
+                logger.error(f"Failed to create regular post (attempt {attempt + 1}): {e}")
+                if attempt == max_attempts - 1:
+                    return {"success": False, "error": str(e), "max_attempts_reached": True}
+                continue
+
+        # Если все попытки исчерпаны
+        logger.error(f"❌ Failed to generate unique content after {max_attempts} attempts")
+        return {
+            "success": False, 
+            "error": f"Could not generate unique content after {max_attempts} attempts",
+            "max_attempts_reached": True
+        }
 
     async def _generate_legal_case(self) -> str:
         """Генерация юридического кейса"""
