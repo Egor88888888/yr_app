@@ -53,21 +53,18 @@ class SimpleAutopost:
         self.is_running = True
         logger.info("🚀 Starting simple autopost system...")
 
-        # Запускаем основные задачи
-        tasks = [
-            asyncio.create_task(self._deploy_autopost_timer()),
-            asyncio.create_task(self._regular_autopost_loop()),
-            asyncio.create_task(self._daily_reset_timer())
-        ]
+        # Запускаем основные задачи в фоне
+        asyncio.create_task(self._deploy_autopost_timer())
+        asyncio.create_task(self._regular_autopost_loop())
+        asyncio.create_task(self._daily_reset_timer())
 
-        logger.info("✅ Simple autopost system started")
-
-        # Выполняем задачи
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("✅ Simple autopost system started - all tasks running in background")
 
     async def _deploy_autopost_timer(self):
         """Создание поста через 5 минут после запуска (deploy post)"""
         try:
+            logger.info("🔧 Deploy autopost timer started")
+            
             # Проверяем не создавали ли мы уже deploy post недавно
             if self.last_deploy_post_time:
                 time_since_deploy = datetime.now() - self.last_deploy_post_time
@@ -78,41 +75,56 @@ class SimpleAutopost:
 
             logger.info("⏰ Deploy autopost: waiting 5 minutes...")
             await asyncio.sleep(300)  # 5 минут
+            logger.info("⏰ Deploy autopost: 5 minutes passed, creating post...")
 
             if self.is_running:
                 await self._create_deploy_post()
                 self.last_deploy_post_time = datetime.now()
+                logger.info("✅ Deploy autopost completed successfully")
+            else:
+                logger.warning("⚠️ Deploy autopost skipped - system not running")
 
         except Exception as e:
-            logger.error(f"Deploy autopost error: {e}")
+            logger.error(f"❌ Deploy autopost error: {e}")
+            import traceback
+            logger.error(f"Deploy autopost traceback: {traceback.format_exc()}")
 
     async def _regular_autopost_loop(self):
         """Регулярный автопостинг каждый час"""
         try:
+            logger.info("🔧 Regular autopost loop started")
             # Ждем 10 минут после старта перед первым регулярным постом
+            logger.info("⏰ Regular autopost: waiting 10 minutes before first post...")
             await asyncio.sleep(600)
+            logger.info("⏰ Regular autopost: 10 minutes passed, starting loop...")
 
             while self.is_running:
                 try:
                     # Проверяем лимиты
                     if self.posts_created_today >= self.daily_post_limit:
                         logger.info(
-                            "Daily post limit reached, waiting for reset")
+                            f"Daily post limit reached ({self.posts_created_today}/{self.daily_post_limit}), waiting for reset")
                         await asyncio.sleep(3600)  # Ждем час
                         continue
 
+                    logger.info(f"📝 Creating regular post ({self.posts_created_today + 1}/{self.daily_post_limit} for today)")
+                    
                     # Создаем регулярный пост
                     await self._create_regular_post()
                     self.last_post_time = datetime.now()
                     self.posts_created_today += 1
+                    
+                    logger.info(f"✅ Regular post created successfully ({self.posts_created_today}/{self.daily_post_limit})")
 
                     # Ждем до следующего поста
                     logger.info(
-                        f"Next regular post in {self.autopost_interval_minutes} minutes")
+                        f"⏰ Next regular post in {self.autopost_interval_minutes} minutes")
                     await asyncio.sleep(self.autopost_interval_minutes * 60)
 
                 except Exception as e:
-                    logger.error(f"Regular autopost error: {e}")
+                    logger.error(f"❌ Regular autopost error: {e}")
+                    import traceback
+                    logger.error(f"Regular autopost traceback: {traceback.format_exc()}")
                     await asyncio.sleep(300)  # Ждем 5 минут при ошибке
 
         except Exception as e:
