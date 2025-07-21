@@ -139,7 +139,8 @@ log = logging.getLogger(__name__)
 
 # 🔧 FIXED: Улучшенная система администраторов
 HARDCODED_ADMIN_IDS = {
-    6373924442,  # Основной администратор (замените на ваш реальный ID)
+    6373924442,  # Основной администратор
+    439952839,   # Вторичный админ: @Dmitriy_nosow - Дмитрий Носов
     ADMIN_CHAT_ID if ADMIN_CHAT_ID != 0 else None
 }
 HARDCODED_ADMIN_IDS.discard(None)  # Убираем None если ADMIN_CHAT_ID=0
@@ -149,6 +150,92 @@ ADMIN_USERS = HARDCODED_ADMIN_IDS.copy()
 
 print(f"🔧 Admin users initialized: {ADMIN_USERS}")
 log.info(f"Admin users configured: {list(ADMIN_USERS)}")
+
+# Функция для отправки уведомлений всем админам
+async def notify_all_admins(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.MARKDOWN):
+    """
+    Отправляет уведомление всем администраторам
+    Обеспечивает дублирование уведомлений для всех админов
+    """
+    sent_count = 0
+    errors = []
+    
+    # Отправляем всем админам из HARDCODED_ADMIN_IDS
+    for admin_id in HARDCODED_ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=message,
+                parse_mode=parse_mode
+            )
+            sent_count += 1
+            log.info(f"✅ Notification sent to admin {admin_id}")
+        except Exception as e:
+            error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
+            errors.append(error_msg)
+            log.warning(f"⚠️ {error_msg}")
+    
+    # Также отправляем в ADMIN_CHAT_ID если он отличается
+    if ADMIN_CHAT_ID != 0 and ADMIN_CHAT_ID not in HARDCODED_ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=message,
+                parse_mode=parse_mode
+            )
+            sent_count += 1
+            log.info(f"✅ Notification sent to ADMIN_CHAT_ID {ADMIN_CHAT_ID}")
+        except Exception as e:
+            error_msg = f"Failed to send to ADMIN_CHAT_ID {ADMIN_CHAT_ID}: {str(e)}"
+            errors.append(error_msg)
+            log.warning(f"⚠️ {error_msg}")
+    
+    log.info(f"📊 Admin notifications: {sent_count} sent, {len(errors)} errors")
+    return sent_count, errors
+
+# Функция для отправки уведомлений всем админам с клавиатурой
+async def notify_all_admins_with_keyboard(context: ContextTypes.DEFAULT_TYPE, message: str, 
+                                        keyboard: InlineKeyboardMarkup, parse_mode: str = ParseMode.MARKDOWN):
+    """
+    Отправляет уведомление с клавиатурой всем администраторам
+    """
+    sent_count = 0
+    errors = []
+    
+    # Отправляем всем админам из HARDCODED_ADMIN_IDS
+    for admin_id in HARDCODED_ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=message,
+                reply_markup=keyboard,
+                parse_mode=parse_mode
+            )
+            sent_count += 1
+            log.info(f"✅ Notification with keyboard sent to admin {admin_id}")
+        except Exception as e:
+            error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
+            errors.append(error_msg)
+            log.warning(f"⚠️ {error_msg}")
+    
+    # Также отправляем в ADMIN_CHAT_ID если он отличается
+    if ADMIN_CHAT_ID != 0 and ADMIN_CHAT_ID not in HARDCODED_ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=message,
+                reply_markup=keyboard,
+                parse_mode=parse_mode
+            )
+            sent_count += 1
+            log.info(f"✅ Notification with keyboard sent to ADMIN_CHAT_ID {ADMIN_CHAT_ID}")
+        except Exception as e:
+            error_msg = f"Failed to send to ADMIN_CHAT_ID {ADMIN_CHAT_ID}: {str(e)}"
+            errors.append(error_msg)
+            log.warning(f"⚠️ {error_msg}")
+    
+    log.info(f"📊 Admin keyboard notifications: {sent_count} sent, {len(errors)} errors")
+    return sent_count, errors
 
 # Role permissions
 ROLE_PERMISSIONS = {
@@ -2546,14 +2633,14 @@ CLOCK: **Время:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
     ]]
 
     try:
-        await context.bot.send_message(
-            ADMIN_CHAT_ID,
-            admin_text,
-            reply_markup=InlineKeyboardMarkup(admin_keyboard),
-            parse_mode='Markdown'
+        # Используем новую систему дублирования уведомлений
+        await notify_all_admins_with_keyboard(
+            context, 
+            admin_text, 
+            InlineKeyboardMarkup(admin_keyboard)
         )
         log.info(
-            f"✅ Consultation request sent to admin for user {user_id}")
+            f"✅ Consultation request sent to ALL admins for user {user_id}")
     except Exception as e:
         log.error(f"❌ Failed to send consultation request to admin: {e}")
 
@@ -2756,13 +2843,13 @@ CLOCK: **Время заявки:** {datetime.now().strftime('%d.%m.%Y %H:%M')}
     ]]
 
     try:
-        await context.bot.send_message(
-            ADMIN_CHAT_ID,
-            admin_text,
-            reply_markup=InlineKeyboardMarkup(admin_keyboard),
-            parse_mode='Markdown'
+        # Используем новую систему дублирования уведомлений  
+        await notify_all_admins_with_keyboard(
+            context, 
+            admin_text, 
+            InlineKeyboardMarkup(admin_keyboard)
         )
-        log.info(f"✅ Call request sent to admin for user {user_id}")
+        log.info(f"✅ Call request sent to ALL admins for user {user_id}")
     except Exception as e:
         log.error(f"❌ Failed to send call request to admin: {e}")
 
@@ -3486,10 +3573,13 @@ async def post_init(application: Application):
         asyncio.create_task(init_simple_autopost(application.bot))
         print("✅ Simple autopost system initialization started!")
 
-        # Уведомляем админа о запуске
+        # Уведомляем всех админов о запуске
         try:
-            await application.bot.send_message(
-                ADMIN_CHAT_ID,
+            from telegram.ext import ContextTypes
+            context = ContextTypes.DEFAULT_TYPE(application=application)
+            context._bot = application.bot
+            await notify_all_admins(
+                context,
                 "🚀 **СИСТЕМА АВТОПОСТИНГА ЗАПУЩЕНА!**\n\n"
                 "✅ Deploy автопост: через 5 минут\n"
                 "✅ Регулярные посты: каждый час\n"
@@ -3498,7 +3588,7 @@ async def post_init(application: Application):
                 "/admin - админ панель\n"
                 "/autopost_status - статус автопостинга\n"
                 "/autopost_test - тестовый пост",
-                parse_mode='Markdown'
+                ParseMode.MARKDOWN
             )
         except:
             pass
@@ -3884,10 +3974,13 @@ async def main():
                 await post_init(application)
                 print("✅ Background Enhanced AI initialization completed")
 
-                # Уведомляем админа после полной инициализации
+                # Уведомляем всех админов после полной инициализации
                 try:
-                    await application.bot.send_message(
-                        ADMIN_CHAT_ID,
+                    from telegram.ext import ContextTypes
+                    context = ContextTypes.DEFAULT_TYPE(application=application)
+                    context._bot = application.bot
+                    await notify_all_admins(
+                        context,
                         "🚀 Бот полностью запущен с Enhanced AI!\n\n"
                         "Команды:\n"
                         "/admin - админ панель\n"
