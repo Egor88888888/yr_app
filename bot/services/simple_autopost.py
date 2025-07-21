@@ -49,6 +49,7 @@ class SimpleAutopost:
 
         print(f"🔧 SimpleAutopost initialized for channel: {self.channel_id}")
         print(f"🔍 Deduplication system: {DEDUPLICATION_TYPE}")
+        print("🚀 REGULAR AUTOPOST FIX DEPLOYED - version 94d7618")
         logger.info(
             f"🔧 SimpleAutopost initialized for channel: {self.channel_id}")
         logger.info(f"🔍 Deduplication system: {DEDUPLICATION_TYPE}")
