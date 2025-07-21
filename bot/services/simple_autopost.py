@@ -13,8 +13,14 @@ from typing import Dict, Any, Optional
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
-# Импорт системы дедупликации
-from .content_deduplication import validate_and_register_content, get_deduplication_system
+# Импорт системы дедупликации - PostgreSQL версия для production
+try:
+    from .content_deduplication_pg import validate_and_register_content
+    DEDUPLICATION_TYPE = "PostgreSQL"
+except ImportError:
+    # Fallback на SQLite версию для локальной разработки
+    from .content_deduplication import validate_and_register_content, get_deduplication_system
+    DEDUPLICATION_TYPE = "SQLite"
 # Импорт профессионального контента
 from .professional_legal_content import get_expert_legal_content
 from .ai_legal_expert import generate_ai_expert_content
@@ -43,6 +49,7 @@ class SimpleAutopost:
 
         logger.info(
             f"🔧 SimpleAutopost initialized for channel: {self.channel_id}")
+        logger.info(f"🔍 Deduplication system: {DEDUPLICATION_TYPE}")
 
     async def start_autopost_system(self):
         """Запуск простой системы автопостинга"""

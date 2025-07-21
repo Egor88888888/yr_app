@@ -41,7 +41,7 @@ from telegram.constants import ParseMode
 
 from bot.services.db import (
     async_sessionmaker, init_db, Base,
-    User, Application as AppModel, Category, Admin, Payment
+    User, Application as AppModel, Category, Admin, Payment, ContentFingerprint
 )
 from bot.services.sheets import append_lead
 from bot.services.pay import create_payment

@@ -48,6 +48,7 @@ __all__ = [
     "Application",
     "Admin",
     "Payment",
+    "ContentFingerprint",
     "Log",
 ]
 
@@ -198,6 +199,23 @@ class Log(Base):
     message: Mapped[str] = mapped_column(Text)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now())
+
+
+class ContentFingerprint(Base, TimestampMixin):
+    """Отпечатки контента для системы дедупликации"""
+    __tablename__ = "content_fingerprints"
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    title_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    full_text_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    topic_keywords: Mapped[str] = mapped_column(Text, nullable=True)  # JSON as string
+    semantic_tokens: Mapped[str] = mapped_column(Text, nullable=True)  # JSON as string
+    legal_references: Mapped[str] = mapped_column(Text, nullable=True)  # JSON as string
+    blocked_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True)
 
 
 # -------- DB init ----------
