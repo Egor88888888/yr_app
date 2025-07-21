@@ -47,6 +47,8 @@ class SimpleAutopost:
             '@test_legal_channel'
         )
 
+        print(f"🔧 SimpleAutopost initialized for channel: {self.channel_id}")
+        print(f"🔍 Deduplication system: {DEDUPLICATION_TYPE}")
         logger.info(
             f"🔧 SimpleAutopost initialized for channel: {self.channel_id}")
         logger.info(f"🔍 Deduplication system: {DEDUPLICATION_TYPE}")
@@ -58,6 +60,7 @@ class SimpleAutopost:
             return
 
         self.is_running = True
+        print("🚀 Starting simple autopost system...")
         logger.info("🚀 Starting simple autopost system...")
 
         # Запускаем основные задачи в фоне
@@ -65,23 +68,27 @@ class SimpleAutopost:
         asyncio.create_task(self._regular_autopost_loop())
         asyncio.create_task(self._daily_reset_timer())
 
+        print("✅ Simple autopost system started - all tasks running in background")
         logger.info("✅ Simple autopost system started - all tasks running in background")
 
     async def _deploy_autopost_timer(self):
         """Создание поста через 5 минут после запуска (deploy post)"""
         try:
+            print("🔧 Deploy autopost timer started")
             logger.info("🔧 Deploy autopost timer started")
             
             # Проверяем не создавали ли мы уже deploy post недавно
             if self.last_deploy_post_time:
                 time_since_deploy = datetime.now() - self.last_deploy_post_time
                 if time_since_deploy < timedelta(hours=1):
-                    logger.info(
-                        "Deploy post already created recently, skipping")
+                    print("Deploy post already created recently, skipping")
+                    logger.info("Deploy post already created recently, skipping")
                     return
 
+            print("⏰ Deploy autopost: waiting 5 minutes...")
             logger.info("⏰ Deploy autopost: waiting 5 minutes...")
             await asyncio.sleep(300)  # 5 минут
+            print("⏰ Deploy autopost: 5 minutes passed, creating post...")
             logger.info("⏰ Deploy autopost: 5 minutes passed, creating post...")
 
             if self.is_running:
@@ -99,10 +106,13 @@ class SimpleAutopost:
     async def _regular_autopost_loop(self):
         """Регулярный автопостинг каждый час"""
         try:
+            print("🔧 Regular autopost loop started")
             logger.info("🔧 Regular autopost loop started")
             # Ждем 10 минут после старта перед первым регулярным постом
+            print("⏰ Regular autopost: waiting 10 minutes before first post...")
             logger.info("⏰ Regular autopost: waiting 10 minutes before first post...")
             await asyncio.sleep(600)
+            print("⏰ Regular autopost: 10 minutes passed, starting loop...")
             logger.info("⏰ Regular autopost: 10 minutes passed, starting loop...")
 
             while self.is_running:
