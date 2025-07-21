@@ -171,9 +171,12 @@ async def notify_all_admins(context: ContextTypes.DEFAULT_TYPE, message: str, pa
             sent_count += 1
             log.info(f"✅ Notification sent to admin {admin_id}")
         except Exception as e:
-            error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
-            errors.append(error_msg)
-            log.warning(f"⚠️ {error_msg}")
+            if "Chat not found" in str(e):
+                log.info(f"ℹ️ Admin {admin_id} hasn't started the bot yet (Chat not found)")
+            else:
+                error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
+                errors.append(error_msg)
+                log.warning(f"⚠️ {error_msg}")
     
     # Также отправляем в ADMIN_CHAT_ID если он отличается
     if ADMIN_CHAT_ID != 0 and ADMIN_CHAT_ID not in HARDCODED_ADMIN_IDS:
@@ -214,9 +217,12 @@ async def notify_all_admins_with_keyboard(context: ContextTypes.DEFAULT_TYPE, me
             sent_count += 1
             log.info(f"✅ Notification with keyboard sent to admin {admin_id}")
         except Exception as e:
-            error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
-            errors.append(error_msg)
-            log.warning(f"⚠️ {error_msg}")
+            if "Chat not found" in str(e):
+                log.info(f"ℹ️ Admin {admin_id} hasn't started the bot yet (Chat not found)")
+            else:
+                error_msg = f"Failed to send to admin {admin_id}: {str(e)}"
+                errors.append(error_msg)
+                log.warning(f"⚠️ {error_msg}")
     
     # Также отправляем в ADMIN_CHAT_ID если он отличается
     if ADMIN_CHAT_ID != 0 and ADMIN_CHAT_ID not in HARDCODED_ADMIN_IDS:

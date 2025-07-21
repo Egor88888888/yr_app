@@ -416,19 +416,14 @@ try:
 
                     # Try to add to Google Sheets
                     try:
-                        await append_lead({
-                            'name': name,
-                            'phone': phone,
-                            'email': email or '',
-                            'category': category_name,
-                            'subcategory': subcategory,
-                            'description': description,
-                            'contact_method': contact_method,
-                            'contact_time': contact_time,
-                            'files_count': len(files),
-                            'application_id': application.id,
-                            'utm_source': utm_source or ''
-                        })
+                        # Fetch the category object
+                        category_result = await session.execute(
+                            select(Category).where(Category.id == category_id)
+                        )
+                        category = category_result.scalar_one_or_none()
+                        
+                        # append_lead is not async, so don't await it
+                        append_lead(application, user, category)
                         print("✅ Added to Google Sheets")
                     except Exception as e:
                         print(f"⚠️ Failed to add to Google Sheets: {e}")
@@ -469,17 +464,13 @@ try:
                         price = category_prices.get(category_id, 3000)
                         application.price = price
 
-                        payment_response = await create_payment(
-                            amount=price,
-                            description=f"Юридическая консультация: {category_name}",
-                            user_id=user.tg_id,
-                            application_id=application.id
-                        )
+                        # create_payment is not async and takes (app, user, amount)
+                        payment_url = create_payment(application, user, price)
 
-                        if payment_response and payment_response.get('url'):
-                            payment_url = payment_response['url']
-                            print(
-                                f"✅ Payment URL created: {payment_url[:50]}...")
+                        if payment_url:
+                            print(f"✅ Payment URL created: {payment_url[:50]}...")
+                        else:
+                            print("⚠️ Payment system disabled or not configured")
 
                         await session.commit()
 
