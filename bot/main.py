@@ -24,7 +24,7 @@ from bot.handlers.user.commands import (
     handle_phone_input, initialize_ai_manager
 )
 
-# Import existing handlers that haven't been refactored yet
+# Import minimal admin handlers
 from bot.handlers.smm_admin import register_smm_admin_handlers
 from bot.handlers.quick_fixes import register_quick_fixes_handlers
 from bot.handlers.production_testing import register_production_testing_handlers

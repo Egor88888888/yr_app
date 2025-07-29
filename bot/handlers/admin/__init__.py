@@ -1,0 +1,1 @@
+# Simplified admin handlers

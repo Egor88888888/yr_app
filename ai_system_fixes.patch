@@ -1,0 +1,128 @@
+diff --git a/bot/services/ai.py b/bot/services/ai.py
+index 879431e..88920c4 100644
+--- a/bot/services/ai.py
++++ b/bot/services/ai.py
+@@ -8,12 +8,9 @@ import aiohttp
+ import json
+ 
+ # Azure OpenAI Configuration - ТОЛЬКО AZURE!
+-AZURE_OPENAI_API_KEY = os.getenv(
+-    "AZURE_OPENAI_API_KEY", "Fjaj2B7pc9tXPnLT4jY8Wv4Gl9435Ifw6ymyQ68OolKP0LVxBoqjJQQJ99BEACfhMk5XJ3w3AAAAACOGrsqR")
+-AZURE_OPENAI_ENDPOINT = os.getenv(
+-    "AZURE_OPENAI_ENDPOINT", "https://divan-mb68c0s7-swedencentral.cognitiveservices.azure.com")
+-AZURE_OPENAI_API_VERSION = os.getenv(
+-    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
++AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
++AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT") 
++AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+ 
+ 
+ async def generate_ai_response(messages: list[dict], model: str = "gpt-4o-mini", max_tokens: int = 800) -> str:
+@@ -38,14 +35,14 @@ async def _azure_openai_request(messages: list[dict], model: str, max_tokens: in
+             "Content-Type": "application/json",
+         }
+ 
+-        # ИСПРАВЛЕННЫЙ Azure OpenAI deployment mapping для ваших actual deployments
++        # ОБНОВЛЕННЫЙ Azure OpenAI deployment mapping - используем доступные deployments
+         deployment_map = {
+-            "gpt-4o-mini": "gpt-35-turbo",          # используем gpt-35-turbo
+-            "gpt-4o": "gpt-4.1",                   # используем gpt-4.1
++            "gpt-4o-mini": "gpt-35-turbo",          # используем gpt-35-turbo  
++            "gpt-4o": "gpt-35-turbo",              # fallback на gpt-35-turbo
+             "gpt-35-turbo": "gpt-35-turbo",        # прямое соответствие
+-            "gpt-4.1": "gpt-4.1",                  # прямое соответствие
++            "gpt-4.1": "gpt-35-turbo",             # fallback на gpt-35-turbo
+             "openai/gpt-4o-mini": "gpt-35-turbo",  # fallback
+-            "openai/gpt-4o": "gpt-4.1"             # fallback
++            "openai/gpt-4o": "gpt-35-turbo"        # fallback
+         }
+ 
+         deployment_name = deployment_map.get(
+diff --git a/bot/services/ai_enhanced/core/ai_manager.py b/bot/services/ai_enhanced/core/ai_manager.py
+index 0f184a6..3bfcc44 100644
+--- a/bot/services/ai_enhanced/core/ai_manager.py
++++ b/bot/services/ai_enhanced/core/ai_manager.py
+@@ -283,6 +283,11 @@ class AIEnhancedManager:
+     ):
+         """Сохранение взаимодействия в базу данных"""
+         try:
++            # Проверяем, что session имеет id (не fallback)
++            if not hasattr(session, 'id') or session.id is None:
++                logger.warning(f"Skipping interaction save - session has no id (fallback mode)")
++                return
++
+             async with async_sessionmaker() as db_session:
+                 # Сохраняем сообщение пользователя
+                 user_msg = DialogueMessage(
+diff --git a/bot/services/ai_enhanced/memory/session_manager.py b/bot/services/ai_enhanced/memory/session_manager.py
+index 6252194..5d9914d 100644
+--- a/bot/services/ai_enhanced/memory/session_manager.py
++++ b/bot/services/ai_enhanced/memory/session_manager.py
+@@ -112,7 +112,8 @@ class SessionManager:
+         except Exception as e:
+             logger.error(
+                 f"Failed to get/create session for user {user_id}: {e}")
+-            return None
++            # Возвращаем fallback сессию при ошибке соединения
++            return self._create_fallback_session(user_id)
+ 
+     async def update_session_context(
+         self,
+@@ -169,3 +170,23 @@ class SessionManager:
+             "active_sessions": len(self.active_sessions),
+             "session_timeout_hours": self.session_timeout_hours
+         }
++
++    def _create_fallback_session(self, user_id: int) -> DialogueSession:
++        """Создание fallback сессии для работы без БД"""
++        from ...ai_enhanced_models import DialogueSession
++        import uuid
++        from datetime import datetime
++        
++        session = DialogueSession(
++            user_id=user_id,
++            session_uuid=str(uuid.uuid4()),
++            context_summary="",
++            message_count=0,
++            resolution_status="ongoing",
++            last_activity=datetime.now(),
++            detected_categories=[],
++            detected_intent=None
++        )
++        # Кэшируем fallback сессию
++        self.active_sessions[user_id] = session
++        return session
+diff --git a/bot/services/ai_enhanced/memory/user_profiler.py b/bot/services/ai_enhanced/memory/user_profiler.py
+index 1a9117a..80b5293 100644
+--- a/bot/services/ai_enhanced/memory/user_profiler.py
++++ b/bot/services/ai_enhanced/memory/user_profiler.py
+@@ -85,7 +85,8 @@ class UserProfiler:
+         except Exception as e:
+             logger.error(
+                 f"Failed to get/create profile for user {user_id}: {e}")
+-            return None
++            # Возвращаем базовый профиль при ошибке соединения
++            return self._create_fallback_profile(user_id)
+ 
+     async def update_profile_from_interaction(
+         self,
+@@ -142,3 +143,19 @@ class UserProfiler:
+             "status": "ok" if self.initialized else "not_initialized",
+             "cached_profiles": len(self.profiles_cache)
+         }
++
++    def _create_fallback_profile(self, user_id: int) -> UserProfile:
++        """Создание базового профиля для работы без БД"""
++        from ...ai_enhanced_models import UserProfile
++        profile = UserProfile(
++            user_id=user_id,
++            experience_level="beginner",
++            preferred_style="friendly", 
++            communication_speed="normal",
++            detail_preference="medium",
++            total_interactions=0,
++            last_categories=[]
++        )
++        # Кэшируем fallback профиль
++        self.profiles_cache[user_id] = profile
++        return profile
