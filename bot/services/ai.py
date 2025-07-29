@@ -8,12 +8,9 @@ import aiohttp
 import json
 
 # Azure OpenAI Configuration - ТОЛЬКО AZURE!
-AZURE_OPENAI_API_KEY = os.getenv(
-    "AZURE_OPENAI_API_KEY", "Fjaj2B7pc9tXPnLT4jY8Wv4Gl9435Ifw6ymyQ68OolKP0LVxBoqjJQQJ99BEACfhMk5XJ3w3AAAAACOGrsqR")
-AZURE_OPENAI_ENDPOINT = os.getenv(
-    "AZURE_OPENAI_ENDPOINT", "https://divan-mb68c0s7-swedencentral.cognitiveservices.azure.com")
-AZURE_OPENAI_API_VERSION = os.getenv(
-    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT") 
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
 
 async def generate_ai_response(messages: list[dict], model: str = "gpt-4o-mini", max_tokens: int = 800) -> str:
@@ -38,14 +35,14 @@ async def _azure_openai_request(messages: list[dict], model: str, max_tokens: in
             "Content-Type": "application/json",
         }
 
-        # ИСПРАВЛЕННЫЙ Azure OpenAI deployment mapping для ваших actual deployments
+        # ОБНОВЛЕННЫЙ Azure OpenAI deployment mapping - используем доступные deployments
         deployment_map = {
-            "gpt-4o-mini": "gpt-35-turbo",          # используем gpt-35-turbo
-            "gpt-4o": "gpt-4.1",                   # используем gpt-4.1
+            "gpt-4o-mini": "gpt-35-turbo",          # используем gpt-35-turbo  
+            "gpt-4o": "gpt-35-turbo",              # fallback на gpt-35-turbo
             "gpt-35-turbo": "gpt-35-turbo",        # прямое соответствие
-            "gpt-4.1": "gpt-4.1",                  # прямое соответствие
+            "gpt-4.1": "gpt-35-turbo",             # fallback на gpt-35-turbo
             "openai/gpt-4o-mini": "gpt-35-turbo",  # fallback
-            "openai/gpt-4o": "gpt-4.1"             # fallback
+            "openai/gpt-4o": "gpt-35-turbo"        # fallback
         }
 
         deployment_name = deployment_map.get(

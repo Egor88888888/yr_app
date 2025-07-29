@@ -112,7 +112,8 @@ class SessionManager:
         except Exception as e:
             logger.error(
                 f"Failed to get/create session for user {user_id}: {e}")
-            return None
+            # Возвращаем fallback сессию при ошибке соединения
+            return self._create_fallback_session(user_id)
 
     async def update_session_context(
         self,
@@ -169,3 +170,23 @@ class SessionManager:
             "active_sessions": len(self.active_sessions),
             "session_timeout_hours": self.session_timeout_hours
         }
+
+    def _create_fallback_session(self, user_id: int) -> DialogueSession:
+        """Создание fallback сессии для работы без БД"""
+        from ...ai_enhanced_models import DialogueSession
+        import uuid
+        from datetime import datetime
+        
+        session = DialogueSession(
+            user_id=user_id,
+            session_uuid=str(uuid.uuid4()),
+            context_summary="",
+            message_count=0,
+            resolution_status="ongoing",
+            last_activity=datetime.now(),
+            detected_categories=[],
+            detected_intent=None
+        )
+        # Кэшируем fallback сессию
+        self.active_sessions[user_id] = session
+        return session

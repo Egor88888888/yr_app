@@ -85,7 +85,8 @@ class UserProfiler:
         except Exception as e:
             logger.error(
                 f"Failed to get/create profile for user {user_id}: {e}")
-            return None
+            # Возвращаем базовый профиль при ошибке соединения
+            return self._create_fallback_profile(user_id)
 
     async def update_profile_from_interaction(
         self,
@@ -142,3 +143,19 @@ class UserProfiler:
             "status": "ok" if self.initialized else "not_initialized",
             "cached_profiles": len(self.profiles_cache)
         }
+
+    def _create_fallback_profile(self, user_id: int) -> UserProfile:
+        """Создание базового профиля для работы без БД"""
+        from ...ai_enhanced_models import UserProfile
+        profile = UserProfile(
+            user_id=user_id,
+            experience_level="beginner",
+            preferred_style="friendly", 
+            communication_speed="normal",
+            detail_preference="medium",
+            total_interactions=0,
+            last_categories=[]
+        )
+        # Кэшируем fallback профиль
+        self.profiles_cache[user_id] = profile
+        return profile

@@ -283,6 +283,11 @@ class AIEnhancedManager:
     ):
         """Сохранение взаимодействия в базу данных"""
         try:
+            # Проверяем, что session имеет id (не fallback)
+            if not hasattr(session, 'id') or session.id is None:
+                logger.warning(f"Skipping interaction save - session has no id (fallback mode)")
+                return
+
             async with async_sessionmaker() as db_session:
                 # Сохраняем сообщение пользователя
                 user_msg = DialogueMessage(
