@@ -17,7 +17,7 @@ from telegram.ext import Application as TelegramApplication
 
 from bot.services.db import async_sessionmaker, ContentFingerprint
 from bot.services.ai_unified import unified_ai_service, AIModel
-from bot.services.content_deduplication_pg import PostgreSQLDeduplicationService
+from bot.services.content_deduplication_pg import PostgreSQLContentDeduplicationSystem
 from bot.config.settings import (
     POST_INTERVAL_HOURS, TARGET_CHANNEL_ID, TARGET_CHANNEL_USERNAME,
     ADMIN_USERS, PRODUCTION_MODE
@@ -65,7 +65,7 @@ class UnifiedAutopostSystem:
     
     def __init__(self, bot_application: TelegramApplication):
         self.bot_application = bot_application
-        self.deduplication_service = PostgreSQLDeduplicationService()
+        self.deduplication_service = PostgreSQLContentDeduplicationSystem()
         self.scheduled_posts: Dict[str, ScheduledPost] = {}
         self.is_running = False
         self.stats = {
@@ -107,7 +107,7 @@ class UnifiedAutopostSystem:
     async def initialize(self):
         """Initialize autopost system"""
         try:
-            await self.deduplication_service.initialize()
+            # Deduplication system doesn't need async initialization
             logger.info("✅ Unified autopost system initialized")
         except Exception as e:
             logger.error(f"❌ Failed to initialize autopost system: {e}")
@@ -251,14 +251,17 @@ class UnifiedAutopostSystem:
             
             content_text = ai_response.content
             
-            # Check for duplicates
-            if await self.deduplication_service.is_duplicate_content(content_text):
-                logger.info(f"Content rejected as duplicate: {topic}")
+            # Check for duplicates and register content
+            is_valid, reason = await self.deduplication_service.validate_and_register_content(
+                title=topic,
+                content=content_text,
+                content_type="autopost"
+            )
+            
+            if not is_valid:
+                logger.info(f"Content rejected: {reason}")
                 self.stats["deduplication_blocks"] += 1
                 return None
-            
-            # Save fingerprint
-            await self.deduplication_service.save_content_fingerprint(content_text, topic)
             
             # Select hashtags
             hashtags = random.choice(self.hashtag_sets)
