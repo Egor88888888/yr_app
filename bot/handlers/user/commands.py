@@ -18,7 +18,7 @@ from sqlalchemy import select
 
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Admin
 from bot.services.sheets import append_lead
-from bot.services.ai import generate_ai_response
+from bot.services.ai_unified import unified_ai_service
 from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received
 from bot.config.settings import (
@@ -172,15 +172,14 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fallback to basic AI if Enhanced AI failed
         if not ai_response:
             try:
-                messages = [
-                    {"role": "system", "content": "Вы - опытный юрист, специализирующийся на российском праве. Отвечайте профессионально и по существу."},
-                    {"role": "user", "content": message_text}
-                ]
-                ai_response = await generate_ai_response(messages)
+                ai_response = await unified_ai_service.generate_legal_consultation(
+                    question=message_text,
+                    context="Общий юридический вопрос"
+                )
                 logger.info(f"✅ Fallback AI response generated for user {user.id}")
             except Exception as e:
                 logger.error(f"❌ Both AI systems failed for user {user.id}: {e}")
-                ai_response = "🤖 AI консультант временно недоступен. Обратитесь к администратору или попробуйте позже."
+                ai_response = "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API. Обратитесь к администратору или попробуйте позже."
         
         # Send response with consultation offer
         full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"

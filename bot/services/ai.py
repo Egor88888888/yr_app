@@ -1,30 +1,70 @@
-"""AI helper using Azure OpenAI ONLY.
+"""AI helper using OpenAI GPT API as primary with Azure fallback.
 Functions: chat_complete, humanize, generate_content.
-ТОЛЬКО AZURE OPENAI - OpenRouter полностью убран!
+PRIMARY: OpenAI GPT API, FALLBACK: Azure OpenAI
 """
 
 import os
 import aiohttp
 import json
 
-# Azure OpenAI Configuration - ТОЛЬКО AZURE!
+# OpenAI Configuration - PRIMARY
+OPENAI_API_KEY = os.getenv("API_GPT")
+
+# Azure OpenAI Configuration - FALLBACK
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT") 
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
 
 async def generate_ai_response(messages: list[dict], model: str = "gpt-4o-mini", max_tokens: int = 800) -> str:
-    """Generate AI response using ТОЛЬКО Azure OpenAI"""
+    """Generate AI response using OpenAI as primary, Azure as fallback"""
 
-    # ТОЛЬКО Azure OpenAI - без fallback на OpenRouter!
+    # Try OpenAI first
+    if OPENAI_API_KEY:
+        try:
+            return await _openai_request(messages, model, max_tokens)
+        except Exception as e:
+            print(f"❌ OpenAI error: {e}")
+    
+    # Fallback to Azure OpenAI
     if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
         try:
             return await _azure_openai_request(messages, model, max_tokens)
         except Exception as e:
             print(f"❌ Azure OpenAI error: {e}")
-            return "🤖 AI консультант временно недоступен. Проверьте настройки Azure OpenAI."
+            return "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API."
 
-    return "🤖 Azure OpenAI не настроен. Обратитесь к администратору."
+    return "🤖 OpenAI API не настроен. Обратитесь к администратору."
+
+
+async def _openai_request(messages: list[dict], model: str, max_tokens: int) -> str:
+    """Make request to OpenAI API"""
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": 0.7
+        }
+        
+        async with session.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=30)
+        ) as response:
+            if response.status == 200:
+                result = await response.json()
+                return result["choices"][0]["message"]["content"].strip()
+            else:
+                error_text = await response.text()
+                print(f"❌ OpenAI API error {response.status}: {error_text}")
+                raise Exception(f"OpenAI API error: {response.status}")
 
 
 async def _azure_openai_request(messages: list[dict], model: str, max_tokens: int) -> str:
