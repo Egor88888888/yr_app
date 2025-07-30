@@ -28,20 +28,31 @@ from ...ai_enhanced_models import (
 )
 from .context_builder import ContextBuilder, AIContext
 from .response_optimizer import ResponseOptimizer
-try:
-    from ..classification.ml_classifier import MLClassifier, HAS_NUMPY
-    ML_AVAILABLE = True
-except ImportError:
-    HAS_NUMPY = False
-    ML_AVAILABLE = False
-    # Fallback ML Classifier
+# FORCE DISABLE ML CLASSIFIER - NO AZURE
+ML_AVAILABLE = False
+HAS_NUMPY = False
 
-    class MLClassifier:
-        def __init__(self, *args, **kwargs):
-            pass
+class MLClassifier:
+    """Disabled ML Classifier - keyword fallback only"""
+    def __init__(self, *args, **kwargs):
+        self.enabled = False
+        logger.info("🔢 ML Classifier: DISABLED - no Azure credentials needed")
 
-        async def classify_category(self, *args, **kwargs):
-            return {"category": "Семейное право", "confidence": 0.5}
+    async def initialize(self):
+        """No-op initialization"""
+        pass
+
+    async def classify_category(self, message: str, *args, **kwargs):
+        """Simple keyword-based classification"""
+        message_lower = message.lower()
+        if any(word in message_lower for word in ["развод", "алимент", "брак", "семья"]):
+            return {"category": "Семейное право", "confidence": 0.8}
+        elif any(word in message_lower for word in ["работ", "труд", "увольнен", "зарплат"]):
+            return {"category": "Трудовые споры", "confidence": 0.8}
+        elif any(word in message_lower for word in ["наследств", "завещан", "наследник"]):
+            return {"category": "Наследство", "confidence": 0.8}
+        else:
+            return {"category": "Общие вопросы", "confidence": 0.5}
 from ..classification.intent_detector import IntentDetector
 from ..memory.dialogue_memory import DialogueMemory
 from ..memory.user_profiler import UserProfiler
