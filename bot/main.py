@@ -134,12 +134,11 @@ class LegalCenterBot:
                 await autopost_system.start_autopost_loop()
                 logger.info("✅ Autopost system started")
             
-            # Start polling
+            # Initialize application without polling
             logger.info(f"🔗 Bot starting in {'PRODUCTION' if PRODUCTION_MODE else 'DEVELOPMENT'} mode")
-            await self.application.run_polling(
-                drop_pending_updates=True,
-                allowed_updates=["message", "callback_query", "inline_query"]
-            )
+            await self.application.initialize()
+            await self.application.start()
+            logger.info("✅ Bot started successfully (webhook mode)")
             
         except Exception as e:
             logger.error(f"❌ Bot startup failed: {e}")

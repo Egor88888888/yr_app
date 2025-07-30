@@ -9,7 +9,7 @@ import sys
 import asyncio
 import threading
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import logging
 
@@ -25,12 +25,30 @@ sys.modules['bot.services.ai_enhanced.classification.ml_classifier'] = BlockedAI
 print("🚫 AI Enhanced imports BLOCKED")
 print("🤖 Starting CLEAN bot with OpenAI only...")
 
-# Create simple FastAPI app for health check
+# Create simple FastAPI app for health check and webhooks
 app = FastAPI(title="Clean Legal Bot")
 
 @app.get("/health")
 async def health_check():
     return JSONResponse({"status": "healthy", "ai_enhanced": "blocked"})
+
+# Global bot instance for webhook handling
+bot_instance = None
+
+@app.post("/telegram/{token}")
+async def webhook_handler(token: str, request: Request):
+    """Handle Telegram webhook updates"""
+    if bot_instance and bot_instance.application:
+        try:
+            from telegram import Update
+            update_dict = await request.json()
+            update = Update.de_json(update_dict, bot_instance.application.bot)
+            await bot_instance.application.process_update(update)
+            return {"status": "ok"}
+        except Exception as e:
+            print(f"❌ Webhook error: {e}")
+            return {"status": "error", "error": str(e)}
+    return {"status": "bot_not_ready"}
 
 async def start_combined():
     """Start both bot and web server concurrently"""
@@ -51,6 +69,9 @@ async def start_combined():
         # Run bot and server concurrently with exception handling
         async def run_bot():
             try:
+                global bot_instance
+                from bot.main import bot
+                bot_instance = bot
                 await main()
             except Exception as e:
                 print(f"❌ Bot error: {e}")
