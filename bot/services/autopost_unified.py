@@ -74,6 +74,7 @@ class UnifiedAutopostSystem:
         self.deduplication_service = PostgreSQLContentDeduplicationSystem()
         self.scheduled_posts: Dict[str, ScheduledPost] = {}
         self.is_running = False  # DISABLED BY DEFAULT - admin must manually enable
+        self.background_tasks = []  # Track background tasks for cleanup
         self.stats = {
             "total_posts": 0,
             "successful_posts": 0,
@@ -127,15 +128,25 @@ class UnifiedAutopostSystem:
         self.is_running = True
         logger.info("🚀 Starting unified autopost loop")
         
-        # Start background tasks
-        asyncio.create_task(self._regular_autopost_loop())
-        asyncio.create_task(self._deploy_autopost_loop())
-        asyncio.create_task(self._scheduled_posts_processor())
+        # Start background tasks and track them
+        self.background_tasks.append(asyncio.create_task(self._regular_autopost_loop()))
+        self.background_tasks.append(asyncio.create_task(self._deploy_autopost_loop()))
+        self.background_tasks.append(asyncio.create_task(self._scheduled_posts_processor()))
     
     async def stop_autopost_loop(self):
         """Stop the autopost loop"""
         self.is_running = False
         logger.info("🛑 Stopping unified autopost loop")
+        
+        # Cancel all background tasks
+        for task in self.background_tasks:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self.background_tasks.clear()
     
     async def _regular_autopost_loop(self):
         """Regular autopost loop - posts every few hours"""
