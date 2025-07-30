@@ -9,7 +9,7 @@
     "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
-    "startCommand": "python production_unified_start.py",
+    "startCommand": "python start_clean.py",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100
   },
