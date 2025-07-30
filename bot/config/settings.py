@@ -27,10 +27,11 @@ blocked_users: Set[int] = set()
 
 # ================ AUTOPOST SETTINGS ================
 
-# Autopost configuration
+# Autopost configuration - DISABLED BY DEFAULT
 POST_INTERVAL_HOURS = int(os.getenv("POST_INTERVAL_HOURS", "10"))
 TARGET_CHANNEL_ID = os.getenv("TARGET_CHANNEL_ID", "-1002768745137")
 TARGET_CHANNEL_USERNAME = os.getenv("TARGET_CHANNEL_USERNAME", "@legal_consult_center")
+AUTOPOST_ENABLED_BY_DEFAULT = False  # Autopost disabled by default
 
 # ================ ADMIN CONFIGURATION ================
 
@@ -57,9 +58,10 @@ if RAILWAY_PUBLIC_DOMAIN == "localhost":
 
 # ================ API KEYS ================
 
-# AI Services
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+# AI Services - PRIMARY: OpenAI GPT API
+OPENAI_API_KEY = os.getenv("API_GPT")  # Primary AI API
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # Fallback
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")  # Legacy support
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
@@ -129,7 +131,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # Feature toggles
 ENABLE_AI_ENHANCED = os.getenv("ENABLE_AI_ENHANCED", "true").lower() == "true"
-ENABLE_AUTOPOST = os.getenv("ENABLE_AUTOPOST", "true").lower() == "true"
+ENABLE_AUTOPOST = os.getenv("ENABLE_AUTOPOST", "false").lower() == "true"  # Disabled by default
 ENABLE_PAYMENTS = bool(CLOUDPAYMENTS_PUBLIC_ID)
 ENABLE_SHEETS_INTEGRATION = bool(GOOGLE_SHEETS_CREDS_JSON)
 ENABLE_NOTIFICATIONS = bool(MAILGUN_API_KEY)
@@ -146,8 +148,8 @@ def validate_config():
     if not ADMIN_CHAT_ID:
         errors.append("ADMIN_CHAT_ID is required")
     
-    if PRODUCTION_MODE and not OPENROUTER_API_KEY and not AZURE_OPENAI_API_KEY:
-        errors.append("AI API key is required in production")
+    if PRODUCTION_MODE and not OPENAI_API_KEY and not OPENROUTER_API_KEY and not AZURE_OPENAI_API_KEY:
+        errors.append("AI API key is required in production (API_GPT, OPENROUTER_API_KEY, or AZURE_OPENAI_API_KEY)")
     
     if errors:
         raise ValueError(f"Configuration errors: {', '.join(errors)}")

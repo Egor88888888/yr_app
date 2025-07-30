@@ -67,7 +67,7 @@ class UnifiedAutopostSystem:
         self.bot_application = bot_application
         self.deduplication_service = PostgreSQLContentDeduplicationSystem()
         self.scheduled_posts: Dict[str, ScheduledPost] = {}
-        self.is_running = False
+        self.is_running = False  # DISABLED BY DEFAULT - admin must manually enable
         self.stats = {
             "total_posts": 0,
             "successful_posts": 0,

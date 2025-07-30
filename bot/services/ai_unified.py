@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from bot.config.settings import (
-    OPENROUTER_API_KEY, AZURE_OPENAI_API_KEY, 
+    OPENAI_API_KEY, OPENROUTER_API_KEY, AZURE_OPENAI_API_KEY, 
     AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION
 )
 
@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 class AIProvider(Enum):
     """Available AI providers"""
-    AZURE_OPENAI = "azure_openai"
+    OPENAI = "openai"
     OPENROUTER = "openrouter"
+    AZURE_OPENAI = "azure_openai"
 
 class AIModel(Enum):
     """Available AI models"""
@@ -61,6 +62,102 @@ class BaseAIProvider(ABC):
     def is_available(self) -> bool:
         """Check if provider is available"""
         pass
+
+class OpenAIProvider(BaseAIProvider):
+    """OpenAI GPT API provider - PRIMARY"""
+    
+    def __init__(self):
+        self.api_key = OPENAI_API_KEY
+    
+    def is_available(self) -> bool:
+        """Check if OpenAI API is available"""
+        return bool(self.api_key)
+    
+    async def generate_response(self, request: AIRequest) -> AIResponse:
+        """Generate response using OpenAI API"""
+        import aiohttp
+        import time
+        
+        if not self.is_available():
+            return AIResponse(
+                content="",
+                provider=AIProvider.OPENAI,
+                model=request.model.value,
+                success=False,
+                error="OpenAI API key not configured"
+            )
+        
+        start_time = time.time()
+        
+        try:
+            # Prepare messages
+            messages = []
+            if request.system_prompt:
+                messages.append({"role": "system", "content": request.system_prompt})
+            messages.extend(request.messages)
+            
+            # API request payload
+            payload = {
+                "model": request.model.value,
+                "messages": messages,
+                "max_tokens": request.max_tokens,
+                "temperature": request.temperature
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Make API request
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    
+                    response_time = time.time() - start_time
+                    result = await response.json()
+                    
+                    if response.status == 200:
+                        content = result["choices"][0]["message"]["content"].strip()
+                        tokens_used = result.get("usage", {}).get("total_tokens", 0)
+                        
+                        return AIResponse(
+                            content=content,
+                            provider=AIProvider.OPENAI,
+                            model=request.model.value,
+                            tokens_used=tokens_used,
+                            response_time=response_time,
+                            success=True
+                        )
+                    else:
+                        error_msg = result.get("error", {}).get("message", f"HTTP {response.status}")
+                        logger.error(f"OpenAI API error: {error_msg}")
+                        
+                        return AIResponse(
+                            content="",
+                            provider=AIProvider.OPENAI,
+                            model=request.model.value,
+                            response_time=response_time,
+                            success=False,
+                            error=error_msg
+                        )
+        
+        except Exception as e:
+            response_time = time.time() - start_time
+            logger.error(f"OpenAI API exception: {e}")
+            
+            return AIResponse(
+                content="",
+                provider=AIProvider.OPENAI,
+                model=request.model.value,
+                response_time=response_time,
+                success=False,
+                error=str(e)
+            )
 
 class AzureOpenAIProvider(BaseAIProvider):
     """Azure OpenAI provider"""
@@ -257,10 +354,12 @@ class UnifiedAIService:
     
     def __init__(self):
         self.providers = {
-            AIProvider.AZURE_OPENAI: AzureOpenAIProvider(),
-            AIProvider.OPENROUTER: OpenRouterProvider()
+            AIProvider.OPENAI: OpenAIProvider(),
+            AIProvider.OPENROUTER: OpenRouterProvider(),
+            AIProvider.AZURE_OPENAI: AzureOpenAIProvider()
         }
-        self.fallback_order = [AIProvider.AZURE_OPENAI, AIProvider.OPENROUTER]
+        # Primary: OpenAI, Fallbacks: OpenRouter, Azure
+        self.fallback_order = [AIProvider.OPENAI, AIProvider.OPENROUTER, AIProvider.AZURE_OPENAI]
         
         # Legal system prompts
         self.system_prompts = {
@@ -390,7 +489,7 @@ class UnifiedAIService:
         # All providers failed
         return AIResponse(
             content="🤖 AI консультант временно недоступен. Обратитесь к администратору или попробуйте позже.",
-            provider=AIProvider.AZURE_OPENAI,  # Default
+            provider=AIProvider.OPENAI,  # Primary provider
             model=request.model.value,
             success=False,
             error="All AI providers failed"
