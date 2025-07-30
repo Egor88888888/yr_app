@@ -24,7 +24,7 @@ from .markdown_fix import prepare_telegram_message
 from .comments_enhanced_setup import EnhancedCommentsManager, ensure_production_comments
 
 # ИСПРАВЛЕНИЕ: Импортируем AIEnhancedManager
-from .ai_enhanced import AIEnhancedManager
+# AI Enhanced removed - no import
 
 logger = logging.getLogger(__name__)
 
