@@ -8,9 +8,17 @@ This replaces the massive 11,271-line main.py with a clean, maintainable structu
 
 import asyncio
 import logging
+import os
 from datetime import datetime
 
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+
+# FORCE BLOCK Enhanced AI to prevent Azure API calls
+DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+logger = logging.getLogger(__name__)
+
+if DISABLE_ENHANCED_AI:
+    logger.info("🚫 Enhanced AI FORCE DISABLED via environment variable - Azure prevention active")
 
 # Import refactored modules
 from bot.config.settings import TOKEN, validate_config, ADMIN_USERS, PRODUCTION_MODE

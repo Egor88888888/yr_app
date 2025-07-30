@@ -19,7 +19,15 @@ from sqlalchemy import select
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Admin
 from bot.services.sheets import append_lead
 from bot.services.ai_unified import unified_ai_service
-# DISABLED: from bot.services.ai_enhanced import AIEnhancedManager
+
+# FORCE DISABLE Enhanced AI imports to prevent Azure calls
+DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+if not DISABLE_ENHANCED_AI:
+    # Import only if not disabled
+    pass  # from bot.services.ai_enhanced import AIEnhancedManager
+else:
+    logger.info("🚫 Enhanced AI imports BLOCKED - Azure prevention active")
+
 from bot.services.notifications import notify_client_application_received
 from bot.config.settings import (
     ADMIN_USERS, WEBAPP_URL, TARGET_CHANNEL_USERNAME,
@@ -32,12 +40,19 @@ from bot.utils.helpers import extract_user_info, format_datetime, format_phone_n
 
 logger = logging.getLogger(__name__)
 
+# FORCE DISABLE Enhanced AI via Environment Variable
+import os
+FORCE_DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+
 # DISABLED Enhanced AI Manager - using unified_ai_service only
 ai_enhanced_manager = None
 
 async def initialize_ai_manager():
     """Initialize AI Manager - Enhanced AI DISABLED"""
     global ai_enhanced_manager
+    if FORCE_DISABLE_ENHANCED_AI:
+        logger.info("🚫 Enhanced AI FORCE DISABLED via DISABLE_ENHANCED_AI=true")
+        return
     # DISABLED: Enhanced AI causes Azure API calls
     # ai_enhanced_manager = AIEnhancedManager()
     logger.info("🤖 Enhanced AI DISABLED - using unified_ai_service only")
