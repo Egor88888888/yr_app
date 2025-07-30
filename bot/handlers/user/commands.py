@@ -21,6 +21,7 @@ from bot.services.sheets import append_lead
 from bot.services.ai_unified import unified_ai_service
 
 # FORCE DISABLE Enhanced AI imports to prevent Azure calls
+import os
 DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
 if not DISABLE_ENHANCED_AI:
     # Import only if not disabled
