@@ -10,7 +10,7 @@ import logging
 
 # Set environment variable BEFORE any imports
 if not os.getenv("API_GPT"):
-    os.environ["API_GPT"] = "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"
+    os.environ["API_GPT"] = "your-openai-api-key-here"  # Replace with real key for testing
 
 # Add bot directory to path  
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'bot'))
