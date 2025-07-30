@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import async_sessionmaker, User
-from ...ai import generate_ai_response as basic_ai_response
+from ...ai_unified import unified_ai_service
 from ...ai_enhanced_models import (
     UserProfile, DialogueSession, DialogueMessage, AIMetrics
 )
@@ -224,12 +224,12 @@ class AIEnhancedManager:
         # Добавляем текущее сообщение
         messages.append({"role": "user", "content": context.message})
 
-        # Вызываем базовый AI с улучшенным контекстом
-        return await basic_ai_response(
-            messages=messages,
-            model="openai/gpt-4o",  # используем более мощную модель
-            max_tokens=1000
+        # Вызываем unified AI с улучшенным контекстом
+        ai_response = await unified_ai_service.generate_legal_consultation(
+            question=context.message,
+            context=f"Enhanced context: {context.previous_topics}"
         )
+        return ai_response.content if hasattr(ai_response, 'content') else ai_response
 
     def _build_system_prompt(self, context: AIContext) -> str:
         """Строим системный промпт с учетом контекста"""
@@ -329,8 +329,7 @@ class AIEnhancedManager:
         logger.warning(f"Using fallback AI due to error: {error}")
 
         try:
-            # Используем старый простой метод
-            from ...ai import generate_ai_response
+            # Используем unified AI для fallback
 
             # Простая категоризация без import dependency
             message_lower = message.lower()
@@ -365,9 +364,10 @@ class AIEnhancedManager:
                 {"role": "user", "content": message}
             ]
 
-            response = await generate_ai_response(messages)
-            response += "\n\n💼 Для детальной консультации нажмите /start и заполните заявку."
-
+            response = await unified_ai_service.generate_legal_consultation(
+                question=message,
+                context=f"Категория: {category}"
+            )
             return response
 
         except Exception as fallback_error:

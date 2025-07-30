@@ -6,7 +6,7 @@
 import logging
 import random
 from typing import Dict, List
-from ..ai import generate_ai_response
+from ..ai_unified import unified_ai_service
 from .models import NewsItem
 
 logger = logging.getLogger(__name__)
