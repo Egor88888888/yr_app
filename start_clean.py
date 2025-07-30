@@ -32,31 +32,33 @@ app = FastAPI(title="Clean Legal Bot")
 async def health_check():
     return JSONResponse({"status": "healthy", "ai_enhanced": "blocked"})
 
-# Now import main
-from bot.main import main
-
-def start_bot():
-    """Start Telegram bot in separate thread"""
+async def start_combined():
+    """Start both bot and web server concurrently"""
     try:
         print("🚀 Starting CLEAN Legal Center Bot...")
-        asyncio.run(main())
+        
+        # Import main bot function
+        from bot.main import main
+        
+        # Start bot and web server concurrently
+        port = int(os.getenv("PORT", 8000))
+        print(f"🌐 Starting web server on port {port}")
+        
+        # Create uvicorn config for async startup
+        config = uvicorn.Config(app, host="0.0.0.0", port=port, log_config=None)
+        server = uvicorn.Server(config)
+        
+        # Run bot and server concurrently
+        await asyncio.gather(
+            main(),
+            server.serve()
+        )
     except Exception as e:
-        print(f"❌ Bot Error: {e}")
-
-def start_web():
-    """Start FastAPI web server"""
-    port = int(os.getenv("PORT", 8000))
-    print(f"🌐 Starting web server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+        print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     try:
-        # Start bot in background thread
-        bot_thread = threading.Thread(target=start_bot, daemon=True)
-        bot_thread.start()
-        
-        # Start web server in main thread
-        start_web()
+        asyncio.run(start_combined())
     except Exception as e:
         print(f"❌ Error: {e}")
         exit(1)
