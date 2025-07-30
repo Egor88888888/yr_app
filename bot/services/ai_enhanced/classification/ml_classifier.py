@@ -52,13 +52,10 @@ else:
     logger.warning(
         "🔢 ML Classifier: Using fallback math (numpy not available)")
 
-# Azure OpenAI Configuration для эмбеддингов
-AZURE_OPENAI_API_KEY = os.getenv(
-    "AZURE_OPENAI_API_KEY", "Fjaj2B7pc9tXPnLT4jY8Wv4Gl9435Ifw6ymyQ68OolKP0LVxBoqjJQQJ99BEACfhMk5XJ3w3AAAAACOGrsqR")
-AZURE_OPENAI_ENDPOINT = os.getenv(
-    "AZURE_OPENAI_ENDPOINT", "https://divan-mb68c0s7-swedencentral.cognitiveservices.azure.com")
-AZURE_OPENAI_API_VERSION = os.getenv(
-    "AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+# Azure OpenAI Configuration для эмбеддингов - DISABLED BY DEFAULT
+AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")  # No default - must be explicitly set
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")  # No default
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
 # Azure OpenAI embeddings deployment name - используем то же имя что и в основном AI сервисе
 AZURE_EMBEDDINGS_DEPLOYMENT = os.getenv(
@@ -81,6 +78,10 @@ class MLClassifier:
         self.categories_cache = {}
         self.embeddings_cache = {}
         self.initialized = False
+        self.ml_enabled = bool(AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT)
+        
+        if not self.ml_enabled:
+            logger.info("🔢 ML Classifier: Disabled (no Azure credentials) - using keyword fallback only")
         self.fallback_keywords = {
             "Семейное право": ["развод", "алимент", "брак", "семь", "дети", "опека"],
             "Наследство": ["наследств", "завещан", "наследник", "имущество"],
@@ -106,7 +107,7 @@ class MLClassifier:
             embeddings_available = False
 
             # ВКЛЮЧИТЬ ПОСЛЕ СОЗДАНИЯ DEPLOYMENT:
-            if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT:
+            if self.ml_enabled:
                 logger.info("Trying Azure OpenAI embeddings...")
                 await self._initialize_category_embeddings()
                 embeddings_available = bool(self.embeddings_cache)
@@ -144,7 +145,7 @@ class MLClassifier:
                 await self.initialize()
 
             # Пробуем ML подход если эмбеддинги доступны
-            if AZURE_OPENAI_API_KEY and self.embeddings_cache:
+            if self.ml_enabled and self.embeddings_cache:
                 ml_result = await self._ml_classify(message)
                 if ml_result['confidence'] > 0.6:  # высокая уверенность
                     return ml_result
@@ -254,7 +255,7 @@ class MLClassifier:
 
     async def _get_embedding(self, text: str) -> Optional[List[float]]:
         """Получение эмбеддинга текста через Azure OpenAI"""
-        if not AZURE_OPENAI_API_KEY or not AZURE_OPENAI_ENDPOINT:
+        if not self.ml_enabled:
             logger.error("Azure OpenAI credentials not configured")
             return None
 
@@ -331,5 +332,5 @@ class MLClassifier:
             "status": "ok" if self.initialized else "not_initialized",
             "categories_loaded": len(self.categories_cache),
             "embeddings_ready": len(self.embeddings_cache),
-            "ml_available": bool(AZURE_OPENAI_API_KEY)
+            "ml_available": self.ml_enabled
         }
