@@ -1,5 +1,5 @@
-# 🐳 PRODUCTION DOCKERFILE
-# Multi-stage build для оптимальной production сборки
+# 🐳 PRODUCTION DOCKERFILE - NO AZURE AI VERSION 2.0
+# Force complete rebuild to eliminate Azure dependencies
 
 FROM python:3.12-slim as base
 
@@ -31,6 +31,11 @@ RUN pip install --no-cache-dir -r requirements_frozen.txt
 
 # Copy application code
 COPY . .
+
+# FORCE REMOVE any Azure AI files that might still exist
+RUN rm -rf bot/services/ai_enhanced* 2>/dev/null || true
+RUN rm -rf bot/**/__pycache__ 2>/dev/null || true
+RUN find . -name "*.pyc" -delete 2>/dev/null || true
 
 # Create necessary directories
 RUN mkdir -p logs && chown -R app:app logs

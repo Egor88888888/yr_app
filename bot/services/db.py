@@ -52,14 +52,8 @@ __all__ = [
     "Log",
 ]
 
-# Import Enhanced AI models to ensure they're included in metadata
-try:
-    from .ai_enhanced_models import (
-        UserProfile, DialogueSession, DialogueMessage, MessageEmbedding,
-        CategoryEmbedding, AIMetrics, UserPreference, TrainingData
-    )
-except ImportError:
-    pass  # Models might not be available yet
+# Enhanced AI models DISABLED - not importing
+# AI Enhanced functionality has been removed
 
 logger = logging.getLogger(__name__)
 
