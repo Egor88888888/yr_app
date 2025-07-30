@@ -6,6 +6,7 @@ Replaces simple_autopost, enhanced_autopost, and deploy_autopost with single sys
 
 import asyncio
 import logging
+import os
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -14,6 +15,11 @@ from enum import Enum
 
 from sqlalchemy import select, func
 from telegram.ext import Application as TelegramApplication
+
+# FORCE DISABLE Enhanced AI imports
+DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+if DISABLE_ENHANCED_AI:
+    logging.getLogger(__name__).info("🚫 Enhanced AI imports BLOCKED in autopost_unified")
 
 from bot.services.db import async_sessionmaker, ContentFingerprint
 from bot.services.ai_unified import unified_ai_service, AIModel

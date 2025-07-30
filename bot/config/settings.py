@@ -129,10 +129,13 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # ================ FEATURE FLAGS ================
 
+# FORCE DISABLE Enhanced AI to prevent Azure calls
+DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+
 # Feature toggles
-ENABLE_AI_ENHANCED = os.getenv("ENABLE_AI_ENHANCED", "true").lower() == "true"
+ENABLE_AI_ENHANCED = False if DISABLE_ENHANCED_AI else os.getenv("ENABLE_AI_ENHANCED", "false").lower() == "true"
 ENABLE_AUTOPOST = os.getenv("ENABLE_AUTOPOST", "false").lower() == "true"  # Disabled by default
-ENABLE_ML_CLASSIFIER = os.getenv("ENABLE_ML_CLASSIFIER", "false").lower() == "true"  # Disabled - requires Azure
+ENABLE_ML_CLASSIFIER = False if DISABLE_ENHANCED_AI else os.getenv("ENABLE_ML_CLASSIFIER", "false").lower() == "true"
 ENABLE_PAYMENTS = bool(CLOUDPAYMENTS_PUBLIC_ID)
 ENABLE_SHEETS_INTEGRATION = bool(GOOGLE_SHEETS_CREDS_JSON)
 ENABLE_NOTIFICATIONS = bool(MAILGUN_API_KEY)
