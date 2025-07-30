@@ -48,10 +48,24 @@ async def start_combined():
         config = uvicorn.Config(app, host="0.0.0.0", port=port, log_config=None)
         server = uvicorn.Server(config)
         
-        # Run bot and server concurrently
+        # Run bot and server concurrently with exception handling
+        async def run_bot():
+            try:
+                await main()
+            except Exception as e:
+                print(f"❌ Bot error: {e}")
+                
+        async def run_server():
+            try:
+                await server.serve()
+            except Exception as e:
+                print(f"❌ Server error: {e}")
+        
+        # Start both services
         await asyncio.gather(
-            main(),
-            server.serve()
+            run_bot(),
+            run_server(),
+            return_exceptions=True
         )
     except Exception as e:
         print(f"❌ Error: {e}")

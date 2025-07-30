@@ -150,13 +150,23 @@ class LegalCenterBot:
         try:
             logger.info("🛑 Stopping Legal Center Bot...")
             
-            # Stop autopost system
+            # Stop autopost system with timeout
             if autopost_system:
-                await autopost_system.stop_autopost_loop()
+                try:
+                    await asyncio.wait_for(autopost_system.stop_autopost_loop(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning("⚠️ Autopost system stop timed out")
+                except Exception as e:
+                    logger.error(f"❌ Error stopping autopost: {e}")
             
-            # Stop telegram application
+            # Stop telegram application with timeout
             if self.application:
-                await self.application.stop()
+                try:
+                    await asyncio.wait_for(self.application.stop(), timeout=3.0)
+                except asyncio.TimeoutError:
+                    logger.warning("⚠️ Telegram app stop timed out")
+                except Exception as e:
+                    logger.error(f"❌ Error stopping telegram app: {e}")
             
             logger.info("✅ Bot stopped successfully")
             
@@ -243,7 +253,10 @@ async def main():
         logger.error(f"❌ Fatal error: {e}")
         raise
     finally:
-        await bot.stop()
+        try:
+            await bot.stop()
+        except Exception as stop_error:
+            logger.error(f"❌ Error during bot shutdown: {stop_error}")
 
 if __name__ == "__main__":
     """Direct execution entry point"""
