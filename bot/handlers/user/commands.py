@@ -19,7 +19,7 @@ from sqlalchemy import select
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Admin
 from bot.services.sheets import append_lead
 from bot.services.ai_unified import unified_ai_service
-from bot.services.ai_enhanced import AIEnhancedManager
+# DISABLED: from bot.services.ai_enhanced import AIEnhancedManager
 from bot.services.notifications import notify_client_application_received
 from bot.config.settings import (
     ADMIN_USERS, WEBAPP_URL, TARGET_CHANNEL_USERNAME,
@@ -32,15 +32,15 @@ from bot.utils.helpers import extract_user_info, format_datetime, format_phone_n
 
 logger = logging.getLogger(__name__)
 
-# Global Enhanced AI Manager instance
+# DISABLED Enhanced AI Manager - using unified_ai_service only
 ai_enhanced_manager = None
 
 async def initialize_ai_manager():
-    """Initialize Enhanced AI Manager"""
+    """Initialize AI Manager - Enhanced AI DISABLED"""
     global ai_enhanced_manager
-    if ai_enhanced_manager is None:
-        ai_enhanced_manager = AIEnhancedManager()
-        await ai_enhanced_manager.initialize()
+    # DISABLED: Enhanced AI causes Azure API calls
+    # ai_enhanced_manager = AIEnhancedManager()
+    logger.info("🤖 Enhanced AI DISABLED - using unified_ai_service only")
 
 # ================ COMMAND HANDLERS ================
 
@@ -157,29 +157,16 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send typing indicator
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
         
-        # Try Enhanced AI first
-        ai_response = None
-        if ai_enhanced_manager:
-            try:
-                ai_response = await ai_enhanced_manager.generate_response(
-                    user_id=user.id,
-                    message=message_text
-                )
-                logger.info(f"✅ Enhanced AI response generated for user {user.id}")
-            except Exception as e:
-                logger.error(f"❌ Enhanced AI failed for user {user.id}: {e}")
-        
-        # Fallback to basic AI if Enhanced AI failed
-        if not ai_response:
-            try:
-                ai_response = await unified_ai_service.generate_legal_consultation(
-                    question=message_text,
-                    context="Общий юридический вопрос"
-                )
-                logger.info(f"✅ Fallback AI response generated for user {user.id}")
-            except Exception as e:
-                logger.error(f"❌ Both AI systems failed for user {user.id}: {e}")
-                ai_response = "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API. Обратитесь к администратору или попробуйте позже."
+        # Use unified AI service directly - Enhanced AI DISABLED
+        try:
+            ai_response = await unified_ai_service.generate_legal_consultation(
+                question=message_text,
+                context="Общий юридический вопрос"
+            )
+            logger.info(f"✅ OpenAI AI response generated for user {user.id}")
+        except Exception as e:
+            logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
+            ai_response = "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API. Обратитесь к администратору или попробуйте позже."
         
         # Send response with consultation offer
         full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
