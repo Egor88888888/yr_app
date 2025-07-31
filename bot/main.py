@@ -138,7 +138,25 @@ class LegalCenterBot:
             logger.info(f"🔗 Bot starting in {'PRODUCTION' if PRODUCTION_MODE else 'DEVELOPMENT'} mode")
             await self.application.initialize()
             await self.application.start()
+            
+            # Set webhook in production mode
+            if PRODUCTION_MODE:
+                from bot.config.settings import WEBHOOK_URL, WEBHOOK_PATH
+                webhook_full_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
+                try:
+                    await self.application.bot.set_webhook(webhook_full_url)
+                    logger.info(f"✅ Webhook set to: {webhook_full_url}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to set webhook: {e}")
+            
             logger.info("✅ Bot started successfully (webhook mode)")
+            
+            # Keep bot running in webhook mode
+            if PRODUCTION_MODE:
+                logger.info("🔄 Bot running in webhook mode - waiting for updates...")
+                # Bot will stay alive through the FastAPI server
+                while True:
+                    await asyncio.sleep(60)  # Keep alive loop
             
         except Exception as e:
             logger.error(f"❌ Bot startup failed: {e}")

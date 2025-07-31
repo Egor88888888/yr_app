@@ -14,6 +14,10 @@ from collections import defaultdict
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
 
+# Webhook configuration
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://poetic-simplicity-production-60e7.up.railway.app")
+WEBHOOK_PATH = f"/telegram/{TOKEN}" if TOKEN else "/telegram/bot_token"
+
 # Environment settings
 PRODUCTION_MODE = os.getenv("RAILWAY_ENVIRONMENT") == "production"
 DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
