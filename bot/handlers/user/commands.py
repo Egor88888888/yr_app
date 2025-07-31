@@ -243,9 +243,8 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
     logger.info(f"🔍 ENHANCED HANDLER processing: User {user.id}, Message: {message_text[:50]}...")
     
     try:
-        # Check if user is admin
-        if user.id in ADMIN_USERS:
-            return  # Let admin handlers process
+        # Process for all users (admins and regular users)
+        logger.info(f"🤖 Starting AI processing for user {user.id}")
         
         # Detect legal category
         detected_category = await detect_category(message_text)
@@ -282,13 +281,14 @@ async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_T
     
     logger.info(f"🔍 Processing message from user {user.id}: {message_text[:50]}...")
     
-    # Admin check
+    # Admin check - BUT STILL ALLOW AI PROCESSING
     if user.id in ADMIN_USERS:
-        logger.info(f"👤 Admin user {user.id} - skipping AI processing")
-        return  # Let admin handlers process
+        logger.info(f"👤 Admin user {user.id} - processing with AI anyway")
+    else:
+        logger.info(f"👤 Regular user {user.id}")
     
     logger.info(f"🤖 Routing to AI handler for user {user.id}")
-    # Regular user - enhanced processing
+    # All users get AI processing
     await enhanced_message_handler(update, context)
 
 # ================ CALLBACK HANDLERS ================
