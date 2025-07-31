@@ -92,6 +92,7 @@ class UltraModernApp {
         this.isSubmitting = false;
         this.interactions = [];
         this.startTime = Date.now();
+        this.debugMessages = [];
         
         this.formData = {
             category_id: null,
@@ -111,14 +112,25 @@ class UltraModernApp {
         this.initialize();
     }
 
+    // Visual debug logging
+    debugLog(message) {
+        console.log(message);
+        this.debugMessages.push(message);
+        
+        const debugElement = document.getElementById('debug-messages');
+        if (debugElement) {
+            debugElement.innerHTML = this.debugMessages.slice(-5).join('<br>');
+        }
+    }
+
     // ===========================
     // INITIALIZATION
     // ===========================
 
     initialize() {
-        console.log('🚀 Initializing Ultra-Modern App...');
-        console.log('📱 Telegram WebApp available:', !!window.Telegram?.WebApp);
-        console.log('🎯 Categories available:', ULTRA_CATEGORIES.length);
+        this.debugLog('🚀 Initializing Ultra-Modern App...');
+        this.debugLog(`📱 Telegram WebApp available: ${!!window.Telegram?.WebApp}`);
+        this.debugLog(`🎯 Categories available: ${ULTRA_CATEGORIES.length}`);
         
         this.setupEventListeners();
         this.loadSavedData();
@@ -126,7 +138,7 @@ class UltraModernApp {
         this.updateUI();
         this.setupAdvancedFeatures();
         
-        console.log('✅ Ultra-Modern App initialized successfully');
+        this.debugLog('✅ Ultra-Modern App initialized successfully');
         
         // Pre-fill user data from Telegram
         if (tg.initDataUnsafe?.user && !this.formData.name) {
@@ -318,11 +330,11 @@ class UltraModernApp {
     renderCategories() {
         const container = document.getElementById('categories');
         if (!container) {
-            console.error('❌ Categories container not found');
+            this.debugLog('❌ Categories container not found');
             return;
         }
 
-        console.log('🎯 Rendering categories:', ULTRA_CATEGORIES.length);
+        this.debugLog(`🎯 Rendering categories: ${ULTRA_CATEGORIES.length}`);
         
         container.innerHTML = ULTRA_CATEGORIES.map(category => `
             <div class="ultra-category" 
@@ -339,12 +351,12 @@ class UltraModernApp {
         container.querySelectorAll('.ultra-category').forEach(categoryElement => {
             categoryElement.addEventListener('click', () => {
                 const categoryId = parseInt(categoryElement.dataset.id);
-                console.log('🎯 Category clicked:', categoryId);
+                this.debugLog(`🎯 Category clicked: ${categoryId}`);
                 this.selectCategory(categoryId);
             });
         });
         
-        console.log('✅ Categories rendered and handlers attached');
+        this.debugLog('✅ Categories rendered and handlers attached');
     }
 
     selectCategory(categoryId) {
@@ -1085,6 +1097,12 @@ document.head.appendChild(style);
 let ultraApp;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Show immediate debug info
+    const debugElement = document.getElementById('debug-messages');
+    if (debugElement) {
+        debugElement.innerHTML = '📱 DOM Content Loaded<br>🚀 Creating UltraModernApp...';
+    }
+    
     // Initialize Ultra-Modern App
     ultraApp = new UltraModernApp();
     
