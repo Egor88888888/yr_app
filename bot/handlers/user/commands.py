@@ -152,6 +152,12 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle AI chat requests"""
+    
+    # Safety checks
+    if not update or not update.effective_user or not update.message or not update.message.text:
+        logger.warning("⚠️ Invalid update data in ai_chat")
+        return
+    
     user = update.effective_user
     message_text = update.message.text
     
@@ -177,6 +183,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Use unified AI service directly - Enhanced AI DISABLED
         try:
+            logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
             ai_response = await unified_ai_service.generate_legal_consultation(
                 question=message_text,
                 context="Общий юридический вопрос"
@@ -184,6 +191,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"✅ OpenAI AI response generated for user {user.id}")
         except Exception as e:
             logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
+            logger.error(f"❌ Error details: {str(e)}")
             ai_response = "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API. Обратитесь к администратору или попробуйте позже."
         
         # Send response with consultation offer
@@ -206,6 +214,12 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enhanced message handler with category detection"""
+    
+    # Safety checks
+    if not update or not update.effective_user or not update.message or not update.message.text:
+        logger.warning("⚠️ Invalid update data in enhanced_message_handler")
+        return
+    
     user = update.effective_user
     message_text = update.message.text
     
@@ -226,10 +240,22 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
         
     except Exception as e:
         logger.error(f"Enhanced message handler error: {e}")
-        await ai_chat(update, context)  # Fallback to regular AI chat
+        # Safety check before fallback
+        if update and update.message and update.message.text:
+            await ai_chat(update, context)  # Fallback to regular AI chat
 
 async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Route messages based on user type and context"""
+    
+    # Safety checks
+    if not update or not update.effective_user:
+        logger.warning("⚠️ Received update without user information")
+        return
+        
+    if not update.message or not update.message.text:
+        logger.warning("⚠️ Received update without message text")
+        return
+    
     user = update.effective_user
     
     # Admin check

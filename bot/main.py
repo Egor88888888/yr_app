@@ -11,6 +11,7 @@ import logging
 import os
 from datetime import datetime
 
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 # FORCE BLOCK Enhanced AI to prevent Azure API calls
@@ -113,6 +114,22 @@ class LegalCenterBot:
             filters.TEXT & ~filters.COMMAND,
             message_handler_router
         ))
+        
+        # Add error handler
+        async def error_handler(update: object, context) -> None:
+            """Log errors caused by updates"""
+            logger.error(f"Exception while handling an update: {context.error}")
+            
+            # Try to send user-friendly error message
+            if isinstance(update, Update) and update.effective_message:
+                try:
+                    await update.effective_message.reply_text(
+                        "🚫 Произошла ошибка при обработке сообщения. Попробуйте еще раз."
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send error message to user: {e}")
+        
+        app.add_error_handler(error_handler)
         
         # Register additional handlers
         register_smm_admin_handlers(app)
