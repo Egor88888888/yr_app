@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f0f0f0;
+        }
+        .debug { 
+            background: #fff; 
+            border: 2px solid #007bff; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .category {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .category:hover {
+            background: #f8f9fa;
+        }
+        .selected {
+            background: #007bff !important;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏛️ Test Mini App</h1>
+    
+    <div id="debug" class="debug">
+        <div>🔍 Debug Info:</div>
+        <div id="debug-messages">Starting...</div>
+    </div>
+    
+    <h2>Выберите категорию:</h2>
+    <div id="categories">
+        <!-- Categories will be loaded here -->
+    </div>
+
+    <script>
+        // Simple debug logging
+        function debugLog(message) {
+            console.log(message);
+            const debugEl = document.getElementById('debug-messages');
+            if (debugEl) {
+                debugEl.innerHTML += '<br>' + message;
+            }
+        }
+
+        // Test Telegram WebApp
+        debugLog('📱 DOM loaded');
+        debugLog('🔗 Telegram WebApp: ' + (window.Telegram ? 'Available' : 'Not available'));
+        
+        if (window.Telegram?.WebApp) {
+            debugLog('✅ Telegram WebApp detected');
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        } else {
+            debugLog('⚠️ Running in browser mode');
+        }
+
+        // Simple categories
+        const categories = [
+            { id: 1, name: "Семейное право", icon: "👨‍👩‍👧" },
+            { id: 2, name: "Трудовые споры", icon: "💼" },
+            { id: 3, name: "Недвижимость", icon: "🏠" }
+        ];
+
+        // Render categories
+        function renderCategories() {
+            debugLog('🎯 Rendering categories...');
+            const container = document.getElementById('categories');
+            
+            if (!container) {
+                debugLog('❌ Categories container not found');
+                return;
+            }
+
+            container.innerHTML = categories.map(cat => 
+                `<div class="category" onclick="selectCategory(${cat.id})">
+                    ${cat.icon} ${cat.name}
+                </div>`
+            ).join('');
+            
+            debugLog('✅ Categories rendered');
+        }
+
+        // Select category
+        function selectCategory(id) {
+            debugLog('🎯 Category selected: ' + id);
+            
+            // Remove previous selection
+            document.querySelectorAll('.category').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Select current
+            event.target.classList.add('selected');
+            
+            // Test submission after 2 seconds
+            setTimeout(() => {
+                testSubmission(id);
+            }, 2000);
+        }
+
+        // Test form submission
+        async function testSubmission(categoryId) {
+            debugLog('📤 Testing form submission...');
+            
+            const testData = {
+                category_id: categoryId,
+                category_name: categories.find(c => c.id === categoryId)?.name,
+                name: "Test User",
+                phone: "+7 999 123 45 67",
+                email: "test@example.com",
+                contact_method: "telegram",
+                contact_time: "any",
+                description: "Test submission"
+            };
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                debugLog('📡 Response status: ' + response.status);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    debugLog('✅ Submit successful: ' + JSON.stringify(result));
+                } else {
+                    debugLog('❌ Submit failed: ' + response.statusText);
+                }
+            } catch (error) {
+                debugLog('❌ Submit error: ' + error.message);
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            debugLog('🚀 Initializing test app...');
+            renderCategories();
+            debugLog('✅ Test app ready');
+        });
+    </script>
+</body>
+</html>

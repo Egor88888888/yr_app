@@ -36,6 +36,12 @@ app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
 async def health_check():
     return JSONResponse({"status": "healthy", "ai_enhanced": "blocked"})
 
+@app.get("/test")
+async def test_page():
+    """Serve test Mini App page"""
+    from fastapi.responses import FileResponse
+    return FileResponse("webapp/test-simple.html")
+
 @app.post("/submit")
 async def submit_application(request: Request):
     """Handle application submission from Mini App"""
