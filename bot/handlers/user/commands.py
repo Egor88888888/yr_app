@@ -181,18 +181,33 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send typing indicator
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
         
-        # Use unified AI service directly - Enhanced AI DISABLED
-        try:
-            logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
-            ai_response = await unified_ai_service.generate_legal_consultation(
-                question=message_text,
-                context="Общий юридический вопрос"
-            )
-            logger.info(f"✅ OpenAI AI response generated for user {user.id}")
-        except Exception as e:
-            logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
-            logger.error(f"❌ Error details: {str(e)}")
-            ai_response = "🤖 AI консультант временно недоступен. Проверьте настройки OpenAI API. Обратитесь к администратору или попробуйте позже."
+        # Check OpenAI API key
+        from bot.config.settings import OPENAI_API_KEY
+        import os
+        api_gpt = os.getenv("API_GPT")
+        logger.info(f"🔍 Environment API_GPT: {'SET' if api_gpt else 'NOT SET'}")
+        logger.info(f"🔍 Settings OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'NOT SET'}")
+        
+        if not OPENAI_API_KEY:
+            logger.error("❌ OPENAI_API_KEY not configured!")
+            ai_response = "❌ OpenAI API ключ не настроен. Обратитесь к администратору."
+        else:
+            logger.info(f"✅ OpenAI API key configured: {OPENAI_API_KEY[:12]}...")
+            
+            # Use unified AI service directly - Enhanced AI DISABLED
+            try:
+                logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
+                ai_response = await unified_ai_service.generate_legal_consultation(
+                    question=message_text,
+                    context="Общий юридический вопрос"
+                )
+                logger.info(f"✅ OpenAI AI response generated for user {user.id}: {ai_response[:100]}...")
+            except Exception as e:
+                logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
+                logger.error(f"❌ Error details: {str(e)}")
+                import traceback
+                logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+                ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
         
         # Send response with consultation offer
         full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
@@ -215,6 +230,8 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enhanced message handler with category detection"""
     
+    logger.info(f"🔍 ENHANCED HANDLER started for user: {update.effective_user.id if update and update.effective_user else 'Unknown'}")
+    
     # Safety checks
     if not update or not update.effective_user or not update.message or not update.message.text:
         logger.warning("⚠️ Invalid update data in enhanced_message_handler")
@@ -222,6 +239,8 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
     
     user = update.effective_user
     message_text = update.message.text
+    
+    logger.info(f"🔍 ENHANCED HANDLER processing: User {user.id}, Message: {message_text[:50]}...")
     
     try:
         # Check if user is admin
@@ -247,6 +266,8 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
 async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Route messages based on user type and context"""
     
+    logger.info(f"🔍 RECEIVED MESSAGE from user: {update.effective_user.id if update and update.effective_user else 'Unknown'}")
+    
     # Safety checks
     if not update or not update.effective_user:
         logger.warning("⚠️ Received update without user information")
@@ -257,11 +278,16 @@ async def message_handler_router(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     user = update.effective_user
+    message_text = update.message.text
+    
+    logger.info(f"🔍 Processing message from user {user.id}: {message_text[:50]}...")
     
     # Admin check
     if user.id in ADMIN_USERS:
+        logger.info(f"👤 Admin user {user.id} - skipping AI processing")
         return  # Let admin handlers process
     
+    logger.info(f"🤖 Routing to AI handler for user {user.id}")
     # Regular user - enhanced processing
     await enhanced_message_handler(update, context)
 
