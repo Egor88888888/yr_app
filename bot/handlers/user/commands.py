@@ -185,15 +185,31 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Record request
+        logger.info(f"🔄 Recording request for user {user.id}")
         increment_total_requests()
         increment_ai_requests()
         record_user_request(user.id)
         
         # Initialize Enhanced AI if not done yet
+        logger.info(f"🔄 Initializing AI manager for user {user.id}")
         await initialize_ai_manager()
+        logger.info(f"✅ AI manager initialized for user {user.id}")
         
         # Send typing indicator
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+        logger.info(f"🔄 Sending typing indicator for user {user.id}")
+        try:
+            await asyncio.wait_for(
+                context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing"),
+                timeout=5.0
+            )
+            logger.info(f"✅ Typing indicator sent for user {user.id}")
+        except asyncio.TimeoutError:
+            logger.error(f"❌ Typing indicator timed out for user {user.id}")
+        except Exception as e:
+            logger.error(f"❌ Typing indicator failed for user {user.id}: {e}")
+        
+        # Send immediate response to avoid timeout, then process AI
+        processing_message = await update.message.reply_text("🤖 Обрабатываю ваш запрос...")
         
         # Use unified AI service directly - Enhanced AI DISABLED
         try:
@@ -219,13 +235,21 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"❌ Full traceback: {traceback.format_exc()}")
             ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
         
-        # Send response with consultation offer
+        # Edit the processing message with the actual response
         full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
         
-        await update.message.reply_text(
-            full_response,
-            parse_mode=ParseMode.MARKDOWN
-        )
+        try:
+            await processing_message.edit_text(
+                full_response,
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as edit_error:
+            logger.error(f"❌ Failed to edit message: {edit_error}")
+            # Fallback: send new message
+            await update.message.reply_text(
+                full_response,
+                parse_mode=ParseMode.MARKDOWN
+            )
         
         increment_successful_requests()
         logger.info(f"✅ AI chat completed for user {user.id}")
