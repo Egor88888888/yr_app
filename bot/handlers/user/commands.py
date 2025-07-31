@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import time
+import traceback
 from datetime import datetime
 from typing import Dict, Any
 
@@ -195,28 +196,15 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await initialize_ai_manager()
         logger.info(f"✅ AI manager initialized for user {user.id}")
         
-        # Send typing indicator
-        logger.info(f"🔄 Sending typing indicator for user {user.id}")
-        try:
-            await asyncio.wait_for(
-                context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing"),
-                timeout=5.0
-            )
-            logger.info(f"✅ Typing indicator sent for user {user.id}")
-        except asyncio.TimeoutError:
-            logger.error(f"❌ Typing indicator timed out for user {user.id}")
-        except Exception as e:
-            logger.error(f"❌ Typing indicator failed for user {user.id}: {e}")
-        
         # Send immediate response to avoid timeout, then process AI
         processing_message = await update.message.reply_text("🤖 Обрабатываю ваш запрос...")
+        logger.info(f"✅ Processing message sent for user {user.id}")
         
         # Use unified AI service directly - Enhanced AI DISABLED
         try:
             logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
             
             # Add timeout for AI request
-            import asyncio
             ai_response = await asyncio.wait_for(
                 unified_ai_service.generate_legal_consultation(
                     question=message_text,
@@ -231,7 +219,6 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
             logger.error(f"❌ Error details: {str(e)}")
-            import traceback
             logger.error(f"❌ Full traceback: {traceback.format_exc()}")
             ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
         
