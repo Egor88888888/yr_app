@@ -54,6 +54,12 @@ async def premium_app():
     from fastapi.responses import FileResponse
     return FileResponse("webapp/premium-app.html")
 
+@app.get("/clean")
+async def clean_app():
+    """Serve clean Mini App without debug"""
+    from fastapi.responses import FileResponse
+    return FileResponse("webapp/clean-app.html")
+
 @app.post("/submit")
 async def submit_application(request: Request):
     """Handle application submission from Mini App"""
