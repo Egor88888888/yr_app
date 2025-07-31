@@ -116,11 +116,17 @@ class UltraModernApp {
     // ===========================
 
     initialize() {
+        console.log('🚀 Initializing Ultra-Modern App...');
+        console.log('📱 Telegram WebApp available:', !!window.Telegram?.WebApp);
+        console.log('🎯 Categories available:', ULTRA_CATEGORIES.length);
+        
         this.setupEventListeners();
         this.loadSavedData();
         this.renderCategories();
         this.updateUI();
         this.setupAdvancedFeatures();
+        
+        console.log('✅ Ultra-Modern App initialized successfully');
         
         // Pre-fill user data from Telegram
         if (tg.initDataUnsafe?.user && !this.formData.name) {
@@ -311,19 +317,34 @@ class UltraModernApp {
 
     renderCategories() {
         const container = document.getElementById('categories');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ Categories container not found');
+            return;
+        }
 
+        console.log('🎯 Rendering categories:', ULTRA_CATEGORIES.length);
+        
         container.innerHTML = ULTRA_CATEGORIES.map(category => `
             <div class="ultra-category" 
                  data-id="${category.id}" 
                  data-name="${category.name}"
                  style="--category-color: ${category.color}"
-                 onclick="ultraApp.selectCategory(${category.id})"
                  title="${category.description}">
                 <div class="ultra-category-emoji">${category.icon}</div>
                 <div class="ultra-category-text">${category.name}</div>
             </div>
         `).join('');
+        
+        // Add click handlers properly
+        container.querySelectorAll('.ultra-category').forEach(categoryElement => {
+            categoryElement.addEventListener('click', () => {
+                const categoryId = parseInt(categoryElement.dataset.id);
+                console.log('🎯 Category clicked:', categoryId);
+                this.selectCategory(categoryId);
+            });
+        });
+        
+        console.log('✅ Categories rendered and handlers attached');
     }
 
     selectCategory(categoryId) {
