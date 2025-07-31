@@ -36,6 +36,43 @@ app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
 async def health_check():
     return JSONResponse({"status": "healthy", "ai_enhanced": "blocked"})
 
+@app.post("/submit")
+async def submit_application(request: Request):
+    """Handle application submission from Mini App"""
+    try:
+        data = await request.json()
+        print(f"📋 Application received: {data}")
+        
+        # Process application data
+        from bot.services.db import async_sessionmaker, Application as AppModel
+        from datetime import datetime
+        
+        # Create application record
+        async with async_sessionmaker() as session:
+            application = AppModel(
+                name=data.get('name', ''),
+                phone=data.get('phone', ''),
+                email=data.get('email', ''),
+                description=data.get('description', ''),
+                category=data.get('category', 'Общий вопрос'),
+                status='pending',
+                created_at=datetime.utcnow(),
+                urgency=data.get('urgency', 'medium')
+            )
+            session.add(application)
+            await session.commit()
+            
+        print(f"✅ Application saved to database: ID {application.id}")
+        
+        # TODO: Send notifications to admins
+        return {"status": "success", "message": "Заявка принята! Мы свяжемся с вами в ближайшее время.", "id": application.id}
+        
+    except Exception as e:
+        print(f"❌ Submit error: {e}")
+        import traceback
+        print(f"❌ Full error: {traceback.format_exc()}")
+        return {"status": "error", "message": f"Ошибка при обработке заявки: {str(e)}"}
+
 # Global bot instance for webhook handling
 bot_instance = None
 
