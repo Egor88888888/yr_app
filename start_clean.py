@@ -44,27 +44,53 @@ async def submit_application(request: Request):
         print(f"📋 Application received: {data}")
         
         # Process application data
-        from bot.services.db import async_sessionmaker, Application as AppModel
+        from bot.services.db import async_sessionmaker, Application as AppModel, User, Category
         from datetime import datetime
+        from sqlalchemy import select
         
-        # Create application record
+        # Create or get user (we don't have telegram user, so create temporary)
         async with async_sessionmaker() as session:
+            # Try to find user by phone or create temporary
+            phone = data.get('phone', '')
+            name = data.get('name', 'Аноним')
+            
+            # Get or create category
+            category_id = data.get('category_id', 1)
+            
+            # Create temporary user if not exists
+            user_result = await session.execute(select(User).where(User.phone == phone))
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                # Generate unique negative tg_id for webapp users
+                import random
+                webapp_tg_id = -random.randint(1000000, 9999999)
+                
+                user = User(
+                    tg_id=webapp_tg_id,  # Negative ID for webapp users
+                    first_name=name,
+                    phone=phone,
+                    email=data.get('email', ''),
+                    preferred_contact=data.get('contact_method', 'phone')
+                )
+                session.add(user)
+                await session.flush()  # Get user.id
+            
+            # Create application record
             application = AppModel(
-                name=data.get('name', ''),
-                phone=data.get('phone', ''),
-                email=data.get('email', ''),
+                user_id=user.id,
+                category_id=category_id,
+                subcategory=data.get('subcategory', ''),
                 description=data.get('description', ''),
-                category=data.get('category', 'Общий вопрос'),
-                status='pending',
-                created_at=datetime.utcnow(),
-                urgency=data.get('urgency', 'medium')
+                contact_method=data.get('contact_method', 'phone'),
+                contact_time=data.get('contact_time', 'any'),
+                status='new'
             )
             session.add(application)
             await session.commit()
             
         print(f"✅ Application saved to database: ID {application.id}")
         
-        # TODO: Send notifications to admins
         return {"status": "success", "message": "Заявка принята! Мы свяжемся с вами в ближайшее время.", "id": application.id}
         
     except Exception as e:
@@ -72,6 +98,41 @@ async def submit_application(request: Request):
         import traceback
         print(f"❌ Full error: {traceback.format_exc()}")
         return {"status": "error", "message": f"Ошибка при обработке заявки: {str(e)}"}
+
+@app.post("/notify-client")
+async def notify_client(request: Request):
+    """Send notification to admin about new application"""
+    try:
+        data = await request.json()
+        print(f"📨 Admin notification request: {data}")
+        
+        # TODO: Send telegram message to admins
+        application_id = data.get('application_id')
+        
+        if bot_instance and bot_instance.application:
+            from bot.config.settings import ADMIN_USERS
+            message = f"📋 Новая заявка #{application_id}\n"
+            message += f"Имя: {data.get('name', 'Не указано')}\n"
+            message += f"Телефон: {data.get('phone', 'Не указано')}\n"
+            message += f"Категория: {data.get('category', 'Не указано')}\n"
+            message += f"Описание: {data.get('description', 'Не указано')}"
+            
+            # Send to all admins
+            for admin_id in ADMIN_USERS:
+                try:
+                    await bot_instance.application.bot.send_message(
+                        chat_id=admin_id,
+                        text=message
+                    )
+                    print(f"✅ Notification sent to admin {admin_id}")
+                except Exception as e:
+                    print(f"❌ Failed to notify admin {admin_id}: {e}")
+        
+        return {"status": "success", "message": "Уведомления отправлены"}
+        
+    except Exception as e:
+        print(f"❌ Notification error: {e}")
+        return {"status": "error", "message": str(e)}
 
 # Global bot instance for webhook handling
 bot_instance = None
