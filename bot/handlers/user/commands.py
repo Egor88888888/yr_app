@@ -191,52 +191,26 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         increment_ai_requests()
         record_user_request(user.id)
         
-        # Initialize Enhanced AI if not done yet
-        logger.info(f"🔄 Initializing AI manager for user {user.id}")
-        await initialize_ai_manager()
-        logger.info(f"✅ AI manager initialized for user {user.id}")
+        # Skip complex initialization and get straight to AI
+        logger.info(f"🤖 DIRECTLY calling OpenAI for user {user.id}: {message_text[:50]}...")
         
-        # Send immediate response to avoid timeout, then process AI
-        processing_message = await update.message.reply_text("🤖 Обрабатываю ваш запрос...")
-        logger.info(f"✅ Processing message sent for user {user.id}")
-        
-        # Use unified AI service directly - Enhanced AI DISABLED
+        # Direct AI call without any extra steps
         try:
-            logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
+            ai_response = await unified_ai_service.generate_legal_consultation(
+                question=message_text,
+                context="Общий юридический вопрос"
+            )
+            logger.info(f"✅ OpenAI SUCCESS for user {user.id}: {ai_response[:100]}...")
             
-            # Add timeout for AI request
-            ai_response = await asyncio.wait_for(
-                unified_ai_service.generate_legal_consultation(
-                    question=message_text,
-                    context="Общий юридический вопрос"
-                ),
-                timeout=30.0  # 30 second timeout
-            )
-            logger.info(f"✅ OpenAI AI response generated for user {user.id}: {ai_response[:100]}...")
-        except asyncio.TimeoutError:
-            logger.error(f"❌ AI request timed out for user {user.id}")
-            ai_response = "🤖 AI консультант не отвечает. Попробуйте позже."
+            # Send response directly
+            full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
+            await update.message.reply_text(full_response)
+            logger.info(f"✅ Response sent to user {user.id}")
+            
         except Exception as e:
-            logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
-            logger.error(f"❌ Error details: {str(e)}")
-            logger.error(f"❌ Full traceback: {traceback.format_exc()}")
-            ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
-        
-        # Edit the processing message with the actual response
-        full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
-        
-        try:
-            await processing_message.edit_text(
-                full_response,
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as edit_error:
-            logger.error(f"❌ Failed to edit message: {edit_error}")
-            # Fallback: send new message
-            await update.message.reply_text(
-                full_response,
-                parse_mode=ParseMode.MARKDOWN
-            )
+            logger.error(f"❌ OpenAI FAILED for user {user.id}: {e}")
+            logger.error(f"❌ Full error: {traceback.format_exc()}")
+            await update.message.reply_text(f"❌ Ошибка AI: {str(e)}")
         
         increment_successful_requests()
         logger.info(f"✅ AI chat completed for user {user.id}")
