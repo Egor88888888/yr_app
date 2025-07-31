@@ -162,6 +162,20 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_text = update.message.text
     
     try:
+        # FIRST - Check OpenAI API key immediately
+        from bot.config.settings import OPENAI_API_KEY
+        import os
+        api_gpt = os.getenv("API_GPT")
+        logger.info(f"🔍 Environment API_GPT: {'SET' if api_gpt else 'NOT SET'}")
+        logger.info(f"🔍 Settings OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'NOT SET'}")
+        
+        if not OPENAI_API_KEY:
+            logger.error("❌ OPENAI_API_KEY not configured!")
+            await update.message.reply_text("❌ OpenAI API ключ не настроен. Обратитесь к администратору.")
+            return
+            
+        logger.info(f"✅ OpenAI API key configured: {OPENAI_API_KEY[:12]}...")
+        
         # Check rate limiting
         if check_rate_limit(user.id):
             await update.message.reply_text(
@@ -181,33 +195,29 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send typing indicator
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
         
-        # Check OpenAI API key
-        from bot.config.settings import OPENAI_API_KEY
-        import os
-        api_gpt = os.getenv("API_GPT")
-        logger.info(f"🔍 Environment API_GPT: {'SET' if api_gpt else 'NOT SET'}")
-        logger.info(f"🔍 Settings OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'NOT SET'}")
-        
-        if not OPENAI_API_KEY:
-            logger.error("❌ OPENAI_API_KEY not configured!")
-            ai_response = "❌ OpenAI API ключ не настроен. Обратитесь к администратору."
-        else:
-            logger.info(f"✅ OpenAI API key configured: {OPENAI_API_KEY[:12]}...")
+        # Use unified AI service directly - Enhanced AI DISABLED
+        try:
+            logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
             
-            # Use unified AI service directly - Enhanced AI DISABLED
-            try:
-                logger.info(f"🤖 Generating AI response for user {user.id}: {message_text[:50]}...")
-                ai_response = await unified_ai_service.generate_legal_consultation(
+            # Add timeout for AI request
+            import asyncio
+            ai_response = await asyncio.wait_for(
+                unified_ai_service.generate_legal_consultation(
                     question=message_text,
                     context="Общий юридический вопрос"
-                )
-                logger.info(f"✅ OpenAI AI response generated for user {user.id}: {ai_response[:100]}...")
-            except Exception as e:
-                logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
-                logger.error(f"❌ Error details: {str(e)}")
-                import traceback
-                logger.error(f"❌ Full traceback: {traceback.format_exc()}")
-                ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
+                ),
+                timeout=30.0  # 30 second timeout
+            )
+            logger.info(f"✅ OpenAI AI response generated for user {user.id}: {ai_response[:100]}...")
+        except asyncio.TimeoutError:
+            logger.error(f"❌ AI request timed out for user {user.id}")
+            ai_response = "🤖 AI консультант не отвечает. Попробуйте позже."
+        except Exception as e:
+            logger.error(f"❌ OpenAI AI failed for user {user.id}: {e}")
+            logger.error(f"❌ Error details: {str(e)}")
+            import traceback
+            logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+            ai_response = f"🤖 AI консультант временно недоступен. Ошибка: {str(e)}"
         
         # Send response with consultation offer
         full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
