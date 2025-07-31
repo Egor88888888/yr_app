@@ -196,10 +196,11 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Direct AI call without any extra steps
         try:
-            ai_response = await unified_ai_service.generate_legal_consultation(
-                question=message_text,
-                context="Общий юридический вопрос"
+            ai_response_obj = await unified_ai_service.generate_legal_consultation(
+                user_message=message_text,
+                category="Общий юридический вопрос"
             )
+            ai_response = ai_response_obj.content
             logger.info(f"✅ OpenAI SUCCESS for user {user.id}: {ai_response[:100]}...")
             
             # Send response directly
