@@ -785,7 +785,7 @@ class UltraModernApp {
             const result = await response.json();
             console.log('✅ Result:', result);
 
-            if (result.status === 'ok') {
+            if (result.status === 'success') {
                 this.handleSubmitSuccess(result);
             } else {
                 throw new Error(result.message || 'Неизвестная ошибка');
@@ -830,6 +830,9 @@ class UltraModernApp {
         // Clear saved data
         this.clearSavedData();
 
+        // Send admin notification
+        this.sendAdminNotification(result.id);
+
         // Premium success feedback
         tg.HapticFeedback?.notificationOccurred('success');
         this.showPremiumToast('🎉 Заявка успешно отправлена!', 'success');
@@ -841,7 +844,7 @@ class UltraModernApp {
             } else if (window.close) {
                 window.close();
             }
-        }, 8000);
+        }, 3000);
 
         this.trackInteraction('form_submit_success', { result });
     }
@@ -862,6 +865,47 @@ class UltraModernApp {
         this.showPremiumToast(message, 'error');
         tg.HapticFeedback?.notificationOccurred('error');
         this.trackInteraction('form_submit_error', { error: error.message });
+    }
+
+    async sendAdminNotification(applicationId) {
+        try {
+            const notifyUrl = window.location.hostname === 'localhost' 
+                ? '/notify-client' 
+                : `${window.location.protocol}//${window.location.host}/notify-client`;
+            
+            const notificationData = {
+                application_id: applicationId,
+                user_data: {
+                    name: this.formData.name,
+                    phone: this.formData.phone,
+                    email: this.formData.email || '',
+                    category_name: this.formData.category_name,
+                    subcategory: this.formData.subcategory || '',
+                    description: this.formData.description || '',
+                    contact_method: this.formData.contact_method,
+                    contact_time: this.formData.contact_time
+                }
+            };
+            
+            console.log('📨 Sending admin notification:', notificationData);
+            
+            const response = await fetch(notifyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(notificationData)
+            });
+            
+            if (!response.ok) {
+                console.error('❌ Failed to send admin notification:', response.status);
+            } else {
+                console.log('✅ Admin notification sent successfully');
+            }
+        } catch (error) {
+            console.error('❌ Admin notification error:', error);
+        }
     }
 
     // ===========================
@@ -1025,6 +1069,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Make globally available
     window.ultraApp = ultraApp;
+    
+    // Add close button handler
+    const closeBtn = document.getElementById('close-app-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            console.log('🚪 Close button clicked');
+            if (tg.close) {
+                tg.close();
+            } else if (window.close) {
+                window.close();
+            } else {
+                console.log('⚠️ No close method available');
+            }
+        });
+    }
     
     console.log('🚀 Ultra-Modern Premium App loaded successfully!');
 });

@@ -111,11 +111,19 @@ async def notify_client(request: Request):
         
         if bot_instance and bot_instance.application:
             from bot.config.settings import ADMIN_USERS
+            
+            # Extract user data from nested structure
+            user_data = data.get('user_data', data)
+            
             message = f"📋 Новая заявка #{application_id}\n"
-            message += f"Имя: {data.get('name', 'Не указано')}\n"
-            message += f"Телефон: {data.get('phone', 'Не указано')}\n"
-            message += f"Категория: {data.get('category', 'Не указано')}\n"
-            message += f"Описание: {data.get('description', 'Не указано')}"
+            message += f"👤 Имя: {user_data.get('name', 'Не указано')}\n"
+            message += f"📞 Телефон: {user_data.get('phone', 'Не указано')}\n"
+            message += f"📧 Email: {user_data.get('email', 'Не указано')}\n"
+            message += f"📂 Категория: {user_data.get('category_name', 'Не указано')}\n"
+            message += f"📝 Подкатегория: {user_data.get('subcategory', 'Не указано')}\n"
+            message += f"💬 Описание: {user_data.get('description', 'Не указано')}\n"
+            message += f"📱 Способ связи: {user_data.get('contact_method', 'Не указано')}\n"
+            message += f"⏰ Время связи: {user_data.get('contact_time', 'Не указано')}"
             
             # Send to all admins
             for admin_id in ADMIN_USERS:

@@ -499,7 +499,49 @@ function showSuccessPulse() {
     }
 }
 
-// Вызов onFormSuccess после успешной отправки формы
+// Send notification to admin with properly formatted data
+async function sendAdminNotification(applicationId) {
+    try {
+        const notifyUrl = window.location.hostname === 'localhost' 
+            ? '/notify-client' 
+            : `${window.location.protocol}//${window.location.host}/notify-client`;
+        
+        const notificationData = {
+            application_id: applicationId,
+            user_data: {
+                name: formData.name,
+                phone: formData.phone,
+                email: formData.email || '',
+                category_name: formData.category_name,
+                subcategory: formData.subcategory || '',
+                description: formData.description || '',
+                contact_method: formData.contact_method,
+                contact_time: formData.contact_time
+            }
+        };
+        
+        console.log('Sending admin notification:', notificationData);
+        
+        const response = await fetch(notifyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(notificationData)
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to send admin notification:', response.status);
+        } else {
+            console.log('Admin notification sent successfully');
+        }
+    } catch (error) {
+        console.error('Admin notification error:', error);
+    }
+}
+
+// Submit form function
 async function submitForm() {
     tg.MainButton.showProgress();
     
@@ -530,7 +572,7 @@ async function submitForm() {
         const result = await response.json();
         console.log('Result:', result);
         
-        if (result.status === 'ok') {
+        if (result.status === 'success') {
             // Show success - используем только mobile-hidden
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.add('mobile-hidden');
@@ -547,12 +589,15 @@ async function submitForm() {
             tg.MainButton.hide();
             tg.BackButton.hide();
             
+            // Send notification to admin with properly formatted data
+            await sendAdminNotification(result.id);
+            
             // Close app after delay
             setTimeout(() => {
                 tg.close();
-            }, 5000);
+            }, 3000);
         } else {
-            tg.showAlert(`Ошибка: ${result.error || 'Неизвестная ошибка'}`);
+            tg.showAlert(`Ошибка: ${result.message || 'Неизвестная ошибка'}`);
         }
     } catch (error) {
         console.error('Submit error:', error);
@@ -560,5 +605,4 @@ async function submitForm() {
     } finally {
         tg.MainButton.hideProgress();
     }
-    onFormSuccess();
 } 
