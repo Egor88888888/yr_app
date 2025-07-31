@@ -42,6 +42,12 @@ async def test_page():
     from fastapi.responses import FileResponse
     return FileResponse("webapp/test-simple.html")
 
+@app.get("/working")
+async def working_app():
+    """Serve working Mini App"""
+    from fastapi.responses import FileResponse
+    return FileResponse("webapp/working-app.html")
+
 @app.post("/submit")
 async def submit_application(request: Request):
     """Handle application submission from Mini App"""
