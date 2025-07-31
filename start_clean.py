@@ -48,6 +48,12 @@ async def working_app():
     from fastapi.responses import FileResponse
     return FileResponse("webapp/working-app.html")
 
+@app.get("/premium")
+async def premium_app():
+    """Serve premium Mini App"""
+    from fastapi.responses import FileResponse
+    return FileResponse("webapp/premium-app.html")
+
 @app.post("/submit")
 async def submit_application(request: Request):
     """Handle application submission from Mini App"""
