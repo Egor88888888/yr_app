@@ -11,6 +11,7 @@ import threading
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import logging
 
 # BLOCK any ai_enhanced imports
@@ -27,6 +28,9 @@ print("🤖 Starting CLEAN bot with OpenAI only...")
 
 # Create simple FastAPI app for health check and webhooks
 app = FastAPI(title="Clean Legal Bot")
+
+# Mount static files for webapp
+app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")
 
 @app.get("/health")
 async def health_check():

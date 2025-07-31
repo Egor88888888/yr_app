@@ -54,11 +54,9 @@ ADMIN_USERS.update(ADDITIONAL_ADMINS)
 
 # ================ WEB APP SETTINGS ================
 
-# Web application URLs
-RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "localhost")
+# Web application URLs  
+RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "poetic-simplicity-production-60e7.up.railway.app")
 WEBAPP_URL = f"https://{RAILWAY_PUBLIC_DOMAIN}/webapp/"
-if RAILWAY_PUBLIC_DOMAIN == "localhost":
-    WEBAPP_URL = "https://localhost/webapp/"
 
 # ================ API KEYS ================
 

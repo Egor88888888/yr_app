@@ -75,12 +75,14 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Set menu button with webapp
         try:
+            logger.info(f"🔧 Setting webapp URL: {WEBAPP_URL}")
             webapp = WebAppInfo(url=WEBAPP_URL)
             menu_button = MenuButtonWebApp(text="📄 Подать заявку", web_app=webapp)
             await context.bot.set_chat_menu_button(chat_id=chat_id, menu_button=menu_button)
-            logger.info(f"✅ Menu button set successfully for user {user.id}")
+            logger.info(f"✅ Menu button set successfully for user {user.id} with URL: {WEBAPP_URL}")
         except Exception as e:
             logger.error(f"❌ Failed to set menu button: {e}")
+            logger.error(f"❌ WEBAPP_URL was: {WEBAPP_URL}")
         
         # Register/update user in database
         try:
