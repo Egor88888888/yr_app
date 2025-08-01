@@ -15,8 +15,8 @@ from bot.services.db import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override with environment variable if available
-if database_url := os.getenv('DATABASE_URL'):
+# Override with environment variable if available (prioritize private endpoint)
+if database_url := (os.getenv('DATABASE_PRIVATE_URL') or os.getenv('DATABASE_URL')):
     config.set_main_option('sqlalchemy.url', database_url)
 
 # Interpret the config file for Python logging.

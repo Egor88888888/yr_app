@@ -61,7 +61,8 @@ logger = logging.getLogger(__name__)
 # DATABASE SETUP
 # =================
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Prioritize private endpoint to avoid egress fees
+DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     # Default local SQLite with async driver

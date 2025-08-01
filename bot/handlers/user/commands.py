@@ -20,6 +20,8 @@ from sqlalchemy import select
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Admin
 from bot.services.sheets import append_lead
 from bot.services.ai_unified import unified_ai_service
+from bot.services.legal_expert_ai import world_class_legal_ai, LegalCase, LegalCategory, ConsultationType
+from bot.services.legal_knowledge_base import legal_knowledge
 
 # FORCE DISABLE Enhanced AI imports to prevent Azure calls
 import os
@@ -154,7 +156,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================ AI CHAT HANDLERS ================
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle AI chat requests"""
+    """🏛️ WORLD-CLASS LEGAL AI CONSULTATION"""
     
     # Safety checks
     if not update or not update.effective_user or not update.message or not update.message.text:
@@ -165,20 +167,6 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_text = update.message.text
     
     try:
-        # FIRST - Check OpenAI API key immediately
-        from bot.config.settings import OPENAI_API_KEY
-        import os
-        api_gpt = os.getenv("API_GPT")
-        logger.info(f"🔍 Environment API_GPT: {'SET' if api_gpt else 'NOT SET'}")
-        logger.info(f"🔍 Settings OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'NOT SET'}")
-        
-        if not OPENAI_API_KEY:
-            logger.error("❌ OPENAI_API_KEY not configured!")
-            await update.message.reply_text("❌ OpenAI API ключ не настроен. Обратитесь к администратору.")
-            return
-            
-        logger.info(f"✅ OpenAI API key configured: {OPENAI_API_KEY[:12]}...")
-        
         # Check rate limiting
         if check_rate_limit(user.id):
             await update.message.reply_text(
@@ -188,42 +176,59 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Record request
-        logger.info(f"🔄 Recording request for user {user.id}")
+        logger.info(f"🏛️ WORLD-CLASS LEGAL AI for user {user.id}: {message_text[:50]}...")
         increment_total_requests()
         increment_ai_requests()
         record_user_request(user.id)
         
-        # Skip complex initialization and get straight to AI
-        logger.info(f"🤖 DIRECTLY calling OpenAI for user {user.id}: {message_text[:50]}...")
+        # Detect legal category from message
+        detected_category = await detect_advanced_legal_category(message_text)
         
-        # Direct AI call without any extra steps
-        try:
-            ai_response_obj = await unified_ai_service.generate_legal_consultation(
-                user_message=message_text,
-                category="Общий юридический вопрос"
-            )
-            ai_response = ai_response_obj.content
-            logger.info(f"✅ OpenAI SUCCESS for user {user.id}: {ai_response[:100]}...")
-            
-            # Send response directly
-            full_response = f"{ai_response}\n\n📞 Для детальной консультации нажмите /start"
-            await update.message.reply_text(full_response)
-            logger.info(f"✅ Response sent to user {user.id}")
-            
-        except Exception as e:
-            logger.error(f"❌ OpenAI FAILED for user {user.id}: {e}")
-            logger.error(f"❌ Full error: {traceback.format_exc()}")
-            await update.message.reply_text(f"❌ Ошибка AI: {str(e)}")
+        # Determine consultation type based on message content
+        consultation_type = determine_consultation_type(message_text)
         
+        # Determine urgency level
+        urgency = determine_urgency_level(message_text)
+        
+        # Create legal case
+        legal_case = LegalCase(
+            user_id=user.id,
+            category=detected_category,
+            consultation_type=consultation_type,
+            description=message_text,
+            urgency=urgency,
+            location="РФ",
+            case_complexity=determine_complexity(message_text),
+            documents_available=has_documents_mention(message_text)
+        )
+        
+        logger.info(f"🎯 Legal case: Category={detected_category.value}, Type={consultation_type.value}, Urgency={urgency}")
+        
+        # Get world-class legal advice
+        legal_advice = await world_class_legal_ai.analyze_legal_case(legal_case)
+        
+        # Format comprehensive response
+        response = format_world_class_response(legal_advice)
+        
+        # Add consultation buttons
+        keyboard = create_consultation_keyboard(legal_case)
+        
+        await update.message.reply_text(
+            response, 
+            reply_markup=keyboard,
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        logger.info(f"✅ World-class legal consultation sent to user {user.id}")
         increment_successful_requests()
-        logger.info(f"✅ AI chat completed for user {user.id}")
         
     except Exception as e:
         increment_failed_requests()
-        logger.error(f"❌ AI chat error for user {user.id}: {e}")
-        await update.message.reply_text(
-            "Произошла ошибка при обработке запроса. Попробуйте позже."
-        )
+        logger.error(f"❌ World-class legal AI error for user {user.id}: {e}")
+        logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        
+        # Fallback to basic consultation
+        await send_fallback_consultation(update, message_text)
 
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enhanced message handler with category detection"""
@@ -677,3 +682,216 @@ async def detect_category(message_text: str) -> str:
             return category
     
     return "other"
+
+# ================ WORLD-CLASS LEGAL AI FUNCTIONS ================
+
+async def detect_advanced_legal_category(message_text: str) -> LegalCategory:
+    """🎯 Advanced legal category detection"""
+    message_lower = message_text.lower()
+    
+    # Comprehensive keyword mapping
+    category_keywords = {
+        LegalCategory.FAMILY_LAW: [
+            "развод", "алименты", "опека", "усыновление", "брак", "супруг", "жена", "муж",
+            "раздел имущества", "брачный договор", "отцовство", "материнство", "лишение прав"
+        ],
+        LegalCategory.CIVIL_LAW: [
+            "договор", "возмещение", "ущерб", "компенсация", "иск", "долг", "обязательство",
+            "нарушение договора", "потребитель", "услуги", "товар", "качество"
+        ],
+        LegalCategory.CRIMINAL_LAW: [
+            "уголовное", "преступление", "кража", "мошенничество", "избиение", "угроза",
+            "наркотики", "взятка", "коррупция", "следствие", "обвинение", "адвокат"
+        ],
+        LegalCategory.LABOR_LAW: [
+            "увольнение", "зарплата", "трудовой", "работодатель", "сотрудник", "отпуск",
+            "больничный", "сверхурочные", "премия", "выходное пособие", "дискриминация"
+        ],
+        LegalCategory.REAL_ESTATE: [
+            "квартира", "дом", "недвижимость", "аренда", "покупка", "продажа", "ипотека",
+            "застройщик", "коммунальные", "ремонт", "соседи", "приватизация", "собственность"
+        ],
+        LegalCategory.BUSINESS_LAW: [
+            "ооо", "ип", "регистрация", "налоги", "бизнес", "предприниматель", "лицензия",
+            "сертификат", "проверка", "штраф", "бухгалтерия", "отчетность"
+        ],
+        LegalCategory.TAX_LAW: [
+            "налоговая", "налог", "ндс", "ндфл", "декларация", "доначисление", "штраф",
+            "пени", "льгота", "вычет", "возврат", "проверка"
+        ],
+        LegalCategory.INHERITANCE: [
+            "наследство", "завещание", "наследник", "нотариус", "вступление", "доля",
+            "отказ от наследства", "обязательная доля", "наследование"
+        ],
+        LegalCategory.BANKRUPTCY: [
+            "банкротство", "долги", "кредиторы", "процедура", "реструктуризация",
+            "финансовый управляющий", "торги", "имущество должника"
+        ],
+        LegalCategory.ADMINISTRATIVE: [
+            "штраф", "гибдд", "административное", "нарушение", "постановление", "жалоба",
+            "лишение прав", "госуслуги", "документы", "паспорт"
+        ]
+    }
+    
+    # Count matches for each category
+    category_scores = {}
+    for category, keywords in category_keywords.items():
+        score = sum(1 for keyword in keywords if keyword in message_lower)
+        if score > 0:
+            category_scores[category] = score
+    
+    # Return category with highest score
+    if category_scores:
+        return max(category_scores, key=category_scores.get)
+    
+    return LegalCategory.OTHER
+
+def determine_consultation_type(message_text: str) -> ConsultationType:
+    """Determine consultation type based on message content"""
+    message_lower = message_text.lower()
+    
+    # Emergency indicators
+    emergency_keywords = [
+        "срочно", "экстренно", "завтра", "сегодня", "немедленно", "угрожают",
+        "арестовали", "обыск", "задержали", "суд завтра", "повестка"
+    ]
+    
+    # Document review indicators  
+    document_keywords = [
+        "проверить договор", "посмотреть документ", "анализ", "правильно ли",
+        "законно ли", "что подписал", "условия договора"
+    ]
+    
+    # Strategy indicators
+    strategy_keywords = [
+        "как лучше", "стратегия", "план действий", "что делать дальше",
+        "как поступить", "варианты решения"
+    ]
+    
+    if any(keyword in message_lower for keyword in emergency_keywords):
+        return ConsultationType.EMERGENCY
+    elif any(keyword in message_lower for keyword in document_keywords):
+        return ConsultationType.DOCUMENT_REVIEW  
+    elif any(keyword in message_lower for keyword in strategy_keywords):
+        return ConsultationType.STRATEGY
+    elif len(message_text) > 200:
+        return ConsultationType.DETAILED
+    else:
+        return ConsultationType.EXPRESS
+
+def determine_urgency_level(message_text: str) -> str:
+    """Determine urgency level"""
+    message_lower = message_text.lower()
+    
+    emergency_words = ["срочно", "экстренно", "немедленно", "сегодня", "завтра"]
+    urgent_words = ["быстро", "скоро", "в ближайшее время", "до конца недели"]
+    
+    if any(word in message_lower for word in emergency_words):
+        return "emergency"
+    elif any(word in message_lower for word in urgent_words):
+        return "high"
+    else:
+        return "medium"
+
+def determine_complexity(message_text: str) -> str:
+    """Determine case complexity"""
+    complex_indicators = [
+        "суд", "иск", "несколько", "сложная", "многоэтапная", "длительная",
+        "спор", "конфликт", "разбирательство", "процедура"
+    ]
+    
+    message_lower = message_text.lower()
+    
+    if any(indicator in message_lower for indicator in complex_indicators):
+        return "high"
+    elif len(message_text) > 300:
+        return "medium"
+    else:
+        return "low"
+
+def has_documents_mention(message_text: str) -> bool:
+    """Check if user mentions having documents"""
+    document_words = [
+        "документ", "договор", "справка", "свидетельство", "паспорт",
+        "бумаги", "копия", "скан", "фото", "файл"
+    ]
+    
+    message_lower = message_text.lower()
+    return any(word in message_lower for word in document_words)
+
+def format_world_class_response(legal_advice) -> str:
+    """Format world-class legal response"""
+    
+    response = f"""🏛️ **ЭКСПЕРТНАЯ ЮРИДИЧЕСКАЯ КОНСУЛЬТАЦИЯ**
+
+🔍 **ПРАВОВОЙ АНАЛИЗ:**
+{legal_advice.legal_analysis}
+
+⚖️ **ПРИМЕНИМОЕ ЗАКОНОДАТЕЛЬСТВО:**
+{' • '.join(legal_advice.legal_references) if legal_advice.legal_references else 'Индивидуальный подбор нормативной базы'}
+
+⚠️ **ОЦЕНКА РИСКОВ:**
+{legal_advice.risks_assessment}
+
+📋 **РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:**"""
+    
+    for i, action in enumerate(legal_advice.recommended_actions[:5], 1):
+        response += f"\n{i}. {action}"
+    
+    response += f"""
+
+⏰ **ВРЕМЕННЫЕ РАМКИ:** {legal_advice.timeline}
+💰 **ОРИЕНТИРОВОЧНАЯ СТОИМОСТЬ:** {legal_advice.estimated_cost}
+
+{legal_advice.sales_offer}"""
+    
+    return response
+
+def create_consultation_keyboard(legal_case: LegalCase) -> InlineKeyboardMarkup:
+    """Create consultation keyboard based on case type"""
+    
+    keyboard = []
+    
+    if legal_case.urgency == "emergency":
+        keyboard.append([
+            InlineKeyboardButton("🚨 ЭКСТРЕННАЯ КОНСУЛЬТАЦИЯ", callback_data="book:emergency")
+        ])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("👑 Премиум консультация (15 000₽)", callback_data="book:premium")],
+        [InlineKeyboardButton("⭐ Стандартная консультация (7 500₽)", callback_data="book:standard")],
+        [InlineKeyboardButton("🎯 Экспресс консультация (3 000₽)", callback_data="book:express")],
+        [InlineKeyboardButton("📄 Заполнить заявку", web_app=WebAppInfo(url=WEBAPP_URL))]
+    ])
+    
+    return InlineKeyboardMarkup(keyboard)
+
+async def send_fallback_consultation(update: Update, message_text: str):
+    """Send fallback consultation when expert system fails"""
+    
+    fallback_response = """🏛️ **БАЗОВАЯ ЮРИДИЧЕСКАЯ КОНСУЛЬТАЦИЯ**
+
+Для предоставления качественной консультации по вашему вопросу рекомендую:
+
+📞 **Записаться на персональную консультацию** - наш опытный юрист проанализирует ситуацию и даст конкретные рекомендации
+
+📋 **Заполнить подробную заявку** - это поможет юристу лучше подготовиться к консультации
+
+⭐ **СТАНДАРТНАЯ КОНСУЛЬТАЦИЯ (7 500₽):**
+✅ Глубокий правовой анализ
+✅ Письменное заключение  
+✅ Подготовка документов
+✅ 30 дней поддержки
+
+📞 Нажмите кнопку ниже для записи"""
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📞 Записаться на консультацию", callback_data="book:standard")],
+        [InlineKeyboardButton("📄 Заполнить заявку", web_app=WebAppInfo(url=WEBAPP_URL))]
+    ])
+    
+    await update.message.reply_text(
+        fallback_response,
+        reply_markup=keyboard,
+        parse_mode=ParseMode.MARKDOWN
+    )
