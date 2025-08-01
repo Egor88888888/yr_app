@@ -305,6 +305,11 @@ async def client_flow_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         await query.answer()
         
+        # Handle free consultation
+        if data == "free_consultation":
+            await handle_free_consultation(update, context)
+            return
+        
         # Parse callback data
         if not data.startswith("client_flow:"):
             return
@@ -850,19 +855,9 @@ def format_world_class_response(legal_advice) -> str:
 def create_consultation_keyboard(legal_case: LegalCase) -> InlineKeyboardMarkup:
     """Create consultation keyboard based on case type"""
     
-    keyboard = []
-    
-    if legal_case.urgency == "emergency":
-        keyboard.append([
-            InlineKeyboardButton("🚨 ЭКСТРЕННАЯ КОНСУЛЬТАЦИЯ", callback_data="book:emergency")
-        ])
-    
-    keyboard.extend([
-        [InlineKeyboardButton("👑 Премиум консультация (15 000₽)", callback_data="book:premium")],
-        [InlineKeyboardButton("⭐ Стандартная консультация (7 500₽)", callback_data="book:standard")],
-        [InlineKeyboardButton("🎯 Экспресс консультация (3 000₽)", callback_data="book:express")],
-        [InlineKeyboardButton("📄 Заполнить заявку", web_app=WebAppInfo(url=WEBAPP_URL))]
-    ])
+    keyboard = [
+        [InlineKeyboardButton("💬 Бесплатная консультация!", callback_data="free_consultation")]
+    ]
     
     return InlineKeyboardMarkup(keyboard)
 
@@ -886,8 +881,7 @@ async def send_fallback_consultation(update: Update, message_text: str):
 📞 Нажмите кнопку ниже для записи"""
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📞 Записаться на консультацию", callback_data="book:standard")],
-        [InlineKeyboardButton("📄 Заполнить заявку", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton("💬 Бесплатная консультация!", callback_data="free_consultation")]
     ])
     
     await update.message.reply_text(
@@ -895,3 +889,32 @@ async def send_fallback_consultation(update: Update, message_text: str):
         reply_markup=keyboard,
         parse_mode=ParseMode.MARKDOWN
     )
+
+async def handle_free_consultation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle free consultation button click"""
+    query = update.callback_query
+    
+    try:
+        await query.answer()
+        
+        text = """💬 **БЕСПЛАТНАЯ КОНСУЛЬТАЦИЯ**
+
+🎯 **Напишите ваш юридический вопрос** и получите:
+
+✅ **Экспертный анализ** ситуации
+✅ **Ссылки на законы** и нормы права  
+✅ **Практические рекомендации** по действиям
+✅ **Оценку перспектив** дела
+
+💡 **Просто опишите вашу ситуацию** в следующем сообщении, и наша экспертная система даст подробную консультацию!
+
+📝 _Например: "Меня незаконно уволили с работы" или "Нужно разделить имущество при разводе"_"""
+
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+    except Exception as e:
+        logger.error(f"Free consultation handler error: {e}")
+        await query.message.reply_text("Напишите ваш юридический вопрос для бесплатной консультации!")
