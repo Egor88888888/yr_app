@@ -358,7 +358,7 @@ class UnifiedAIService:
             AIProvider.OPENROUTER: OpenRouterProvider(),
             AIProvider.AZURE_OPENAI: AzureOpenAIProvider()
         }
-        # Primary: OpenAI, Fallbacks: OpenRouter, Azure
+        # Primary: OpenAI, Fallbacks: OpenRouter, Azure (temporary fallback mode)
         self.fallback_order = [AIProvider.OPENAI, AIProvider.OPENROUTER, AIProvider.AZURE_OPENAI]
         
         # Legal system prompts
@@ -488,11 +488,11 @@ class UnifiedAIService:
         
         # All providers failed
         return AIResponse(
-            content="🤖 AI консультант временно недоступен. Обратитесь к администратору или попробуйте позже.",
+            content="⚠️ AI консультант временно недоступен из-за неправильных API ключей.\n\n📞 Пожалуйста, свяжитесь с администратором для обновления конфигурации API ключей:\n- OpenAI API ключ недействителен\n- OpenRouter API ключ не настроен\n- Azure OpenAI не настроен\n\n🔧 Для решения проблемы администратору нужно:\n1. Проверить правильность OpenAI API ключа\n2. Установить корректные переменные окружения\n3. Перезапустить сервис",
             provider=AIProvider.OPENAI,  # Primary provider
             model=request.model.value,
             success=False,
-            error="All AI providers failed"
+            error="All AI providers failed - invalid API keys"
         )
     
     def get_available_providers(self) -> List[AIProvider]:

@@ -60,8 +60,8 @@ WEBAPP_URL = f"https://{RAILWAY_PUBLIC_DOMAIN}/webapp/"
 
 # ================ API KEYS ================
 
-# AI Services - PRIMARY: OpenAI GPT API
-OPENAI_API_KEY = os.getenv("API_GPT")  # Primary AI API
+# AI Services - PRIMARY: OpenAI GPT API  
+OPENAI_API_KEY = os.getenv("API_GPT", "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")  # Primary AI API
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # Fallback
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")  # Legacy support
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
