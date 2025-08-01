@@ -849,6 +849,13 @@ def format_world_class_response(legal_advice) -> str:
 💰 **ОРИЕНТИРОВОЧНАЯ СТОИМОСТЬ:** {legal_advice.estimated_cost}
 
 {legal_advice.sales_offer}"""
+
+    # Добавляем вопросы для продолжения диалога
+    if legal_advice.follow_up_questions:
+        response += "\n\n🤔 **ВОПРОСЫ ДЛЯ РАЗМЫШЛЕНИЯ:**"
+        for question in legal_advice.follow_up_questions:
+            response += f"\n• {question}"
+        response += "\n\n💬 Задавайте вопросы - продолжим обсуждение!"
     
     return response
 

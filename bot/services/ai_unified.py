@@ -423,6 +423,31 @@ class UnifiedAIService:
         
         return await self._generate_with_fallback(request)
     
+    async def generate_world_class_consultation(
+        self, 
+        user_message: str,
+        system_prompt: str, 
+        category: Optional[str] = None,
+        model: AIModel = AIModel.GPT_4O
+    ) -> AIResponse:
+        """Generate world-class legal consultation with custom system prompt"""
+        
+        full_system_prompt = system_prompt
+        if category:
+            full_system_prompt += f"\n\nКАТЕГОРИЯ ПРАВА: {category.upper()}"
+        
+        messages = [{"role": "user", "content": user_message}]
+        
+        request = AIRequest(
+            messages=messages,
+            model=model,
+            system_prompt=full_system_prompt,
+            max_tokens=1500,  # Больше токенов для детальных консультаций
+            temperature=0.7
+        )
+        
+        return await self._generate_with_fallback(request)
+    
     async def generate_content(
         self, 
         topic: str, 
