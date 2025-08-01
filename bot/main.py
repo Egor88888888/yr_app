@@ -100,7 +100,7 @@ class LegalCenterBot:
         # User callback handlers
         app.add_handler(CallbackQueryHandler(
             client_flow_callback, 
-            pattern=r"^(client_flow:|free_consultation$)"
+            pattern=r"^client_flow:"
         ))
         
         # Phone input handler (context-dependent)

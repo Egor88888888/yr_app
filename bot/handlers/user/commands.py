@@ -305,10 +305,6 @@ async def client_flow_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         await query.answer()
         
-        # Handle free consultation
-        if data == "free_consultation":
-            await handle_free_consultation(update, context)
-            return
         
         # Parse callback data
         if not data.startswith("client_flow:"):
@@ -398,24 +394,24 @@ async def handle_get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle price information request"""
     query = update.callback_query
     
-    text = """💰 **Наши тарифы**
+    text = """💼 **Наши услуги**
 
-📋 **Консультация** - 3,000 ₽
+📋 **Консультация**
 └ Устная консультация до 1 часа
 
-📄 **Анализ документов** - 5,000 ₽  
+📄 **Анализ документов**  
 └ Проверка и заключение по документам
 
-⚖️ **Представительство** - от 15,000 ₽
+⚖️ **Представительство**
 └ Ведение дела в суде
 
-📝 **Составление документов** - от 7,000 ₽
+📝 **Составление документов**
 └ Договоры, иски, жалобы
 
-🎯 **Комплексное сопровождение** - индивидуально
+🎯 **Комплексное сопровождение**
 └ Полное ведение юридических вопросов
 
-*Точная стоимость определяется после консультации"""
+*Стоимость обсуждается индивидуально на консультации"""
     
     keyboard = [
         [InlineKeyboardButton("📞 Заказать звонок", callback_data="client_flow:request_call")],
@@ -846,7 +842,6 @@ def format_world_class_response(legal_advice) -> str:
     response += f"""
 
 ⏰ **ВРЕМЕННЫЕ РАМКИ:** {legal_advice.timeline}
-💰 **ОРИЕНТИРОВОЧНАЯ СТОИМОСТЬ:** {legal_advice.estimated_cost}
 
 {legal_advice.sales_offer}"""
 
@@ -863,7 +858,7 @@ def create_consultation_keyboard(legal_case: LegalCase) -> InlineKeyboardMarkup:
     """Create consultation keyboard based on case type"""
     
     keyboard = [
-        [InlineKeyboardButton("💬 Бесплатная консультация!", callback_data="free_consultation")]
+        [InlineKeyboardButton("💬 Бесплатная консультация!", web_app=WebAppInfo(url=WEBAPP_URL))]
     ]
     
     return InlineKeyboardMarkup(keyboard)
@@ -879,8 +874,8 @@ async def send_fallback_consultation(update: Update, message_text: str):
 
 📋 **Заполнить подробную заявку** - это поможет юристу лучше подготовиться к консультации
 
-⭐ **СТАНДАРТНАЯ КОНСУЛЬТАЦИЯ (7 500₽):**
-✅ Глубокий правовой анализ
+⭐ **СТАНДАРТНАЯ КОНСУЛЬТАЦИЯ:**
+✅ Глубокий правовой анализ (1 час)
 ✅ Письменное заключение  
 ✅ Подготовка документов
 ✅ 30 дней поддержки
@@ -888,7 +883,7 @@ async def send_fallback_consultation(update: Update, message_text: str):
 📞 Нажмите кнопку ниже для записи"""
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💬 Бесплатная консультация!", callback_data="free_consultation")]
+        [InlineKeyboardButton("💬 Бесплатная консультация!", web_app=WebAppInfo(url=WEBAPP_URL))]
     ])
     
     await update.message.reply_text(
@@ -897,31 +892,3 @@ async def send_fallback_consultation(update: Update, message_text: str):
         parse_mode=ParseMode.MARKDOWN
     )
 
-async def handle_free_consultation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle free consultation button click"""
-    query = update.callback_query
-    
-    try:
-        await query.answer()
-        
-        text = """💬 **БЕСПЛАТНАЯ КОНСУЛЬТАЦИЯ**
-
-🎯 **Напишите ваш юридический вопрос** и получите:
-
-✅ **Экспертный анализ** ситуации
-✅ **Ссылки на законы** и нормы права  
-✅ **Практические рекомендации** по действиям
-✅ **Оценку перспектив** дела
-
-💡 **Просто опишите вашу ситуацию** в следующем сообщении, и наша экспертная система даст подробную консультацию!
-
-📝 _Например: "Меня незаконно уволили с работы" или "Нужно разделить имущество при разводе"_"""
-
-        await query.edit_message_text(
-            text,
-            parse_mode=ParseMode.MARKDOWN
-        )
-        
-    except Exception as e:
-        logger.error(f"Free consultation handler error: {e}")
-        await query.message.reply_text("Напишите ваш юридический вопрос для бесплатной консультации!")
