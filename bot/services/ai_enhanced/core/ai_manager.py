@@ -232,43 +232,45 @@ class AIEnhancedManager:
         )
 
     def _build_system_prompt(self, context: AIContext) -> str:
-        """Строим системный промпт с учетом контекста"""
-        base_prompt = """Ты - опытный юрист-консультант в российском юридическом центре.
-Твоя задача - давать профессиональные, понятные и полезные советы по правовым вопросам."""
+        """Строим контекстный промпт для живого диалога"""
+        
+        # Базовый промпт без шаблонов
+        base_prompt = """Вы - ведущий юрист с многолетним опытом. Ведите живой профессиональный диалог с клиентом.
 
-        # Добавляем персонализацию
+ВАЖНО: НЕ используйте структурированные форматы, шаблоны или эмоджи.
+Отвечайте естественно, анализируя конкретную ситуацию клиента.
+
+Ваши принципы:
+1. Глубокий анализ каждого вопроса на основе диалога
+2. Демонстрация экспертизы через конкретные правовые знания
+3. Индивидуальный подход к каждой ситуации
+4. Формирование персонального предложения наших услуг
+
+Стиль: Профессиональный диалог без стандартных фраз."""
+
+        # Контекст предыдущих сообщений для анализа
+        if context.dialogue_history:
+            recent_messages = context.dialogue_history[-3:]  # Последние 3 сообщения
+            conversation_context = ""
+            for msg in recent_messages:
+                role = "Клиент" if msg.role == "user" else "Вы"
+                conversation_context += f"\n{role}: {msg.content}"
+            
+            if conversation_context:
+                base_prompt += f"\n\nКонтекст диалога:{conversation_context}\n\nПродолжите диалог с учетом предыдущего обсуждения."
+
+        # Добавляем персонализацию без шаблонов
         if context.user_profile:
             profile = context.user_profile
-
+            
             if profile.experience_level == "beginner":
-                base_prompt += "\nОбъясняй сложные термины простыми словами."
+                base_prompt += "\nОбъясняйте правовые понятия доступно."
             elif profile.experience_level == "advanced":
-                base_prompt += "\nМожешь использовать профессиональную юридическую терминологию."
+                base_prompt += "\nИспользуйте профессиональную терминологию."
 
-            if profile.preferred_style == "formal":
-                base_prompt += "\nИспользуй формальный стиль общения."
-            elif profile.preferred_style == "friendly":
-                base_prompt += "\nОбщайся дружелюбно и неформально."
-
-            if profile.detail_preference == "brief":
-                base_prompt += "\nДавай краткие, сжатые ответы."
-            elif profile.detail_preference == "detailed":
-                base_prompt += "\nДавай подробные, развернутые объяснения."
-
-        # Добавляем контекст категории
+        # Категория для фокуса экспертизы
         if context.predicted_category:
-            base_prompt += f"\nТема вопроса: {context.predicted_category}"
-
-        # Добавляем контекст намерения
-        if context.detected_intent:
-            if context.detected_intent == "consultation":
-                base_prompt += "\nПользователь ищет юридическую консультацию."
-            elif context.detected_intent == "application":
-                base_prompt += "\nПользователь хочет подать заявку на услуги."
-            elif context.detected_intent == "information":
-                base_prompt += "\nПользователь ищет информацию о процедурах."
-
-        base_prompt += "\n\nВ конце ответа всегда предлагай подать заявку для детальной консультации."
+            base_prompt += f"\n\nОбласть права: {context.predicted_category}. Покажите глубокую экспертизу в этой сфере."
 
         return base_prompt
 

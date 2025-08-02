@@ -57,25 +57,17 @@ class ResponseOptimizer:
         context: AIContext,
         user_profile: Optional[UserProfile] = None
     ) -> str:
-        """Оптимизация финального ответа"""
+        """Минимальная оптимизация без шаблонов для живого диалога"""
         try:
-            optimized = response
-
-            # 1. Улучшаем форматирование
-            optimized = await self._improve_formatting(optimized)
-
-            # 2. Добавляем эмодзи для категории
-            optimized = await self._add_category_emoji(optimized, context)
-
-            # 3. Улучшаем структуру ответа
-            optimized = await self._improve_structure(optimized)
-
-            # 4. Добавляем персонализированный CTA
-            optimized = await self._add_personalized_cta(optimized, context, user_profile)
-
-            # 5. Финальная проверка качества
-            optimized = await self._quality_check(optimized)
-
+            # Убираем все шаблонные улучшения
+            # Оставляем только базовое форматирование текста
+            
+            # Убираем лишние пробелы и переносы
+            optimized = re.sub(r'\n\s*\n\s*\n+', '\n\n', response)
+            optimized = optimized.strip()
+            
+            # НЕ добавляем эмоджи, структуру или CTA - только живой диалог
+            
             return optimized
 
         except Exception as e:
