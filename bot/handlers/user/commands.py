@@ -27,10 +27,11 @@ from bot.services.legal_knowledge_base import legal_knowledge
 import os
 logger = logging.getLogger(__name__)
 
-DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "false").lower() == "true"
 if not DISABLE_ENHANCED_AI:
-    # Import only if not disabled
-    pass  # from bot.services.ai_enhanced import AIEnhancedManager
+    # Import Enhanced AI for conversation memory
+    from bot.services.ai_enhanced import AIEnhancedManager
+    logger.info("✅ Enhanced AI imports ENABLED - conversation memory active")
 else:
     logger.info("🚫 Enhanced AI imports BLOCKED - Azure prevention active")
 
@@ -48,20 +49,25 @@ logger = logging.getLogger(__name__)
 
 # FORCE DISABLE Enhanced AI via Environment Variable
 import os
-FORCE_DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "true").lower() == "true"
+FORCE_DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "false").lower() == "true"
 
-# DISABLED Enhanced AI Manager - using unified_ai_service only
+# Enhanced AI Manager for conversation memory
 ai_enhanced_manager = None
 
 async def initialize_ai_manager():
-    """Initialize AI Manager - Enhanced AI DISABLED"""
+    """Initialize AI Manager with conversation memory"""
     global ai_enhanced_manager
     if FORCE_DISABLE_ENHANCED_AI:
-        logger.info("🚫 Enhanced AI FORCE DISABLED via DISABLE_ENHANCED_AI=true")
+        logger.info("🚫 Enhanced AI DISABLED via DISABLE_ENHANCED_AI=true")
         return
-    # DISABLED: Enhanced AI causes Azure API calls
-    # ai_enhanced_manager = AIEnhancedManager()
-    logger.info("🤖 Enhanced AI DISABLED - using unified_ai_service only")
+    
+    # Initialize Enhanced AI for conversation memory
+    if not DISABLE_ENHANCED_AI:
+        ai_enhanced_manager = AIEnhancedManager()
+        await ai_enhanced_manager.initialize()
+        logger.info("🤖 Enhanced AI Manager initialized with conversation memory")
+    else:
+        logger.info("🤖 Enhanced AI DISABLED - using unified_ai_service only")
 
 # ================ COMMAND HANDLERS ================
 
@@ -249,15 +255,23 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
         # Process for all users (admins and regular users)
         logger.info(f"🤖 Starting AI processing for user {user.id}")
         
-        # Detect legal category
-        detected_category = await detect_category(message_text)
-        
-        # Process with AI
-        await ai_chat(update, context)
-        
-        # Log category detection
-        if detected_category:
-            logger.info(f"Detected category '{detected_category}' for user {user.id}")
+        # Use Enhanced AI Manager for conversation memory if available
+        if ai_enhanced_manager and not DISABLE_ENHANCED_AI:
+            logger.info(f"🧠 Using Enhanced AI with conversation memory for user {user.id}")
+            await ai_enhanced_manager.process_user_message(update, context)
+        else:
+            # Fallback to basic AI without memory
+            logger.info(f"💭 Using basic AI without memory for user {user.id}")
+            
+            # Detect legal category
+            detected_category = await detect_category(message_text)
+            
+            # Process with AI
+            await ai_chat(update, context)
+            
+            # Log category detection
+            if detected_category:
+                logger.info(f"Detected category '{detected_category}' for user {user.id}")
         
     except Exception as e:
         logger.error(f"Enhanced message handler error: {e}")
