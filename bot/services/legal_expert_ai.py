@@ -539,8 +539,8 @@ class WorldClassLegalAI:
             risks_assessment=risks_assessment,
             timeline=timeline,
             estimated_cost=self._get_category_cost_estimate(case),
-            next_steps=self._generate_next_steps(case),
-            sales_offer=self._generate_sales_offer(case),
+            next_steps=self._get_category_next_steps(case),
+            sales_offer=await self._generate_sales_offer(case),
             follow_up_questions=self._get_category_follow_up_questions(case)
         )
     
