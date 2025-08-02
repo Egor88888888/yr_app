@@ -214,7 +214,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         legal_advice = await world_class_legal_ai.analyze_legal_case(legal_case)
         
         # Format comprehensive response
-        response = format_world_class_response(legal_advice)
+        response = format_natural_response(legal_advice)
         
         # Add consultation buttons
         keyboard = create_consultation_keyboard(legal_case)
@@ -234,7 +234,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
         
         # Fallback to basic consultation
-        await send_fallback_consultation(update, message_text)
+        await send_natural_consultation(update, message_text)
 
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enhanced message handler with category detection"""
@@ -255,25 +255,18 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
         # Process for all users (admins and regular users)
         logger.info(f"🤖 Starting AI processing for user {user.id}")
         
-        # Use Enhanced AI Manager for conversation memory if available
-        if ai_enhanced_manager and not DISABLE_ENHANCED_AI:
-            logger.info(f"🧠 Using Enhanced AI with conversation memory for user {user.id}")
-            # Call correct method with proper parameters
-            response = await ai_enhanced_manager.generate_response(user.id, message_text, context.user_data or {})
-            await update.message.reply_text(response, parse_mode="Markdown")
-        else:
-            # Fallback to basic AI without memory
-            logger.info(f"💭 Using basic AI without memory for user {user.id}")
-            
-            # Detect legal category
-            detected_category = await detect_category(message_text)
-            
-            # Process with AI
-            await ai_chat(update, context)
-            
-            # Log category detection
-            if detected_category:
-                logger.info(f"Detected category '{detected_category}' for user {user.id}")
+        # Используем только чистый AI без Enhanced системы для естественного диалога
+        logger.info(f"💭 Using natural AI conversation for user {user.id}")
+        
+        # Detect legal category
+        detected_category = await detect_category(message_text)
+        
+        # Process with natural AI
+        await ai_chat(update, context)
+        
+        # Log category detection
+        if detected_category:
+            logger.info(f"Detected category '{detected_category}' for user {user.id}")
         
     except Exception as e:
         logger.error(f"Enhanced message handler error: {e}")
@@ -836,37 +829,26 @@ def has_documents_mention(message_text: str) -> bool:
     message_lower = message_text.lower()
     return any(word in message_lower for word in document_words)
 
-def format_world_class_response(legal_advice) -> str:
-    """Format world-class legal response"""
+def format_natural_response(legal_advice) -> str:
+    """Format natural conversational legal response without templates"""
     
-    response = f"""🏛️ **ЭКСПЕРТНАЯ ЮРИДИЧЕСКАЯ КОНСУЛЬТАЦИЯ**
-
-🔍 **ПРАВОВОЙ АНАЛИЗ:**
-{legal_advice.legal_analysis}
-
-⚖️ **ПРИМЕНИМОЕ ЗАКОНОДАТЕЛЬСТВО:**
-{' • '.join(legal_advice.legal_references) if legal_advice.legal_references else 'Индивидуальный подбор нормативной базы'}
-
-⚠️ **ОЦЕНКА РИСКОВ:**
-{legal_advice.risks_assessment}
-
-📋 **РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:**"""
+    # Создаем естественный ответ без структурированных блоков
+    response_parts = []
     
-    for i, action in enumerate(legal_advice.recommended_actions[:5], 1):
-        response += f"\n{i}. {action}"
+    # Основной анализ
+    if legal_advice.legal_analysis:
+        response_parts.append(legal_advice.legal_analysis)
     
-    response += f"""
-
-⏰ **ВРЕМЕННЫЕ РАМКИ:** {legal_advice.timeline}
-
-{legal_advice.sales_offer}"""
-
-    # Добавляем вопросы для продолжения диалога
-    if legal_advice.follow_up_questions:
-        response += "\n\n🤔 **ВОПРОСЫ ДЛЯ РАЗМЫШЛЕНИЯ:**"
-        for question in legal_advice.follow_up_questions:
-            response += f"\n• {question}"
-        response += "\n\n💬 Задавайте вопросы - продолжим обсуждение!"
+    # Риски (если есть)
+    if legal_advice.risks_assessment and legal_advice.risks_assessment != "Требуется дополнительный анализ":
+        response_parts.append(f"Важно учесть: {legal_advice.risks_assessment}")
+    
+    # Предложение услуг
+    if legal_advice.sales_offer:
+        response_parts.append(legal_advice.sales_offer)
+    
+    # Объединяем части естественно
+    response = "\n\n".join(response_parts)
     
     return response
 
@@ -879,32 +861,21 @@ def create_consultation_keyboard(legal_case: LegalCase) -> InlineKeyboardMarkup:
     
     return InlineKeyboardMarkup(keyboard)
 
-async def send_fallback_consultation(update: Update, message_text: str):
-    """Send fallback consultation when expert system fails"""
+async def send_natural_consultation(update: Update, message_text: str):
+    """Send natural consultation response when AI system fails"""
     
-    fallback_response = """🏛️ **БАЗОВАЯ ЮРИДИЧЕСКАЯ КОНСУЛЬТАЦИЯ**
+    fallback_response = """Понимаю ваш вопрос, но для качественного анализа именно вашей ситуации мне нужны дополнительные детали. 
 
-Для предоставления качественной консультации по вашему вопросу рекомендую:
+Каждая юридическая ситуация уникальна, и важно рассмотреть все нюансы, чтобы дать вам действительно полезный совет.
 
-📞 **Записаться на персональную консультацию** - наш опытный юрист проанализирует ситуацию и даст конкретные рекомендации
-
-📋 **Заполнить подробную заявку** - это поможет юристу лучше подготовиться к консультации
-
-⭐ **СТАНДАРТНАЯ КОНСУЛЬТАЦИЯ:**
-✅ Глубокий правовой анализ (1 час)
-✅ Письменное заключение  
-✅ Подготовка документов
-✅ 30 дней поддержки
-
-📞 Нажмите кнопку ниже для записи"""
+Предлагаю записаться на персональную консультацию, где мы детально разберем вашу ситуацию и найдем оптимальное решение."""
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💬 Бесплатная консультация!", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton("Записаться на консультацию", web_app=WebAppInfo(url=WEBAPP_URL))]
     ])
     
     await update.message.reply_text(
         fallback_response,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.MARKDOWN
+        reply_markup=keyboard
     )
 
