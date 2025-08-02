@@ -229,8 +229,8 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"❌ AI conversation error for user {user.id}: {e}")
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
         
-        # Fallback to basic consultation
-        await send_natural_consultation(update, message_text)
+        # NO FALLBACKS - Show real error
+        await update.message.reply_text(f"OpenAI API Error: {str(e)}")
 
 async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enhanced message handler with category detection"""
