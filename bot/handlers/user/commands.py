@@ -27,13 +27,9 @@ from bot.services.legal_knowledge_base import legal_knowledge
 import os
 logger = logging.getLogger(__name__)
 
-DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "false").lower() == "true"
-if not DISABLE_ENHANCED_AI:
-    # Import Enhanced AI for conversation memory
-    from bot.services.ai_enhanced import AIEnhancedManager
-    logger.info("✅ Enhanced AI imports ENABLED - conversation memory active")
-else:
-    logger.info("🚫 Enhanced AI imports BLOCKED - Azure prevention active")
+# FORCE DISABLE Enhanced AI - using only natural conversation
+DISABLE_ENHANCED_AI = True
+logger.info("🚫 Enhanced AI FORCE DISABLED - using only natural AI conversation")
 
 from bot.services.notifications import notify_client_application_received
 from bot.config.settings import (
@@ -49,25 +45,12 @@ logger = logging.getLogger(__name__)
 
 # FORCE DISABLE Enhanced AI via Environment Variable
 import os
-FORCE_DISABLE_ENHANCED_AI = os.getenv("DISABLE_ENHANCED_AI", "false").lower() == "true"
-
-# Enhanced AI Manager for conversation memory
+# Enhanced AI completely disabled
 ai_enhanced_manager = None
 
 async def initialize_ai_manager():
-    """Initialize AI Manager with conversation memory"""
-    global ai_enhanced_manager
-    if FORCE_DISABLE_ENHANCED_AI:
-        logger.info("🚫 Enhanced AI DISABLED via DISABLE_ENHANCED_AI=true")
-        return
-    
-    # Initialize Enhanced AI for conversation memory
-    if not DISABLE_ENHANCED_AI:
-        ai_enhanced_manager = AIEnhancedManager()
-        await ai_enhanced_manager.initialize()
-        logger.info("🤖 Enhanced AI Manager initialized with conversation memory")
-    else:
-        logger.info("🤖 Enhanced AI DISABLED - using unified_ai_service only")
+    """Enhanced AI disabled - using only natural conversation"""
+    logger.info("🤖 Using only natural AI conversation - no Enhanced AI system")
 
 # ================ COMMAND HANDLERS ================
 

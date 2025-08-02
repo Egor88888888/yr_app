@@ -220,33 +220,20 @@ class WorldClassLegalAI:
         return request
     
     async def _structure_advice(self, case: LegalCase, ai_content: str) -> LegalAdvice:
-        """Структурирование совета от AI"""
+        """Преобразование AI ответа в естественный формат без структуры"""
         
-        # Извлекаем ключевые компоненты из ответа AI
-        legal_analysis = self._extract_section(ai_content, "ПРАВОВОЙ АНАЛИЗ", "ПРИМЕНИМЫЕ НОРМЫ")
-        legal_references = self._extract_legal_references(ai_content)
-        risks_assessment = self._extract_section(ai_content, "АНАЛИЗ РИСКОВ", "ПЛАН ДЕЙСТВИЙ")
-        recommended_actions = self._extract_action_plan(ai_content)
-        timeline = self._extract_timeline(ai_content)
-        estimated_cost = self._extract_cost_estimate(ai_content)
-        
-        # Генерируем персонализированное торговое предложение
-        sales_offer = self._generate_sales_offer(case)
-        
-        # Генерируем вопросы для уточнения
-        follow_up_questions = await self._generate_follow_up_questions(case)
-        
+        # Используем весь AI ответ как есть без извлечения структур
         return LegalAdvice(
             case=case,
-            legal_analysis=legal_analysis or ai_content[:500] + "...",
-            recommended_actions=recommended_actions,
-            legal_references=legal_references,
-            risks_assessment=risks_assessment or "Требуется дополнительный анализ",
-            timeline=timeline or "Зависит от обстоятельств дела",
-            estimated_cost=estimated_cost or "Требуется персональная оценка",
-            next_steps=self._generate_next_steps(case),
-            sales_offer=sales_offer,
-            follow_up_questions=follow_up_questions
+            legal_analysis=ai_content.strip(),  # Весь ответ AI как естественный анализ
+            recommended_actions=[],  # Пустые структурированные поля
+            legal_references=[],
+            risks_assessment="",
+            timeline="",
+            estimated_cost="",
+            next_steps=[],
+            sales_offer="",  # Никаких продающих предложений
+            follow_up_questions=[]  # Никаких дополнительных вопросов
         )
     
     def _extract_section(self, text: str, start_marker: str, end_marker: str) -> str:
@@ -451,7 +438,7 @@ class WorldClassLegalAI:
             timeline=timeline,
             estimated_cost=self._get_category_cost_estimate(case),
             next_steps=self._get_category_next_steps(case),
-            sales_offer=self._generate_sales_offer(case),
+            sales_offer="",
             follow_up_questions=self._get_category_follow_up_questions(case)
         )
     
