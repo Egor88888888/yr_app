@@ -145,7 +145,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================ AI CHAT HANDLERS ================
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """🏛️ WORLD-CLASS LEGAL AI CONSULTATION"""
+    """💬 AI CONVERSATION WITH MEMORY"""
     
     # Safety checks
     if not update or not update.effective_user or not update.message or not update.message.text:
@@ -156,6 +156,9 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_text = update.message.text
     
     try:
+        # Import conversation memory
+        from bot.services.simple_memory import simple_memory
+        
         # Check rate limiting
         if check_rate_limit(user.id):
             await update.message.reply_text(
@@ -165,55 +168,65 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Record request
-        logger.info(f"🏛️ WORLD-CLASS LEGAL AI for user {user.id}: {message_text[:50]}...")
+        logger.info(f"💬 AI CONVERSATION for user {user.id}: {message_text[:50]}...")
         increment_total_requests()
         increment_ai_requests()
         record_user_request(user.id)
         
-        # Detect legal category from message
-        detected_category = await detect_advanced_legal_category(message_text)
+        # Get conversation history for context
+        history = await simple_memory.get_conversation_history(user.id)
+        logger.info(f"📚 Retrieved {len(history)} previous messages for user {user.id}")
         
-        # Determine consultation type based on message content
-        consultation_type = determine_consultation_type(message_text)
+        # Prepare messages with conversation context
+        messages = []
         
-        # Determine urgency level
-        urgency = determine_urgency_level(message_text)
+        # Add system prompt for natural legal consultation
+        messages.append({
+            "role": "system",
+            "content": """Вы - опытный юрист с глубокими знаниями российского права. Ведите естественный профессиональный диалог с клиентом.
+
+Важно:
+- Учитывайте предыдущие сообщения в разговоре для продолжения диалога
+- Анализируйте конкретную ситуацию клиента индивидуально  
+- Демонстрируйте экспертизу через конкретные правовые знания
+- НЕ используйте шаблоны, структурированные форматы или эмоджи
+- Отвечайте как настоящий юрист в живой беседе
+- Естественно предлагайте персональную консультацию когда это уместно"""
+        })
         
-        # Create legal case
-        legal_case = LegalCase(
-            user_id=user.id,
-            category=detected_category,
-            consultation_type=consultation_type,
-            description=message_text,
-            urgency=urgency,
-            location="РФ",
-            case_complexity=determine_complexity(message_text),
-            documents_available=has_documents_mention(message_text)
+        # Add conversation history for context
+        for msg in history:
+            messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        
+        # Add current message
+        messages.append({
+            "role": "user",
+            "content": message_text
+        })
+        
+        # Generate AI response with conversation context
+        response = await unified_ai_service.generate_simple_response(
+            messages=messages,
+            model=AIModel.GPT_4O_MINI,
+            max_tokens=1000
         )
         
-        logger.info(f"🎯 Legal case: Category={detected_category.value}, Type={consultation_type.value}, Urgency={urgency}")
+        # Store conversation in memory
+        await simple_memory.add_message(user.id, "user", message_text)
+        await simple_memory.add_message(user.id, "assistant", response.content)
         
-        # Get world-class legal advice
-        legal_advice = await world_class_legal_ai.analyze_legal_case(legal_case)
+        # Send response
+        await update.message.reply_text(response.content)
         
-        # Format comprehensive response
-        response = format_natural_response(legal_advice)
-        
-        # Add consultation buttons
-        keyboard = create_consultation_keyboard(legal_case)
-        
-        await update.message.reply_text(
-            response, 
-            reply_markup=keyboard,
-            parse_mode=ParseMode.MARKDOWN
-        )
-        
-        logger.info(f"✅ World-class legal consultation sent to user {user.id}")
+        logger.info(f"✅ Conversational response sent to user {user.id}")
         increment_successful_requests()
         
     except Exception as e:
         increment_failed_requests()
-        logger.error(f"❌ World-class legal AI error for user {user.id}: {e}")
+        logger.error(f"❌ AI conversation error for user {user.id}: {e}")
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
         
         # Fallback to basic consultation
