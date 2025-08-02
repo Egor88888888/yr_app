@@ -258,7 +258,9 @@ async def enhanced_message_handler(update: Update, context: ContextTypes.DEFAULT
         # Use Enhanced AI Manager for conversation memory if available
         if ai_enhanced_manager and not DISABLE_ENHANCED_AI:
             logger.info(f"🧠 Using Enhanced AI with conversation memory for user {user.id}")
-            await ai_enhanced_manager.process_user_message(update, context)
+            # Call correct method with proper parameters
+            response = await ai_enhanced_manager.generate_response(user.id, message_text, context.user_data or {})
+            await update.message.reply_text(response, parse_mode="Markdown")
         else:
             # Fallback to basic AI without memory
             logger.info(f"💭 Using basic AI without memory for user {user.id}")

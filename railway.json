@@ -16,6 +16,6 @@
     "PYTHONPATH": ".",
     "PYTHONUNBUFFERED": "1",
     "PORT": "8000",
-    "DISABLE_ENHANCED_AI": "true"
+    "DISABLE_ENHANCED_AI": "false"
   }
 }
