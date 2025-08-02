@@ -19,7 +19,7 @@ from sqlalchemy import select
 
 from bot.services.db import async_sessionmaker, User, Application as AppModel, Category, Admin
 from bot.services.sheets import append_lead
-from bot.services.ai_unified import unified_ai_service
+from bot.services.ai_unified import unified_ai_service, AIModel
 from bot.services.legal_expert_ai import world_class_legal_ai, LegalCase, LegalCategory, ConsultationType
 from bot.services.legal_knowledge_base import legal_knowledge
 
