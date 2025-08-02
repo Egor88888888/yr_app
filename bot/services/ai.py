@@ -115,7 +115,7 @@ async def _azure_openai_request(messages: list[dict], model: str, max_tokens: in
 async def generate_post_content(topic: str) -> str:
     """Generate post content for channel using Azure OpenAI"""
     messages = [
-        {"role": "system", "content": "Ты юрист, пишешь полезные посты для Telegram канала. Используй эмодзи."},
+        {"role": "system", "content": "Ты юрист, пишешь полезные профессиональные посты для Telegram канала."},
         {"role": "user", "content": f"Напиши пост на тему: {topic}. Объем 300-400 символов."}
     ]
     return await generate_ai_response(messages)
