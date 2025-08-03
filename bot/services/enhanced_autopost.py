@@ -38,7 +38,19 @@ class LegalContentDatabase:
 
     def __init__(self, db_path: str = "legal_content.db"):
         self.db_path = db_path
-        self.init_database()
+        self._initialized = False
+        # Don't initialize database on import - do it lazily
+
+    def _ensure_initialized(self):
+        """Ensure database is initialized"""
+        if not self._initialized:
+            try:
+                self.init_database()
+                self._initialized = True
+            except Exception as e:
+                print(f"⚠️ Could not initialize SQLite database: {e}")
+                print("⚠️ Running without enhanced autopost database")
+                self._initialized = False
 
     def init_database(self):
         """Инициализация базы данных"""
@@ -193,6 +205,11 @@ class LegalContentDatabase:
 
     def get_next_topic(self) -> Tuple[str, str]:
         """Получить следующую тему для публикации с учетом ротации"""
+        self._ensure_initialized()
+        if not self._initialized:
+            # Return fallback topic if database not available
+            return ("case", "Основы российского права")
+        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -240,6 +257,11 @@ class LegalContentDatabase:
 
     def save_post(self, post_type: str, title: str, topic: str, legal_ref: str = ""):
         """Сохранить информацию о публикации"""
+        self._ensure_initialized()
+        if not self._initialized:
+            print("⚠️ Cannot save post: database not available")
+            return
+        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -932,7 +954,17 @@ class EnhancedAutopostSystem:
 
 
 # Глобальный экземпляр системы
-enhanced_autopost = EnhancedAutopostSystem()
+try:
+    enhanced_autopost = EnhancedAutopostSystem()
+except Exception as e:
+    print(f"⚠️ Could not initialize EnhancedAutopostSystem: {e}")
+    print("⚠️ Creating fallback instance")
+    
+    class FallbackAutopostSystem:
+        async def generate_daily_post(self):
+            return {"text": "Fallback legal content: Система автопостинга временно недоступна", "media": None}
+    
+    enhanced_autopost = FallbackAutopostSystem()
 
 
 async def get_enhanced_autopost_status() -> Dict[str, any]:
