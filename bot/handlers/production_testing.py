@@ -5,8 +5,17 @@
 """
 
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
 
 from bot.config.settings import is_admin
 from bot.core.metrics import get_system_stats
@@ -31,8 +40,28 @@ async def cmd_test_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка тестирования: {e}")
 
+
+async def production_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Minimal /test command for production monitoring."""
+    keyboard = [[InlineKeyboardButton("Quick Check", callback_data="test_quick")]]
+    await update.message.reply_text(
+        "🧪 Production testing interface",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
+async def production_test_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Handle callbacks from :func:`production_test_command`."""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(f"✅ Received: {query.data}")
+
 def register_production_testing_handlers(app: Application):
     """Регистрация минимального тестирования"""
     app.add_handler(CommandHandler("test", cmd_test_system))
-    
+    app.add_handler(CommandHandler("production_test", production_test_command))
+    app.add_handler(CallbackQueryHandler(production_test_callback_handler, pattern="^test_"))
+
     logger.info("✅ Minimal testing handlers registered")
