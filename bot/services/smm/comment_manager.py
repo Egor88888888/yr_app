@@ -107,6 +107,9 @@ class CommentManager:
         self.responses_this_hour = 0
         self.last_hour_reset = datetime.now()
 
+        # Автоматические ответы отключены по умолчанию, чтобы бот не отвечал сам
+        self.auto_responses_enabled = False
+
         self.is_running = False
 
     async def start_manager(self):
@@ -204,6 +207,13 @@ class CommentManager:
             # Проверка модерации
             if await self.moderation_system.should_moderate(comment_event):
                 await self._moderate_comment(comment_event)
+                return
+
+            if not self.auto_responses_enabled:
+                comment_event.requires_response = False
+                comment_event.response_strategy = ResponseStrategy.IGNORE
+                logger.info(
+                    f"💬 Processed comment from user {comment_event.user_id}: auto responses disabled")
                 return
 
             # Добавляем в активные разговоры

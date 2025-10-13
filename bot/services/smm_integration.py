@@ -1019,45 +1019,12 @@ class SMMIntegration:
         channel_id: str,
         message_id: int
     ) -> bool:
-        """Обновляет кнопки поста после публикации с автоматическими комментариями"""
-        try:
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-            from .comments_auto_setup import get_auto_comments_manager
-
-            # Используем автоматический менеджер комментариев
-            comments_manager = get_auto_comments_manager(self.bot)
-
-            # Получаем правильную ссылку на комментарии (с автопроверкой настройки)
-            comments_url = await comments_manager.ensure_comments_for_post(
-                channel_id,
-                message_id,
-                fallback_to_bot=True  # Если комментарии не настроены, ведем в бота
-            )
-
-            # Создаем единственную кнопку консультации
-            correct_buttons = [[
-                InlineKeyboardButton(
-                    "📱 Получить консультацию",
-                    url=f"https://t.me/{self.bot.username}"
-                )
-            ]]
-
-            reply_markup = InlineKeyboardMarkup(correct_buttons)
-
-            # Редактируем кнопки поста
-            await self.bot.edit_message_reply_markup(
-                chat_id=channel_id,
-                message_id=message_id,
-                reply_markup=reply_markup
-            )
-
-            logger.info(
-                f"✅ Updated post buttons with auto-comments for message {message_id} in channel {channel_id}")
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Failed to update post buttons: {e}")
-            return False
+        """Отключено: автоматические комментарии к постам больше не создаются"""
+        logger.info(
+            "🛑 Auto-comments for posts are disabled; skipping post button update "
+            f"for message {message_id} in channel {channel_id}"
+        )
+        return False
 
     def _create_comments_url(self, channel_id: str, message_id: int) -> str:
         """Создает правильную ссылку на комментарии к посту"""
